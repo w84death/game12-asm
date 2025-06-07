@@ -1,5 +1,4 @@
 ; P1X Bootlader for a GAME-12
-; This is the bootloader.
 ; It is a simple bootloader that loads the game code from disk and jumps to it.
 ; Copyright (C) 2025 Krzysztof Krystian Jankowski
 ; This program is free software. See LICENSE for details.
@@ -7,11 +6,11 @@
 org 0x7C00
 use16
 
-KERNEL_SIZE_KB        equ 16                 ; Size of the kernel in KB
-SECTORS_TO_LOAD       equ KERNEL_SIZE_KB*2  ; Sectors to load (512KB chunks)
-KERNEL_STACK_POINTER  equ 0xFFFE            ; Stack pointer for the kernel
-KERNEL_SEGMENT        equ 0x1000            ; Segment where kernel is loaded
-KERNEL_OFFSET         equ 0x0000            ; Offset where kernel is loaded
+GAME_SIZE_KB          equ 0x10              ; Size of the game in KB
+SECTORS_TO_LOAD       equ GAME_SIZE_KB*2    ; Sectors to load (512KB chunks)
+GAME_STACK_POINTER    equ 0xFFFE            ; Stack pointer for the game
+GAME_SEGMENT          equ 0x1000            ; Segment where game is loaded
+GAME_OFFSET           equ 0x0100            ; Offset where game is loaded
 
 ; Start of the bootloader ======================================================
 ; This is the entry point of the bootloader.
@@ -32,11 +31,11 @@ boot_start:
 	mov si, welcome_msg
   call boot_print_str
 
-; Load kernel ==================================================================
-; This function loads the kernel from disk into memory.
+; Load game ==================================================================
+; This function loads the game from disk into memory.
 ; Expects: None
 ; Returns: None
-boot_load_kernel:
+boot_load_game:
   mov si, loading_msg
   call boot_print_str
 
@@ -46,10 +45,10 @@ boot_load_kernel:
   int 0x13               ; Reset disk system
   jc boot_disk_reset_error
 
-  ; Set up memory location for loading kernel
-  mov ax, KERNEL_SEGMENT
+  ; Set up memory location for loading game
+  mov ax, GAME_SEGMENT
   mov es, ax
-  xor bx, bx             ; Offset where code will be loaded (starting at 0)
+  xor bx, GAME_OFFSET             ; Offset where code will be loaded
 
   ; Set up disk read parameters
   mov ah, 0x02           ; BIOS read sectors function
@@ -60,13 +59,13 @@ boot_load_kernel:
   mov dl, [floppy_drive_number]           ; Drive 0 (first floppy drive)
 
   int 0x13               ; BIOS disk interrupt
-  jc boot_kernel_error   ; Error if carry flag set
+  jc boot_game_error   ; Error if carry flag set
 
   ; Check if we read the correct number of sectors
   cmp al, SECTORS_TO_LOAD
   jb boot_sector_count_error  ; Error if fewer sectors read than expected
 
-  jmp boot_kernel_success
+  jmp boot_game_success
 
 ; Disk reset error =============================================================
 ; This function handles disk reset errors.
@@ -90,7 +89,7 @@ boot_sector_count_error:
 ; This function handles disk read errors.
 ; Expects: None
 ; Returns: None
-boot_kernel_error:
+boot_game_error:
   mov si, disk_read_error_msg
   call boot_print_str
   jmp boot_error_recovery
@@ -111,32 +110,32 @@ boot_error_recovery:
 
   xor ax, ax
   int 0x16               ; Wait for key press
-  jmp boot_load_kernel   ; Try again
+  jmp boot_load_game   ; Try again
 ret
 
 ; Kernel loaded successfully ===================================================
-; This function is called after the kernel is loaded successfully.
+; This function is called after the game is loaded successfully.
 ; Expects: None
 ; Returns: None
-boot_kernel_success:
+boot_game_success:
   mov si, done_msg
   call boot_print_str
 
-  ; Give visual indicator we're about to jump to kernel
-  mov si, kernel_jump_msg
+  ; Give visual indicator we're about to jump to game
+  mov si, game_jump_msg
   call boot_print_str
 
-  ; Pass drive number to kernel in DL register
+  ; Pass drive number to game in DL register
   mov dl, [floppy_drive_number]
 
-  ; Set up stack before jumping to kernel
-  mov ax, KERNEL_SEGMENT
+  ; Set up stack before jumping to game
+  mov ax, GAME_SEGMENT
   mov ds, ax
   mov es, ax
   mov ss, ax
-  mov sp, KERNEL_STACK_POINTER
+  mov sp, GAME_STACK_POINTER
 
-  jmp KERNEL_SEGMENT:KERNEL_OFFSET
+  jmp GAME_SEGMENT:GAME_OFFSET
 
 ; Print character ==============================================================
 ; This function prints a character to the screen.
@@ -171,8 +170,8 @@ disk_read_error_msg db  '<!> Disk read error.',0x0A,0x0D,0x0
 reset_err_msg db        '<!> Disk reset error.',0x0A,0x0D,0x0
 count_err_msg db        '<!> Disk sector count error.',0x0A,0x0D,0x0
 done_msg db             '\o/ Success.',0x0A,0x0D,0x0
-again_msg db            0x0A,0x0D,'<*> Press any key to try again.',0x0A,0x0D,0x0
-kernel_jump_msg db      'Booting game code...',0x0A,0x0D,0x0
+again_msg db        0x0A,0x0D,'<*> Press any key to try again.', 0x0A, 0x0D, 0x0
+game_jump_msg db        'Booting game code...',0x0A,0x0D,0x0
 floppy_drive_msg db     'Floppy drive number: ',0x0
 floppy_drive_number db  0x00
 
