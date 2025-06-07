@@ -801,6 +801,7 @@ get_random:
   inc ax
   rol ax, 1
   xor ax, 0x1337
+  add ax, [_GAME_TICK_]
   mov [_RNG_], ax
 ret
 
@@ -839,6 +840,7 @@ mov ah, al
     jg .draw_gradient       ; Loop until all bars are drawn
 ret
 
+TERRAIN_RULES_MASK equ 0x03
 ; =========================================== GENERATE MAP ==================|80
 generate_map:
   mov di, _MAP_
@@ -851,7 +853,7 @@ generate_map:
       cmp dx, MAP_SIZE
       jne .not_first
         call get_random
-        and ax, 0x3
+        and ax, TERRAIN_RULES_MASK
         mov [di], al
         jmp .check_top
       .not_first:
@@ -860,7 +862,7 @@ generate_map:
       movzx bx, [di-1]
       shl bx, 2
       call get_random
-      and ax, 0x3
+      and ax, TERRAIN_RULES_MASK
       add bx, ax
       mov al, [si+bx]
       mov [di], al            ; Save terrain tile ID
@@ -871,7 +873,7 @@ generate_map:
       movzx bx, [di-MAP_SIZE]
       shl bx, 2
       call get_random
-      and ax, 0x3
+      and ax, TERRAIN_RULES_MASK
       add bx, ax
       mov bl, [si+bx]
 
@@ -1362,7 +1364,7 @@ draw_ui:
    rep stosb
 
    mov di, UI_FIRST_LINE+8
-   mov al, TILE_RAILS_1+10  ; Crossing
+   mov al, TILE_RAILS_3     ; Crossing
    call draw_sprite
 
    mov si, [_ECONOMY_TRACKS_]  ; Railroad tracks count
@@ -1422,6 +1424,13 @@ draw_ui:
 
 ret
 
+
+
+
+
+
+; =========================================== AUDIO SYSTEM ==================|80
+
 init_sound:
    mov al, 182         ; Binary mode, square wave, 16-bit divisor
    out 43h, al         ; Write to PIT command register[2]
@@ -1453,12 +1462,7 @@ stop_sound:
 
 
 
-
-; ==============================================================================
-;
-; DATA SECTION
-;
-; ==============================================================================
+; =========================================== TEXT DATA =====================|80
 
 WelcomeText db 'P1X ASSEMBLY ENGINE V12.02', 0x0
 PressEnterText db 'PRESS ENTER', 0x0
@@ -1470,6 +1474,8 @@ FakeNumberText db '0000', 0x0
 UIBuildModeText db 'F2: Build Mode', 0x0
 UIExploreModeText db 'F2: Explore Mode', 0x0
 UIScoreText db 'Score:', 0x0
+
+; =========================================== AUDIO DATA ====================|80
 
 AudioSamples:
 db 0x80, 0x8C, 0x98, 0xA4, 0xAF, 0xB9, 0xC1, 0xC7
@@ -1488,17 +1494,20 @@ db 0x35, 0x39, 0x3F, 0x47, 0x51, 0x5C, 0x68, 0x74
 ; =========================================== TERRAIN GEN RULES =============|80
 
 TerrainRules:
-db 0, 1, 1, 1  ; Swamp
-db 0, 1, 2, 2  ; Mud
-db 1, 2, 2, 3  ; Some Grass
-db 2, 3, 3, 4  ; Dense Grass
-db 2, 3, 4, 5  ; Bush
-db 4, 5, 5, 6  ; Tree
-db 5, 5, 5, 6  ; Mountain
+db 0, 1, 1, 2   ; 0 Mud 1
+db 1, 1, 2, 3   ; 1 Mud 2
+db 2, 2, 1, 3   ; 2 Mud Grass 1
+db 2, 3, 4, 4   ; 3 Mud Grass 2
+db 3, 4, 4, 5   ; 4 Grass
+db 4, 3, 5, 6   ; 5 Bush
+db 6, 7, 7, 4   ; 6 Trees 1
+db 7, 6, 4, 8   ; 7 Trees 2
+db 7, 8, 8, 9   ; 8 Mountains 1
+db 9, 8, 8, 7   ; 9 Mountain 2
 
 TerrainColors:
-db 0x4         ; Swamp
-db 0x4         ; Mud
+db 0x4         ; Mud 1
+db 0x4         ; Mud 2
 db 0x4         ; Some Grass
 db 0x5         ; Dense Grass
 db 0x5         ; Bush
@@ -1508,14 +1517,7 @@ db 0xA         ; Mountain
 ; =========================================== TILES =========================|80
 
 RailroadsList:
-db 1, 1, 5, 0
-db 1, 1, 2, 3
-db 5, 4, 5, 6
-db 7, 8, 9, 10, 11
-
-TilesCompressed:
-
-TilesCompressedEnd:
+db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
 
 include 'tiles.asm'
 
