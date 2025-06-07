@@ -48,10 +48,10 @@ _ECONOMY_SCORE_           equ _BASE_ + 0x16   ; 2 bytes
 
 ; 25b free to use
 
-_TILES_                   equ _BASE_ + 0x20    ; 40 tiles = 10K = 0x2800
-_MAP_                     equ _BASE_ + 0x4820  ; Map data 128*128*1b= 0x4000
-_METADATA_                equ _BASE_ + 0x8820  ; Map metadata 128*128*1b= 0x4000
-_ENTITIES_                equ _BASE_ + 0xC820  ; Entities 128*128*1b= 0x4000
+_TILES_                   equ _BASE_ + 0x20    ; 64 tiles = 16K
+_MAP_                     equ _BASE_ + 0x4020  ; Map data 128*128*1b= 0x4000
+_METADATA_                equ _BASE_ + 0x8020  ; Map metadata 128*128*1b= 0x4000
+_ENTITIES_                equ _BASE_ + 0xC020  ; Entities 128*128*1b= 0x4000
 ; 35.6K
 
 ; =========================================== GAME STATES ===================|80
@@ -91,6 +91,7 @@ KB_F2       equ 0x3C
 
 ; =========================================== TILES NAMES ===================|80
 
+TILES_COUNT                     equ 0x40    ; 64 tiles
 TILE_MUD_1                      equ 0x00
 TILE_MUD_2                      equ 0x01
 TILE_MUD_GRASS_1                equ 0x02
@@ -637,19 +638,22 @@ init_debug_view:
    mov al, COLOR_BLACK
    call clear_screen
 
-   mov di, 320*16+16
-   xor ax, ax
-   mov cx, (TilesCompressedEnd-TilesCompressed)/2
+   mov di, 320*16+16    ; Position on screen
+   xor ax, ax           ; Sprite ID 0
+   mov cx, TILES_COUNT
    .spr:
       call draw_sprite
-      inc ax
+      inc ax              ; Next prite ID
+
+      .test_new_line:
       mov bx, ax
-      and bx, 0x7
+      and bx, 0xF
       cmp bx, 0
       jne .skip_new_line
-         add di, 320*SPRITE_SIZE-SPRITE_SIZE*8
+         add di, 320*SPRITE_SIZE-SPRITE_SIZE*18 + 320*2
       .skip_new_line:
-      add di, 16
+
+      add di, 18
    loop .spr
 
    mov byte [_GAME_STATE_], STATE_DEBUG_VIEW
@@ -1006,7 +1010,8 @@ draw_transport:
 ret
 
 ; =========================================== DECOMPRESS SPRITE ============|80
-; IN: SI - Compressed sprite data
+; IN: SI - Compressed sprite data address
+; DI - sprites memory data address
 ; OUT: Sprite decompressed to _TILES_
 decompress_sprite:
    lodsb
@@ -1030,7 +1035,7 @@ decompress_sprite:
          and bx, 0x3    ; Cut last 2 bits
          add bx, dx     ; add palette shift
          mov byte bl, [Palettes+bx] ; get color from palette
-         mov byte [_TILES_+di], bl  ; Write pixel color
+         mov byte [di], bl  ; Write pixel color
          inc di           ; Move destination to next pixel
       loop .draw_pixel
 
@@ -1041,20 +1046,20 @@ ret
 ; =========================================== DECOMPRESS TILES ============|80
 ; OUT: Tiles decompressed to _TILES_
 decompress_tiles:
-   xor di, di
-   mov si, Tiles
-   .decompress_next:
-      cmp byte [si], 0xFF
-      jz .done
+  xor di, _TILES_
+  mov si, Tiles
+  .decompress_next:
+    cmp byte [si], 0xFF
+    jz .done
 
-      call decompress_sprite
-      add di, SPRITE_SIZE*SPRITE_SIZE
-   jmp .decompress_next
-   .done:
+    call decompress_sprite
+    ;add di, SPRITE_SIZE*SPRITE_SIZE
+  jmp .decompress_next
+  .done:
 ret
 
 ; =========================================== DRAW TILE =====================|80
-; IN: SI - Tile data
+; `: SI - Tile data
 ; AL - Tile ID
 ; DI - Position
 ; OUT: Tile drawn on the screen
