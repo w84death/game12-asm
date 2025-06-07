@@ -144,6 +144,24 @@ TILE_BUILDING_2                 equ 0x2A
 TILE_BUILDING_3                 equ 0x2B
 TILE_BUILDING_4                 equ 0x2C
 TILE_BUILDING_5                 equ 0x2D
+TILE_BUILDING_5_BLUE            equ 0x2E
+TILE_BUILDING_5_YELLOW          equ 0x2F
+TILE_BUILDING_5_RED             equ 0x30
+
+TILE_ORE_BLUE                   equ 0x31
+TILE_ORE_YELLOW                 equ 0x32
+TILE_ORE_RED                    equ 0x33
+
+TILE_SWITCH_1                   equ 0x34
+TILE_SWITCH_2                   equ 0x35
+TILE_SWITCH_3                   equ 0x36
+TILE_SWITCH_4                   equ 0x37
+TILE_SWITCH_5                   equ 0x38
+
+TILE_CURSOR_1                   equ 0x39
+TILE_CURSOR_2                   equ 0x3A
+TILE_CURSOR_3                   equ 0x3B
+TILE_CURSOR_4                   equ 0x3C
 
 TILE_BUILDING_EXTRACTOR       equ 19
 
@@ -878,9 +896,13 @@ generate_map:
          lodsb
 
          .check_invisible_walls:
-         cmp al, TILE_MOUNTAIN
+         cmp al, TILE_MOUNTAINS_1
          je .set_wall
-         cmp al, TILE_TREE
+         cmp al, TILE_MOUNTAINS_2
+         je .set_wall
+         cmp al, TILE_TREES_1
+         je .set_wall
+         cmp al, TILE_TREES_2
          je .set_wall
          cmp al, TILE_BUSH
 
@@ -1265,10 +1287,10 @@ init_gameplay_elements:
       add byte [di], META_TRANSPORT
       inc di
    loop .add_meta
-   mov byte [di-MAP_SIZE-8], TILE_MUD+META_TRANSPORT
-   mov byte [di-MAP_SIZE*2-8], TILE_MUD+META_TRANSPORT
-   mov byte [di+MAP_SIZE-2], TILE_MUD+META_TRANSPORT
-   mov byte [di+MAP_SIZE*2-2], TILE_MUD+META_TRANSPORT
+   mov byte [di-MAP_SIZE-8], TILE_MUD_1+META_TRANSPORT
+   mov byte [di-MAP_SIZE*2-8], TILE_MUD_1+META_TRANSPORT
+   mov byte [di+MAP_SIZE-2], TILE_MUD_2+META_TRANSPORT
+   mov byte [di+MAP_SIZE*2-2], TILE_MUD_1+META_TRANSPORT
 
 
    mov di, _MAP_ + 128*63+66
@@ -1281,12 +1303,12 @@ init_gameplay_elements:
    mov di, _MAP_ + 128*64+66
    mov cx, 4
    .add_meta3:
-      mov byte [di], TILE_FOUNDATION_STATION+META_TRANSPORT
+      mov byte [di], TILE_FOUNDATION_STATION_2+META_TRANSPORT
       inc di
    loop .add_meta3
 
    mov di, _MAP_ + 128*64+65
-   mov byte [di], TILE_FOUNDATION_EXTRACTION+META_TRANSPORT
+   mov byte [di], TILE_FOUNDATION_STATION_2+META_TRANSPORT
 
    mov di, _ENTITIES_
    mov word [di], 0x4042 ; 64x64
