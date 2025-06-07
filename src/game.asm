@@ -91,23 +91,60 @@ KB_F2       equ 0x3C
 
 ; =========================================== TILES NAMES ===================|80
 
-TILE_MUD                      equ 0x0
-TILE_MUD2                     equ 0x1
-TILE_MUD_GRASS                equ 0x2
-TILE_GRASS                    equ 0x3
-TILE_BUSH                     equ 0x4
-TILE_TREE                     equ 0x5
-TILE_MOUNTAIN                 equ 0x6
-TILE_FOUNDATION               equ 0x7
-TILE_FOUNDATION_STATION       equ 0x8
-TILE_FOUNDATION_EXTRACTION    equ 0x9
-META_TILES_MASK               equ 0x1F
+TILE_MUD_1                      equ 0x00
+TILE_MUD_2                      equ 0x01
+TILE_MUD_GRASS_1                equ 0x02
+TILE_MUD_GRASS_2                equ 0x03
+TILE_GRASS                      equ 0x04
+TILE_BUSH                       equ 0x05
+TILE_TREES_1                    equ 0x06
+TILE_TREES_2                    equ 0x07
+TILE_MOUNTAINS_1                equ 0x08
+TILE_MOUNTAINS_2                equ 0x09
 
-TILE_CART_VERTICAL            equ 16
-TILE_CART_HORIZONTAl          equ 17
-TILE_BUILDING_1               equ 16
-TILE_BUILDING_2               equ 17
-TILE_BUILDING_3               equ 18
+TILE_RIVER_1                    equ 0x0A
+TILE_RIVER_2                    equ 0x0B
+TILE_RIVER_3                    equ 0x0C
+TILE_RIVER_4                    equ 0x0D
+TILE_RIVER_5                    equ 0x0E
+TILE_RIVER_6                    equ 0x0F
+TILE_RIVER_7                    equ 0x10
+TILE_RIVER_8                    equ 0x11
+
+TILE_FOUNDATION                 equ 0x12
+TILE_FOUNDATION_STATION_1       equ 0x13
+TILE_FOUNDATION_STATION_2       equ 0x14
+
+
+TILE_PLANT_YELLOW_1             equ 0x15
+TILE_PLANT_YELLOW_2             equ 0x16
+TILE_PLANT_BLUE_1               equ 0x17
+TILE_PLANT_BLUE_2               equ 0x18
+TILE_PLANT_RED_1                equ 0x19
+TILE_PLANT_RED_2                equ 0x1A
+
+TILE_CART_VERTICAL              equ 0x1B
+TILE_CART_HORIZONTAl            equ 0x1C
+
+TILE_RAILS_1                    equ 0x1D
+TILE_RAILS_2                    equ 0x1E
+TILE_RAILS_3                    equ 0x1F
+TILE_RAILS_4                    equ 0x20
+TILE_RAILS_5                    equ 0x21
+TILE_RAILS_6                    equ 0x22
+TILE_RAILS_7                    equ 0x23
+TILE_RAILS_8                    equ 0x24
+TILE_RAILS_9                    equ 0x25
+TILE_RAILS_10                   equ 0x26
+TILE_RAILS_11                   equ 0x27
+TILE_RAILS_12                   equ 0x28
+
+TILE_BUILDING_1                 equ 0x29
+TILE_BUILDING_2                 equ 0x2A
+TILE_BUILDING_3                 equ 0x2B
+TILE_BUILDING_4                 equ 0x2C
+TILE_BUILDING_5                 equ 0x2D
+
 TILE_BUILDING_EXTRACTOR       equ 19
 
 TILE_RESOURCE_BLUE            equ 29
@@ -117,6 +154,9 @@ TILE_RESOURCE_RED             equ 31
 TILE_RAILROADS                equ 10
 CURSOR_NORMAL                 equ 22
 CURSOR_BUILD                  equ 21
+
+
+META_TILES_MASK                 equ 0x1F
 
 META_INVISIBLE_WALL           equ 0x20    ; For collision detection
 META_TRANSPORT                equ 0x40    ; For railroads
@@ -947,8 +987,6 @@ ret
 ; IN: SI - Compressed sprite data
 ; OUT: Sprite decompressed to _TILES_
 decompress_sprite:
-   pusha
-
    lodsb
    movzx dx, al   ; save palette
    shl dx, 2      ; multiply by 4 (palette size)
@@ -976,27 +1014,21 @@ decompress_sprite:
 
    pop cx                   ; Restore line counter
    loop .plot_line
-  popa
 ret
 
 ; =========================================== DECOMPRESS TILES ============|80
 ; OUT: Tiles decompressed to _TILES_
 decompress_tiles:
    xor di, di
-   mov cx, TilesCompressedEnd-TilesCompressed
+   mov si, Tiles
    .decompress_next:
-      push cx
-
-      mov bx, TilesCompressedEnd-TilesCompressed
-      sub bx, cx
-      shl bx, 1
-      mov si, [TilesCompressed+bx]
+      cmp byte [si], 0xFF
+      jz .done
 
       call decompress_sprite
       add di, SPRITE_SIZE*SPRITE_SIZE
-
-      pop cx
-   loop .decompress_next
+   jmp .decompress_next
+   .done:
 ret
 
 ; =========================================== DRAW TILE =====================|80
@@ -1464,13 +1496,7 @@ db 5, 4, 5, 6
 db 7, 8, 9, 10, 11
 
 TilesCompressed:
-dw SwampTile, MudTile, SomeGrassTile, DenseGrassTile, BushTile, TreeTile, MountainTile, FoundationBuildingTile, FoundationStationTile, FoundationExtractionTile ; 10
-dw Railroads3Sprite, Railroads5Sprite, Railroads6Sprite, Railroads7Sprite, Railroads9Sprite, Railroads10Sprite, Railroads11Sprite
-dw Railroads12Sprite, Railroads13Sprite, Railroads14Sprite, Railroads15Sprite
-dw CursorBuildSprite, CursorSprite
-dw CartVerticalSprite, CartHorizontalSprite
-dw House0Sprite, House1Sprite, House2Sprite, House3Sprite
-dw ResourceBlueSprite, ResourceYellowSprite, ResourceRedSprite
+
 TilesCompressedEnd:
 
 include 'tiles.asm'
