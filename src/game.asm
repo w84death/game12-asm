@@ -165,7 +165,9 @@ META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
 
 META_INVISIBLE_WALL           equ 0x20  ; For collision detection
 META_TRANSPORT                equ 0x40  ; For railroads
-META_SWITCH                   equ 0x80  ; Railroad switch
+META_BUILDING                 equ 0x80  ; Railroad switch
+META_EMPTY1                   equ 0x100 ; Empty tile 1
+META_EMPTY2                   equ 0x200 ; Empty tile 2
 
 META_EMPTY                    equ 0x00
 META_TRAIN                    equ 0x01
@@ -513,9 +515,6 @@ init_engine:
   call init_sound
   call decompress_tiles
   call generate_map
-  ; call init_entities
-  call init_gameplay_elements
-
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN_INIT
 
 jmp game_state_satisfied
@@ -554,6 +553,7 @@ init_title_screen:
   mov bl, COLOR_WHITE
   call draw_text
 
+  mov ax, 4560        ; Middle C frequency divisor
   call play_sound
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 jmp game_state_satisfied
@@ -602,8 +602,6 @@ jmp game_state_satisfied
 
 new_game:
   call generate_map
-  ; call init_entities
-  call init_gameplay_elements
   call reset_to_default_values
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
@@ -1241,72 +1239,6 @@ draw_minimap:
       mov cx, VIEWPORT_WIDTH/2
       rep stosw
 ret
-
-init_gameplay_elements:
-  mov di, _MAP_ + 128*64+64
-  mov cx, 8
-  .add_meta:
-    and byte [di], 3
-    add byte [di], META_TRANSPORT
-    inc di
-  loop .add_meta
-  mov byte [di-MAP_SIZE-8], TILE_MUD_1+META_TRANSPORT
-  mov byte [di-MAP_SIZE*2-8], TILE_MUD_1+META_TRANSPORT
-  mov byte [di+MAP_SIZE-2], TILE_MUD_2+META_TRANSPORT
-  mov byte [di+MAP_SIZE*2-2], TILE_MUD_1+META_TRANSPORT
-
-
-  mov di, _MAP_ + 128*63+66
-  mov cx, 6
-  .add_meta2:
-    mov byte [di], TILE_FOUNDATION
-    inc di
-  loop .add_meta2
-
-  mov di, _MAP_ + 128*64+66
-  mov cx, 4
-  .add_meta3:
-    mov byte [di], TILE_FOUNDATION_STATION_2+META_TRANSPORT
-    inc di
-  loop .add_meta3
-
-  mov di, _MAP_ + 128*64+65
-  mov byte [di], TILE_FOUNDATION_STATION_2+META_TRANSPORT
-
-  mov di, _ENTITIES_
-  mov word [di], 0x4042 ; 64x64
-  mov byte [di+2], TILE_CART_HORIZONTAl
-  mov byte [di+3], META_EMPTY_CART
-
-  add di, 4
-  mov word [di], 0x4043
-  mov byte [di+2], TILE_CART_HORIZONTAl
-  mov byte [di+3], META_EMPTY_CART+ENTITY_META_CART+ENTITY_META_RESOURCE_BLUE
-
-  add di, 4
-  mov word [di], 0x4044
-  mov byte [di+2], TILE_CART_HORIZONTAl
-  mov byte [di+3], META_EMPTY_CART+ENTITY_META_CART+ENTITY_META_RESOURCE_YELLOW
-
-  add di, 4
-  mov word [di], 0x4045
-  mov byte [di+2], TILE_CART_HORIZONTAl
-  mov byte [di+3], META_EMPTY_CART+ENTITY_META_CART+ENTITY_META_RESOURCE_RED
-
-  add di, 4
-  mov word [di], 0x3F44 ; 64x64
-  mov byte [di+2], TILE_BUILDING_BARRACK
-  mov byte [di+3], META_EMPTY
-  add di, 4
-  mov word [di], 0x3F45 ; 64x64
-  mov byte [di+2], TILE_BUILDING_FACTORY
-  mov byte [di+3], META_EMPTY
-  add di, 4
-  mov word [di], 0x3F47 ; 64x64
-  mov byte [di+2], TILE_BUILDING_RADAR
-  mov byte [di+3], META_EMPTY
-ret
-
 
 ; =========================================== DRAW UI =======================|80
 
