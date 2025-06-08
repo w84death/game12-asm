@@ -980,51 +980,51 @@ caculate_and_draw_rails:
   jz .done_calculating
     add al, 0x1
   .done_calculating:
-  mov dl, al              ; Save connection pattern
+  mov dl, al                            ; Save connection pattern
 
   inc si
   mov bx, RailroadsList
   xlatb
-  add al, TILE_RAILS_1  ; Shift to railroad tiles
+  add al, TILE_RAILS_1                  ; Shift to first railroad tiles
   call draw_sprite
 
-  cmp dl, 0x7
-  je .draw_switch_lr
-  cmp dl, 0xB
-  je .draw_switch_ud
-  cmp dl, 0x0D
-  je .draw_switch_lr
-  cmp dl, 0x0E
-  je .draw_switch_ud
-  jmp .done
+  .calculate_correct_switch:
+    cmp dl, 0x7
+    je .prepare_switch_horizontal
+    cmp dl, 0xB
+    je .prepare_switch_vertical
+    cmp dl, 0x0D
+    je .prepare_switch_horizontal
+    cmp dl, 0x0E
+    je .prepare_switch_vertical
+    jmp .no_switch
 
-  .draw_switch_lr:
-    mov dl, 0   ; left
-    mov dh, METADATA_SWITCH_INITIALIZED
+  .prepare_switch_horizontal:
+    mov dl, 0                           ; left switch ID
+    mov dh, METADATA_SWITCH_INITIALIZED ; data for saving in _METADATA_
     jmp .draw_switch
-  .draw_switch_ud:
-    mov dl, 1   ; down
-    mov dh, 1+METADATA_SWITCH_INITIALIZED
+  .prepare_switch_vertical:
+    mov dl, 1                           ; down switch ID
+    mov dh, 1+METADATA_SWITCH_INITIALIZED ; data for saving in _METADATA_
   .draw_switch:
-  push si
-  sub si, _MAP_
-  add si, _METADATA_
-  mov al, [si]
+  push si                               ; save tile position
+  sub si, _MAP_                         ; calculate position in _MAP_
+  add si, _METADATA_                    ; add it to the _METADATA_ for same pos
+  mov al, [si]                          ; read _METADATA_ for this tile
   test al, METADATA_SWITCH_INITIALIZED
   jnz .switch_initialized
-    and al, METADATA_SWITCH_MASK
-    shr al, METADATA_SWITCH_SHIFT
-    mov byte [si], dh
-    mov al, dl
+  .initialize_switch:
+    mov byte [si], dh                   ; save horizontal/vertical to _METADATA_
+    mov al, dl                          ; save switch ID for drawing
   jmp .draw_initialized_switch
   .switch_initialized:
   and al, METADATA_SWITCH_MASK
   shr al, METADATA_SWITCH_SHIFT
   .draw_initialized_switch:
-  add al, TILE_SWITCH_LEFT
-  pop si
+  add al, TILE_SWITCH_LEFT              ; shift to first switch sprite data
+  pop si                                ; load tile position
   call draw_sprite
-  .done:
+  .no_switch:
 ret
 
 ; =========================================== DECOMPRESS SPRITE ============|80
