@@ -159,7 +159,7 @@ TILE_SWITCH_STOP                equ 0x37
 TILE_CURSOR_BUILD               equ 0x38
 TILE_CURSOR_PAN                 equ 0x39
 TILE_CURSOR_EDIT                equ 0x3A
-TILE_CURSOR_X                   equ 0x3B
+TILE_CURSOR_REMOVE                   equ 0x3B
 
 META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
 
@@ -178,9 +178,9 @@ ENTITY_META_RESOURCE_YELLOW   equ 0x10
 ENTITY_META_RESOURCE_RED      equ 0x20
 
 MODE_VIEWPORT_PANNING         equ 0x00
-MODE_TRACKS_PLACING           equ 0x01
-MODE_FOUNDATION_PLACING       equ 0x02
-MODE_BUILDING_CONSTRUCTION    equ 0x03
+MODE_INFRASTRUCTURE_PLACING   equ 0x01
+MODE_INFRASTRUCTURE_EDIT      equ 0x02
+MODE_INFRASTRUCTURE_REMOVE    equ 0x03
 
 UI_POSITION                   Equ 320*160
 UI_FIRST_LINE                 equ 320*164
@@ -284,12 +284,16 @@ check_keyboard:
   jne .done
 
   cmp byte [_INTERACTION_MODE_], MODE_VIEWPORT_PANNING
-  je .viewport_panning
-  cmp byte [_INTERACTION_MODE_], MODE_TRACKS_PLACING
-  je .tracks_building
+  je .viewport_panning_mode
+  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_PLACING
+  je .interactive_mode
+  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_EDIT
+  je .interactive_mode
+  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_REMOVE
+  je .interactive_mode
   jmp .done
 
-  .viewport_panning:
+  .viewport_panning_mode:
     cmp ah, KB_UP
     je .move_viewport_up
     cmp ah, KB_DOWN
@@ -299,7 +303,22 @@ check_keyboard:
     cmp ah, KB_RIGHT
     je .move_viewport_right
     cmp ah, KB_F2
-    je .swap_mode
+    je .change_mode
+  jmp .done
+
+  .interactive_mode:
+    cmp ah, KB_UP
+    je .move_cursor_up
+    cmp ah, KB_DOWN
+    je .move_cursor_down
+    cmp ah, KB_LEFT
+    je .move_cursor_left
+    cmp ah, KB_RIGHT
+    je .move_cursor_right
+    cmp ah, KB_SPACE
+    je .do_interaction
+    cmp ah, KB_F2
+    je .change_mode
   jmp .done
 
   .move_viewport_up:
@@ -327,23 +346,9 @@ check_keyboard:
     inc word [_CURSOR_X_]
   jmp .redraw_terrain
 
-  .tracks_building:
-    cmp ah, KB_UP
-    je .move_cursor_up
-    cmp ah, KB_DOWN
-    je .move_cursor_down
-    cmp ah, KB_LEFT
-    je .move_cursor_left
-    cmp ah, KB_RIGHT
-    je .move_cursor_right
-    cmp ah, KB_SPACE
-    je .construct_railroad
-    cmp ah, KB_F2
-    je .swap_mode
-  jmp .done
-
-  .swap_mode:
-    xor byte [_INTERACTION_MODE_], 0x1
+  .change_mode:
+    inc byte [_INTERACTION_MODE_]
+    and byte [_INTERACTION_MODE_], 0x3  ; 0-3
     call draw_ui
     jmp .redraw_tile
 
@@ -374,7 +379,8 @@ check_keyboard:
     inc word [_CURSOR_X_]
   jmp .redraw_tile
 
-  .construct_railroad:
+  .do_interaction:
+    ; if tracks building
     cmp word [_ECONOMY_TRACKS_], 0      ; check economy: track count
     jz .done
 
@@ -397,7 +403,7 @@ check_keyboard:
     mov [di], al               ; set railroad tile
 
     call draw_ui
-    jmp .redraw_tile
+  jmp .redraw_tile
 
   .redraw_tile:
     ; to be optimize later
@@ -1166,11 +1172,29 @@ draw_cursor:
   add bx, ax              ; Y * 16 * 320 + X * 16
   mov di, bx              ; Move result to DI
 
-  mov al, TILE_CURSOR_PAN
-  cmp byte [_INTERACTION_MODE_], MODE_TRACKS_PLACING
-  jne .skip_build_cursor
+
+  cmp byte [_INTERACTION_MODE_], MODE_VIEWPORT_PANNING
+  jz .panning_cursor
+  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_PLACING
+  jz .placing_cursor
+  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_EDIT
+  jz .edit_cursor
+  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_REMOVE
+  jz .remove_cursor
+
+  .panning_cursor:
+    mov al, TILE_CURSOR_PAN
+    jmp .draw_selected_cursor
+  .placing_cursor:
     mov al, TILE_CURSOR_BUILD
-  .skip_build_cursor:
+    jmp .draw_selected_cursor
+  .edit_cursor:
+    mov al, TILE_CURSOR_EDIT
+    jmp .draw_selected_cursor
+  .remove_cursor:
+    mov al, TILE_CURSOR_REMOVE
+
+  .draw_selected_cursor:
   call draw_sprite
 ret
 
@@ -1299,11 +1323,29 @@ draw_ui:
    mov bl, COLOR_WHITE
    call draw_number
 
-   mov si, UIExploreModeText
-   cmp byte [_INTERACTION_MODE_], MODE_TRACKS_PLACING
-   jne .skip_build_mode
-      mov si, UIBuildModeText
-   .skip_build_mode:
+   cmp byte [_INTERACTION_MODE_], MODE_VIEWPORT_PANNING
+   jz .panning_mode
+   cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_PLACING
+   jz .placing_mode
+   cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_EDIT
+   jz .edit_mode
+   cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_REMOVE
+   jz .remove_mode
+
+  .panning_mode:
+    mov si, UIExploreModeText
+    jmp .write_mode
+  .placing_mode:
+    mov si, UIBuildModeText
+    jmp .write_mode
+  .edit_mode:
+    mov si, UIEditModeText
+    jmp .write_mode
+  .remove_mode:
+    mov si, UIRemoveModeText
+
+
+   .write_mode:
    mov dx, 0x01714
    mov bl, COLOR_NAVY_BLUE
    call draw_text
@@ -1333,7 +1375,6 @@ init_sound:
 ret
 
 play_sound:
-   mov ax, 4560        ; Middle C frequency divisor
    out 42h, al         ; Low byte first
    mov al, ah
    out 42h, al         ; High byte[2]
@@ -1367,25 +1408,11 @@ MainMenuTitleText db '"Mycelium Overlords"',0x0
 MainMenuText db 'F1: New Map | ENTER: Play | ESC: Quit',0x0
 MainMenuCopyText db '(C) 2025 P1X',0x0
 FakeNumberText db '0000', 0x0
-UIBuildModeText db 'F2: Build Mode', 0x0
 UIExploreModeText db 'F2: Explore Mode', 0x0
+UIBuildModeText db 'F2: Build Mode', 0x0
+UIEditModeText db 'F2: Edit Mode', 0x0
+UIRemoveModeText db 'F2: Remove Mode', 0x0
 UIScoreText db 'Score:', 0x0
-
-; =========================================== AUDIO DATA ====================|80
-
-AudioSamples:
-db 0x80, 0x8C, 0x98, 0xA4, 0xAF, 0xB9, 0xC1, 0xC7
-db 0xCB, 0xCD, 0xCC, 0xC9, 0xC4, 0xBD, 0xB3, 0xA8
-db 0x9C, 0x8F, 0x83, 0x77, 0x6D, 0x65, 0x5F, 0x5B
-db 0x5A, 0x5B, 0x5F, 0x65, 0x6D, 0x77, 0x83, 0x8F
-db 0x9C, 0xA8, 0xB3, 0xBD, 0xC4, 0xC9, 0xCC, 0xCD
-db 0xCB, 0xC7, 0xC1, 0xB9, 0xAF, 0xA4, 0x98, 0x8C
-db 0x80, 0x74, 0x68, 0x5C, 0x51, 0x47, 0x3F, 0x39
-db 0x35, 0x33, 0x34, 0x37, 0x3C, 0x43, 0x4D, 0x58
-db 0x64, 0x71, 0x7D, 0x89, 0x93, 0x9B, 0xA1, 0xA5
-db 0xA6, 0xA5, 0xA1, 0x9B, 0x93, 0x89, 0x7D, 0x71
-db 0x64, 0x58, 0x4D, 0x43, 0x3C, 0x37, 0x34, 0x33
-db 0x35, 0x39, 0x3F, 0x47, 0x51, 0x5C, 0x68, 0x74
 
 ; =========================================== TERRAIN GEN RULES =============|80
 
