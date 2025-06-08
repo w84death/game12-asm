@@ -385,6 +385,8 @@ check_keyboard:
     mov al, [di]                        ; get tile data at current place
     test al, META_TRANSPORT             ; check if empty
     jnz .done
+    test al, META_INVISIBLE_WALL
+    jz .done
 
     dec word [_ECONOMY_TRACKS_]         ; decrease track count
 
@@ -826,7 +828,6 @@ mov ah, al
   .draw_gradient:
     mov cx, SCREEN_WIDTH*4           ; Number of pixels high for each bar
     rep stosw               ; Write to the VGA memory
-
     cmp dl, 0x8             ; Check if we are in the middle
     jl .down                ; If not, decrease
     inc al                  ; Increase color in right pixel
@@ -834,7 +835,6 @@ mov ah, al
     .down:
     dec al                  ; Decrease color in left pixel
     .up:
-
     xchg al, ah             ; Swap colors (left/right pixel)
     dec dl                  ; Decrease number of bars to draw
     jg .draw_gradient       ; Loop until all bars are drawn
@@ -845,75 +845,41 @@ TERRAIN_RULES_MASK equ 0x03
 generate_map:
   mov di, _MAP_
   mov si, TerrainRules
-  mov cx, MAP_SIZE
-
+  mov cx, MAP_SIZE                      ; Height
   .next_row:
-    mov dx, MAP_SIZE
-    .next_cell:
-      cmp dx, MAP_SIZE
-      jne .not_first
-        call get_random
-        and ax, TERRAIN_RULES_MASK
-        mov [di], al
-        jmp .check_top
-      .not_first:
-
-      .check_left:
-      movzx bx, [di-1]
-      shl bx, 2
-      call get_random
-      and ax, TERRAIN_RULES_MASK
-      add bx, ax
-      mov al, [si+bx]
-      mov [di], al            ; Save terrain tile ID
-
-      cmp cx, MAP_SIZE
-      je .skip_first_row
-      .check_top:
-      movzx bx, [di-MAP_SIZE]
-      shl bx, 2
-      call get_random
-      and ax, TERRAIN_RULES_MASK
-      add bx, ax
-      mov bl, [si+bx]
-
-      call get_random
-      test ax, 0x1
-      jnz .skip_first_row
-      mov [di], bl            ; Save terrain tile ID
-      mov al, bl
-      .skip_first_row:
-
-      inc di
-      dec dx
-    jnz .next_cell
+    mov dx, MAP_SIZE                    ; Width
+    .next_col:
+      call get_random                   ; AX is random value
+      and ax, TERRAIN_RULES_MASK        ; Crop to 0-3
+      mov [di], al                      ; Save terrain tile
+      cmp dx, MAP_SIZE                  ; Check if first col
+      je .skip_cell
+      cmp cx, MAP_SIZE                  ; Check if first row
+      je .skip_cell
+      movzx bx, [di-1]                  ; Get left tile
+      test al, 0x1                      ; If odd value skip checking top
+      jz .skip_top
+      movzx bx, [di-MAP_SIZE]           ; Get top tile
+      .skip_top:
+      shl bx, 2                         ; Mul by 4 to fit rules table
+      add bx, ax                        ; Get random rule for the tile ID
+      mov al, [si+bx]                   ; Get the tile ID from rules table
+      mov [di], al                      ; Save terrain tile
+      .skip_cell:
+      inc di                            ; Next map tile cell
+      dec dx                            ; Next column (couner is top-down)
+    jnz .next_col
   loop .next_row
 
-  .set_metata:
-    mov di, _MAP_
-    mov si, di
+  .set_metadata:
+    mov si, _MAP_
     mov cx, MAP_SIZE*MAP_SIZE
     .meta_next_cell:
-      lodsb
-
-      .check_invisible_walls:
-      cmp al, TILE_MOUNTAINS_1
-      je .set_wall
-      cmp al, TILE_MOUNTAINS_2
-      je .set_wall
-      cmp al, TILE_TREES_1
-      je .set_wall
-      cmp al, TILE_TREES_2
-      je .set_wall
-      cmp al, TILE_BUSH
-
-      jmp .skip_invisible_walls
-
-      .set_wall:
-        add al, META_INVISIBLE_WALL
-      .skip_invisible_walls:
-
-      stosb
+      cmp byte [si], TILE_TREES_1
+      jge .skip
+      add byte [si], META_INVISIBLE_WALL
+      .skip:
+      inc si
     loop .meta_next_cell
 ret
 
@@ -1048,9 +1014,7 @@ decompress_tiles:
   .decompress_next:
     cmp byte [si], 0xFF
     jz .done
-
     call decompress_sprite
-    ;add di, SPRITE_SIZE*SPRITE_SIZE
   jmp .decompress_next
   .done:
 ret
