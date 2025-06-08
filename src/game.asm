@@ -23,6 +23,11 @@
 ; * Graphics: EGA Enchanced (8x16)
 ; * RAM: 512KB
 ;
+; Programs used for production:
+;   - Zed IDE
+;   - Pro Motion NG
+;   - custom toolset for tileset conversion
+;
 ; ==============================================================================
 ; Latest revision: 06/2025
 ; ==============================================================================
@@ -138,7 +143,7 @@ TILE_RAILS_10                   equ 0x26
 TILE_RAILS_11                   equ 0x27
 
 TILE_BUILDING_BARRACK           equ 0x28
-TILE_BUILDING_FACTORY           equ 0x29
+TILE_BUILDING_RAFINERY          equ 0x29
 TILE_BUILDING_RADAR             equ 0x2A
 TILE_BUILDING_ARM               equ 0x2B
 TILE_BUILDING_EXTRACT           equ 0x2C
@@ -150,39 +155,49 @@ TILE_ORE_BLUE                   equ 0x30
 TILE_ORE_YELLOW                 equ 0x31
 TILE_ORE_RED                    equ 0x32
 
-TILE_SWITCH_DOWN                equ 0x33
-TILE_SWITCH_UP                  equ 0x34
+TILE_SWITCH_LEFT                equ 0x33
+TILE_SWITCH_DOWN                equ 0x34
 TILE_SWITCH_RIGHT               equ 0x35
-TILE_SWITCH_LEFT                equ 0x36
+TILE_SWITCH_UP                  equ 0x36
 TILE_SWITCH_STOP                equ 0x37
 
 TILE_CURSOR_BUILD               equ 0x38
 TILE_CURSOR_PAN                 equ 0x39
 TILE_CURSOR_EDIT                equ 0x3A
-TILE_CURSOR_REMOVE                   equ 0x3B
+TILE_CURSOR_REMOVE              equ 0x3B
 
 META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
-
 META_INVISIBLE_WALL           equ 0x20  ; For collision detection
 META_TRANSPORT                equ 0x40  ; For railroads
-META_BUILDING                 equ 0x80  ; Railroad switch
-META_EMPTY1                   equ 0x100 ; Empty tile 1
-META_EMPTY2                   equ 0x200 ; Empty tile 2
+META_FOG                      equ 0x80  ; Fog of War
 
-META_EMPTY                    equ 0x00
-META_TRAIN                    equ 0x01
-META_EMPTY_CART               equ 0x02
-ENTITY_META_CART              equ 0x04
-ENTITY_META_RESOURCE_BLUE     equ 0x08
-ENTITY_META_RESOURCE_YELLOW   equ 0x10
-ENTITY_META_RESOURCE_RED      equ 0x20
+METADATA_SWITCH_INITIALIZED          equ 0x01  ;
+METADATA_SWITCH_MASK          equ 0x0C  ; For rails
+METADATA_SWITCH_SHIFT         equ 0x02
+METADATA_1 equ 0x10
+METADATA_2 equ 0x20
+METADATA_3 equ 0x40
+
+META_ENTITY_MASK              equ 0x1F  ; 5 bits for sprite data (32 tiles max)
+META_CART                     equ 0x01
+META_BUILDING                 equ 0x02
+META_RESOURCE                 equ 0x04
+META_RESOURCE_TYPE_MASK       equ 0xE7  ; 0-3 - for plants and carts
+META_RESOURCE_TYPE_SHIFT      equ 0x04
+META_RESOURCE_BLUE            equ 1
+META_RESOURCE_YELLOW          equ 2
+META_RESOURCE_RED             equ 3
+
+META_PLANT_SIZE               equ 0x20  ; small - big
+META_DIRECTION_MASK           equ 0xC0  ; for carts
+META_DIRECTION_SHIFT          equ 0x06
 
 MODE_VIEWPORT_PANNING         equ 0x00
 MODE_INFRASTRUCTURE_PLACING   equ 0x01
 MODE_INFRASTRUCTURE_EDIT      equ 0x02
 MODE_INFRASTRUCTURE_REMOVE    equ 0x03
 
-UI_POSITION                   Equ 320*160
+UI_POSITION                   equ 320*160
 UI_FIRST_LINE                 equ 320*164
 UI_LINES                      equ 40
 
@@ -908,9 +923,9 @@ draw_terrain:
       call draw_tile
 
       test bl, META_TRANSPORT
-      jz .skip_draw_transport
-        call draw_transport
-      .skip_draw_transport:
+      jz .skip_rails
+        call caculate_and_draw_rails
+      .skip_rails:
 
       add di, SPRITE_SIZE
     loop .draw_cell
@@ -942,14 +957,10 @@ redraw_terrain_tile:
   and al, META_TILES_MASK ; clear metadata
   call draw_tile
   pop si
-  test bl, META_TRANSPORT
-  jz .skip_draw_transport
-    call draw_transport
-  .skip_draw_transport:
 ret
 
 
-draw_transport:
+caculate_and_draw_rails:
   xor ax, ax
   dec si
   .test_up:
@@ -969,11 +980,51 @@ draw_transport:
   jz .done_calculating
     add al, 0x1
   .done_calculating:
+  mov dl, al              ; Save connection pattern
+
   inc si
   mov bx, RailroadsList
   xlatb
   add al, TILE_RAILS_1  ; Shift to railroad tiles
   call draw_sprite
+
+  cmp dl, 0x7
+  je .draw_switch_lr
+  cmp dl, 0xB
+  je .draw_switch_ud
+  cmp dl, 0x0D
+  je .draw_switch_lr
+  cmp dl, 0x0E
+  je .draw_switch_ud
+  jmp .done
+
+  .draw_switch_lr:
+    mov dl, 0   ; left
+    mov dh, METADATA_SWITCH_INITIALIZED
+    jmp .draw_switch
+  .draw_switch_ud:
+    mov dl, 1   ; down
+    mov dh, 1+METADATA_SWITCH_INITIALIZED
+  .draw_switch:
+  push si
+  sub si, _MAP_
+  add si, _METADATA_
+  mov al, [si]
+  test al, METADATA_SWITCH_INITIALIZED
+  jnz .switch_initialized
+    and al, METADATA_SWITCH_MASK
+    shr al, METADATA_SWITCH_SHIFT
+    mov byte [si], dh
+    mov al, dl
+  jmp .draw_initialized_switch
+  .switch_initialized:
+  and al, METADATA_SWITCH_MASK
+  shr al, METADATA_SWITCH_SHIFT
+  .draw_initialized_switch:
+  add al, TILE_SWITCH_LEFT
+  pop si
+  call draw_sprite
+  .done:
 ret
 
 ; =========================================== DECOMPRESS SPRITE ============|80
@@ -1128,14 +1179,16 @@ draw_entities:
 
     .check_if_cart:
       lodsb                ; Load META data
-      test al, ENTITY_META_CART
+      test al, META_CART
       jz .next_entity
 
-      test al, ENTITY_META_RESOURCE_BLUE
+      and al, META_RESOURCE_TYPE_MASK
+      shr al, META_RESOURCE_TYPE_SHIFT
+      cmp al, META_RESOURCE_BLUE
       jnz .draw_blue_cart
-      test al, ENTITY_META_RESOURCE_YELLOW
+      cmp al, META_RESOURCE_YELLOW
       jnz .draw_yellow_cart
-      test al, ENTITY_META_RESOURCE_RED
+      cmp al, META_RESOURCE_RED
       jnz .draw_red_cart
       jmp .next_entity
 
