@@ -52,6 +52,9 @@ _ECONOMY_BLUE_RES_        equ _BASE_ + 0x12   ; 2 bytes
 _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x14   ; 2 bytes
 _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
+_MUSIC_POINTER_           equ _BASE_ + 0x1A    ; 2 bytes
+_SFX_POINTER_             equ _BASE_ + 0x1C    ; 2 bytes
+_CURRENT_SONG_            equ _BASE_ + 0x1E    ; 2 bytes
 
 _TILES_                   equ _BASE_ + 0x0100  ; 64 tiles = 16K
 _MAP_                     equ _BASE_ + 0x4100  ; Map data 128*128*1b= 0x4000
@@ -232,6 +235,50 @@ COLOR_CYAN          equ 13
 COLOR_YELLOW        equ 14
 COLOR_WHITE         equ 15
 
+; =========================================== MUSICAL NOTES =================|80
+; Note values are frequency divisors for the PC speaker
+; Formula: divisor = 1193180 / frequency_hz
+
+NOTE_REST   equ 0x0000  ; Rest (silence)
+NOTE_C3     equ 0x2394  ; 130.81 Hz
+NOTE_CS3    equ 0x2187  ; 138.59 Hz
+NOTE_D3     equ 0x1F8F  ; 146.83 Hz
+NOTE_DS3    equ 0x1DA8  ; 155.56 Hz
+NOTE_E3     equ 0x1BD0  ; 164.81 Hz
+NOTE_F3     equ 0x1A07  ; 174.61 Hz
+NOTE_FS3    equ 0x184C  ; 185.00 Hz
+NOTE_G3     equ 0x169E  ; 196.00 Hz
+NOTE_GS3    equ 0x14FC  ; 207.65 Hz
+NOTE_A3     equ 0x1365  ; 220.00 Hz
+NOTE_AS3    equ 0x11D9  ; 233.08 Hz
+NOTE_B3     equ 0x1056  ; 246.94 Hz
+
+NOTE_C4     equ 0x11CA  ; 261.63 Hz (Middle C)
+NOTE_CS4    equ 0x10C4  ; 277.18 Hz
+NOTE_D4     equ 0x0FC8  ; 293.66 Hz
+NOTE_DS4    equ 0x0ED4  ; 311.13 Hz
+NOTE_E4     equ 0x0DE8  ; 329.63 Hz
+NOTE_F4     equ 0x0D04  ; 349.23 Hz
+NOTE_FS4    equ 0x0C26  ; 369.99 Hz
+NOTE_G4     equ 0x0B4F  ; 392.00 Hz
+NOTE_GS4    equ 0x0A7E  ; 415.30 Hz
+NOTE_A4     equ 0x09B3  ; 440.00 Hz
+NOTE_AS4    equ 0x08ED  ; 466.16 Hz
+NOTE_B4     equ 0x082B  ; 493.88 Hz
+
+NOTE_C5     equ 0x08E5  ; 523.25 Hz
+NOTE_CS5    equ 0x0862  ; 554.37 Hz
+NOTE_D5     equ 0x07E4  ; 587.33 Hz
+NOTE_DS5    equ 0x076A  ; 622.25 Hz
+NOTE_E5     equ 0x06F4  ; 659.25 Hz
+NOTE_F5     equ 0x0682  ; 698.46 Hz
+NOTE_FS5    equ 0x0613  ; 739.99 Hz
+NOTE_G5     equ 0x05A8  ; 783.99 Hz
+NOTE_GS5    equ 0x053F  ; 830.61 Hz
+NOTE_A5     equ 0x04D9  ; 880.00 Hz
+NOTE_AS5    equ 0x0476  ; 932.33 Hz
+NOTE_B5     equ 0x0416  ; 987.77 Hz
+
 ; =========================================== INITIALIZATION ================|80
 
 start:
@@ -397,7 +444,10 @@ check_keyboard:
   .do_interaction:
     ; if tracks building
     cmp word [_ECONOMY_TRACKS_], 0      ; check economy: track count
-    jz .done
+    jz .error
+
+    mov bx, SFX_BUILD
+    call play_sfx
 
     mov ax, [_CURSOR_Y_]                ; calculate map position
     shl ax, 7   ; Y * 128
@@ -419,6 +469,12 @@ check_keyboard:
 
     call draw_ui
   jmp .redraw_tile
+
+  jmp .no_error
+  .error:
+    mov bx, SFX_ERROR
+    call play_sfx
+  .no_error:
 
   .redraw_tile:
     ; to be optimize later
@@ -462,7 +518,7 @@ check_keyboard:
   .skip_tick_reset:
   inc dword [_GAME_TICK_]
 
-call stop_sound
+call update_audio
 
 ; =========================================== ESC OR LOOP ===================|80
 
@@ -533,7 +589,7 @@ StateTransitionTableEnd:
 
 init_engine:
   call reset_to_default_values
-  call init_sound
+  call init_audio_system
   call decompress_tiles
   call generate_map
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN_INIT
@@ -574,8 +630,9 @@ init_title_screen:
   mov bl, COLOR_WHITE
   call draw_text
 
-  mov ax, 4560        ; Middle C frequency divisor
-  call play_sound
+  mov bx, INTRO_MUSIC
+  call start_music
+
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 jmp game_state_satisfied
 
@@ -615,6 +672,9 @@ init_menu:
   call draw_text
 
   mov byte [_GAME_STATE_], STATE_MENU
+
+  mov bx, TITLE_MUSIC
+  call start_music
 jmp game_state_satisfied
 
 live_menu:
@@ -635,6 +695,8 @@ init_game:
   call draw_cursor
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
+  mov bx, GAME_MUSIC
+  call start_music
 jmp game_state_satisfied
 
 live_game:
@@ -1422,11 +1484,65 @@ ret
 
 ; =========================================== AUDIO SYSTEM ==================|80
 
-init_sound:
-   mov al, 182         ; Binary mode, square wave, 16-bit divisor
-   out 43h, al         ; Write to PIT command register[2]
+init_audio_system:
+  mov word [_MUSIC_POINTER_], 0
+  mov byte [_SFX_POINTER_], 0
+  mov word [_CURRENT_SONG_], 0
+
+  mov al, 182         ; Binary mode, square wave, 16-bit divisor
+  out 43h, al         ; Write to PIT command register[2]
 ret
 
+; Start playing a song
+; Input: BX = pointer to song data
+start_music:
+  mov [_CURRENT_SONG_], bx
+  mov [_MUSIC_POINTER_], bx
+ret
+
+; Input: BX = pointer to sound effect data
+play_sfx:
+  mov [_SFX_POINTER_], bx
+ret
+
+update_audio:
+  mov ax, [_GAME_TICK_]
+  and ax, 0x3
+  dec ax
+  jz .done
+
+  mov si, [_SFX_POINTER_]
+  mov ax, [si]
+  test ax, ax
+  jz .play_music
+
+  call play_sound
+  add word [_SFX_POINTER_], 2
+
+ret
+
+  .play_music:
+    mov si, [_MUSIC_POINTER_]
+    mov ax, [si]
+    test ax, ax
+    jne .play_note
+
+    ; Loop the song
+    mov si, [_CURRENT_SONG_]
+    mov [_MUSIC_POINTER_], si
+    mov ax, [si]
+
+  .play_note:
+    add word [_MUSIC_POINTER_], 2
+    cmp ax, NOTE_REST
+    je .done
+
+    call play_sound
+
+  .done:
+ret
+
+; IN: AL - Low byte of frequency, AH - High byte of frequency
 play_sound:
    out 42h, al         ; Low byte first
    mov al, ah
@@ -1442,6 +1558,8 @@ stop_sound:
    and al, 11111100b   ; Clear bits 0-1
    out 61h, al
    ret
+
+
 
 
 
@@ -1494,6 +1612,8 @@ db 0xA         ; Mountain
 
 RailroadsList:
 db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
+
+include 'music_and_sfx.asm'
 
 include 'tiles.asm'
 
