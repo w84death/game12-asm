@@ -177,9 +177,10 @@ META_INVISIBLE_WALL           equ 0x20  ; For collision detection
 META_TRANSPORT                equ 0x40  ; For railroads
 META_FOG                      equ 0x80  ; Fog of War
 
-METADATA_SWITCH_INITIALIZED          equ 0x01  ;
-METADATA_SWITCH_MASK          equ 0x0C  ; For rails
-METADATA_SWITCH_SHIFT         equ 0x02
+METADATA_SWITCH_INITIALIZED   equ 0x01
+METADATA_SWITCH_MASK          equ 0x06
+METADATA_SWITCH_SHIFT         equ 0x01
+METADATA_1 equ 0x08
 METADATA_1 equ 0x10
 METADATA_2 equ 0x20
 METADATA_3 equ 0x40
@@ -205,7 +206,7 @@ MODE_ALL                      equ 0x00
 MODE_VIEWPORT_MOVE         equ 0x01
 MODE_INFRASTRUCTURE_PLACE   equ 0x02
 MODE_INFRASTRUCTURE_EDIT      equ 0x03
-MODE_INFRASTRUCTURE_REMOVE    equ 0x04
+MODE_TERRAIN_REMOVE    equ 0x04
 
 UI_POSITION                   equ 320*160
 UI_FIRST_LINE                 equ 320*164
@@ -485,7 +486,7 @@ game_logic:
     mov byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
     jmp .redraw_tile
   .set_mode_removing:
-    mov byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_REMOVE
+    mov byte [_SCENE_MODE_], MODE_TERRAIN_REMOVE
     jmp .redraw_tile
 
   .infrastructure_place:
@@ -514,6 +515,32 @@ game_logic:
     mov [di], al               ; set railroad tile
 
     call draw_ui
+  jmp .redraw_tile
+
+  .infrastructure_edit:
+    mov ax, [_CURSOR_Y_]                ; calculate map position
+    shl ax, 7   ; Y * 128
+    add ax, [_CURSOR_X_]
+    mov si, _METADATA_                  ; add it to the _METADATA_ for same pos
+    add si, ax
+    xor ax, ax
+    mov al, [si]                        ; read _METADATA_ for this tile
+    test al, METADATA_SWITCH_INITIALIZED
+    jz .done
+    mov bl, al                          ; save the metadata value
+    mov bh, 0xFF                        ; calculate the bit mask
+    sub bh, METADATA_SWITCH_MASK        ; to everything beside switch
+    and bl, bh                          ; clear switch data (in saved value)
+    and al, METADATA_SWITCH_MASK        ; mask swich data
+    shr al, METADATA_SWITCH_SHIFT       ; move to right to conv to number
+    xor al, 0x2                         ; invert swich top-down or left-right
+    shl al, METADATA_SWITCH_SHIFT       ; move back to left for correct position
+    or bl, al                           ; set new sitch to saved metadata value
+    mov [si], bl                        ; save in _METADATA_
+
+  jmp .redraw_tile
+
+  .terrain_remove:
   jmp .redraw_tile
 
   jmp .no_error
@@ -609,6 +636,29 @@ InputTable:
   dw game_logic.move_cursor_right
   db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_SPACE
   dw game_logic.infrastructure_place
+
+  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_UP
+  dw game_logic.move_cursor_up
+  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_DOWN
+  dw game_logic.move_cursor_down
+  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_LEFT
+  dw game_logic.move_cursor_left
+  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_RIGHT
+  dw game_logic.move_cursor_right
+  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_SPACE
+  dw game_logic.infrastructure_edit
+
+
+  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_UP
+  dw game_logic.move_cursor_up
+  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_DOWN
+  dw game_logic.move_cursor_down
+  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_LEFT
+  dw game_logic.move_cursor_left
+  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_RIGHT
+  dw game_logic.move_cursor_right
+  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_SPACE
+  dw game_logic.terrain_remove
 
 InputTableEnd:
 
@@ -1099,9 +1149,12 @@ caculate_and_draw_rails:
     jmp .draw_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
-    mov dh, 1+METADATA_SWITCH_INITIALIZED ; data for saving in _METADATA_
+    mov dh, 1
+    shl dh, METADATA_SWITCH_SHIFT
+    add dh, METADATA_SWITCH_INITIALIZED ; data for saving in _METADATA_
   .draw_switch:
   push si                               ; save tile position
+  dec si
   sub si, _MAP_                         ; calculate position in _MAP_
   add si, _METADATA_                    ; add it to the _METADATA_ for same pos
   mov al, [si]                          ; read _METADATA_ for this tile
@@ -1326,7 +1379,7 @@ draw_cursor:
   jz .placing_cursor
   cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
   jz .edit_cursor
-  cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_REMOVE
+  cmp byte [_SCENE_MODE_], MODE_TERRAIN_REMOVE
   jz .remove_cursor
 
   .panning_cursor:
@@ -1476,7 +1529,7 @@ draw_ui:
    jz .placing_mode
    cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
    jz .edit_mode
-   cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_REMOVE
+   cmp byte [_SCENE_MODE_], MODE_TERRAIN_REMOVE
    jz .remove_mode
 
   .panning_mode:
