@@ -46,7 +46,7 @@ _VIEWPORT_X_              equ _BASE_ + 0x07   ; 2 bytes
 _VIEWPORT_Y_              equ _BASE_ + 0x09   ; 2 bytes
 _CURSOR_X_                equ _BASE_ + 0x0B   ; 2 bytes
 _CURSOR_Y_                equ _BASE_ + 0x0D   ; 2 bytes
-_INTERACTION_MODE_        equ _BASE_ + 0x0F   ; 1 byte
+_SCENE_MODE_              equ _BASE_ + 0x0F   ; 1 byte
 _ECONOMY_TRACKS_          equ _BASE_ + 0x10   ; 2 bytes
 _ECONOMY_BLUE_RES_        equ _BASE_ + 0x12   ; 2 bytes
 _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x14   ; 2 bytes
@@ -95,6 +95,9 @@ KB_M        equ 0x32
 KB_TAB      equ 0x0F
 KB_F1       equ 0x3B
 KB_F2       equ 0x3C
+KB_F3       equ 0x3D
+KB_F4       equ 0x3E
+KB_F5       equ 0x3F
 
 ; =========================================== TILES NAMES ===================|80
 
@@ -195,10 +198,14 @@ META_PLANT_SIZE               equ 0x20  ; small - big
 META_DIRECTION_MASK           equ 0xC0  ; for carts
 META_DIRECTION_SHIFT          equ 0x06
 
-MODE_VIEWPORT_PANNING         equ 0x00
-MODE_INFRASTRUCTURE_PLACING   equ 0x01
-MODE_INFRASTRUCTURE_EDIT      equ 0x02
-MODE_INFRASTRUCTURE_REMOVE    equ 0x03
+MODE_MAIN_MENU                equ 0x00
+MODE_SETTINGS_MENU            equ 0x01
+
+MODE_ALL                      equ 0x00
+MODE_VIEWPORT_MOVE         equ 0x01
+MODE_INFRASTRUCTURE_PLACE   equ 0x02
+MODE_INFRASTRUCTURE_EDIT      equ 0x03
+MODE_INFRASTRUCTURE_REMOVE    equ 0x04
 
 UI_POSITION                   equ 320*160
 UI_FIRST_LINE                 equ 320*164
@@ -342,46 +349,33 @@ check_keyboard:
 
 ; ========================================= GAME LOGIC INPUT =============|80
 
-  cmp byte [_GAME_STATE_], STATE_GAME
-  jne .done
+  mov si, InputTable
+  mov cx, InputTableEnd-InputTable
+  .check_input:
+    mov bl, [_GAME_STATE_]
+    cmp bl, [si]        ; Check current state
+    jne .next_input
 
-  cmp byte [_INTERACTION_MODE_], MODE_VIEWPORT_PANNING
-  je .viewport_panning_mode
-  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_PLACING
-  je .interactive_mode
-  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_EDIT
-  je .interactive_mode
-  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_REMOVE
-  je .interactive_mode
-  jmp .done
+    cmp byte [si+1], MODE_ALL
+    je .check_keypress
+    mov bl, [_SCENE_MODE_]
+    cmp bl, [si+1]      ; Check current mode
+    jne .next_entry
 
-  .viewport_panning_mode:
-    cmp ah, KB_UP
-    je .move_viewport_up
-    cmp ah, KB_DOWN
-    je .move_viewport_down
-    cmp ah, KB_LEFT
-    je .move_viewport_left
-    cmp ah, KB_RIGHT
-    je .move_viewport_right
-    cmp ah, KB_F2
-    je .change_mode
-  jmp .done
+    .check_keypress:
+    cmp ah, [si+2]      ; Check key press
+    jne .next_entry
 
-  .interactive_mode:
-    cmp ah, KB_UP
-    je .move_cursor_up
-    cmp ah, KB_DOWN
-    je .move_cursor_down
-    cmp ah, KB_LEFT
-    je .move_cursor_left
-    cmp ah, KB_RIGHT
-    je .move_cursor_right
-    cmp ah, KB_SPACE
-    je .do_interaction
-    cmp ah, KB_F2
-    je .change_mode
-  jmp .done
+    mov bx, [si+3]
+    jmp bx
+
+  .next_input:
+    add si, 5           ; Move to next entry
+  loop .check_input
+
+  .done:
+
+game_logic:
 
   .move_viewport_up:
     cmp word [_VIEWPORT_Y_], 0
@@ -407,12 +401,6 @@ check_keyboard:
     inc word [_VIEWPORT_X_]
     inc word [_CURSOR_X_]
   jmp .redraw_terrain
-
-  .change_mode:
-    inc byte [_INTERACTION_MODE_]
-    and byte [_INTERACTION_MODE_], 0x3  ; 0-3
-    call draw_ui
-    jmp .redraw_tile
 
   .move_cursor_up:
     mov ax, [_VIEWPORT_Y_]
@@ -441,8 +429,20 @@ check_keyboard:
     inc word [_CURSOR_X_]
   jmp .redraw_tile
 
-  .do_interaction:
-    ; if tracks building
+  .set_mode_panning:
+    mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
+    jmp .redraw_tile
+  .set_mode_placing:
+    mov byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_PLACE
+    jmp .redraw_tile
+  .set_mode_editing:
+    mov byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
+    jmp .redraw_tile
+  .set_mode_removing:
+    mov byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_REMOVE
+    jmp .redraw_tile
+
+  .infrastructure_place:
     cmp word [_ECONOMY_TRACKS_], 0      ; check economy: track count
     jz .error
 
@@ -557,33 +557,67 @@ exit:
 ; =========================================== LOGIC FOR GAME STATES =========|80
 
 StateJumpTable:
-   dw init_engine
-   dw exit
-   dw init_title_screen
-   dw live_title_screen
-   dw init_menu
-   dw live_menu
-   dw new_game
-   dw init_game
-   dw live_game
-   dw init_map_view
-   dw live_map_view
-   dw init_debug_view
-   dw live_debug_view
+  dw init_engine
+  dw exit
+  dw init_title_screen
+  dw live_title_screen
+  dw init_menu
+  dw live_menu
+  dw new_game
+  dw init_game
+  dw live_game
+  dw init_map_view
+  dw live_map_view
+  dw init_debug_view
+  dw live_debug_view
 
 StateTransitionTable:
-    db STATE_TITLE_SCREEN, KB_ESC,   STATE_QUIT
-    db STATE_TITLE_SCREEN, KB_ENTER, STATE_MENU_INIT
-    db STATE_MENU,         KB_ESC,   STATE_QUIT
-    db STATE_MENU,         KB_F1,    STATE_GAME_NEW
-    db STATE_MENU,         KB_ENTER, STATE_GAME_INIT
-    db STATE_MENU,         KB_F2,    STATE_DEBUG_VIEW_INIT
-    db STATE_GAME,         KB_ESC,   STATE_MENU_INIT
-    db STATE_GAME,         KB_TAB,   STATE_MAP_VIEW_INIT
-    db STATE_MAP_VIEW,     KB_ESC,   STATE_MENU_INIT
-    db STATE_MAP_VIEW,     KB_TAB,   STATE_GAME_INIT
-    db STATE_DEBUG_VIEW,   KB_ESC,   STATE_MENU_INIT
+  db STATE_TITLE_SCREEN, KB_ESC,   STATE_QUIT
+  db STATE_TITLE_SCREEN, KB_ENTER, STATE_MENU_INIT
+  db STATE_MENU,         KB_ESC,   STATE_QUIT
+  db STATE_MENU,         KB_F1,    STATE_GAME_NEW
+  db STATE_MENU,         KB_ENTER, STATE_GAME_INIT
+  db STATE_MENU,         KB_F2,    STATE_DEBUG_VIEW_INIT
+  db STATE_GAME,         KB_ESC,   STATE_MENU_INIT
+  db STATE_GAME,         KB_TAB,   STATE_MAP_VIEW_INIT
+  db STATE_MAP_VIEW,     KB_ESC,   STATE_MENU_INIT
+  db STATE_MAP_VIEW,     KB_TAB,   STATE_GAME_INIT
+  db STATE_DEBUG_VIEW,   KB_ESC,   STATE_MENU_INIT
 StateTransitionTableEnd:
+
+InputTable:
+  db STATE_GAME,        MODE_ALL,  KB_F1
+  dw game_logic.set_mode_panning
+  db STATE_GAME,        MODE_ALL,  KB_F2
+  dw game_logic.set_mode_placing
+  db STATE_GAME,        MODE_ALL,  KB_F3
+  dw game_logic.set_mode_editing
+  db STATE_GAME,        MODE_ALL,  KB_F4
+  dw game_logic.set_mode_removing
+
+  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_UP
+  dw game_logic.move_viewport_up
+  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_DOWN
+  dw game_logic.move_viewport_down
+  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_LEFT
+  dw game_logic.move_viewport_left
+  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_RIGHT
+  dw game_logic.move_viewport_right
+
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_UP
+  dw game_logic.move_cursor_up
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_DOWN
+  dw game_logic.move_cursor_down
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_LEFT
+  dw game_logic.move_cursor_left
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_RIGHT
+  dw game_logic.move_cursor_right
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_ENTER
+  dw game_logic.infrastructure_place
+
+InputTableEnd:
+
+
 
 ; ======================================= PROCEDURES FOR GAME STATES ========|80
 
@@ -672,6 +706,7 @@ init_menu:
   call draw_text
 
   mov byte [_GAME_STATE_], STATE_MENU
+  mov byte [_SCENE_MODE_], MODE_MAIN_MENU
 
   mov bx, TITLE_MUSIC
   call start_music
@@ -686,7 +721,7 @@ new_game:
   call reset_to_default_values
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
-
+  mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
 jmp game_state_satisfied
 
 init_game:
@@ -1288,13 +1323,13 @@ draw_cursor:
   mov di, bx              ; Move result to DI
 
 
-  cmp byte [_INTERACTION_MODE_], MODE_VIEWPORT_PANNING
+  cmp byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
   jz .panning_cursor
-  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_PLACING
+  cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_PLACE
   jz .placing_cursor
-  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_EDIT
+  cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
   jz .edit_cursor
-  cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_REMOVE
+  cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_REMOVE
   jz .remove_cursor
 
   .panning_cursor:
@@ -1438,13 +1473,13 @@ draw_ui:
    mov bl, COLOR_WHITE
    call draw_number
 
-   cmp byte [_INTERACTION_MODE_], MODE_VIEWPORT_PANNING
+   cmp byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
    jz .panning_mode
-   cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_PLACING
+   cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_PLACE
    jz .placing_mode
-   cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_EDIT
+   cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
    jz .edit_mode
-   cmp byte [_INTERACTION_MODE_], MODE_INFRASTRUCTURE_REMOVE
+   cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_REMOVE
    jz .remove_mode
 
   .panning_mode:
