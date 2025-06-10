@@ -23,7 +23,9 @@ IMG_DIR = $(BUILD_DIR)/img
 # Files
 BOOTLOADER = $(BIN_DIR)/boot.bin
 GAME = $(BIN_DIR)/game.bin
+GAME_COM = $(BIN_DIR)/game.com
 FLOPPY_IMG = $(IMG_DIR)/floppy.img
+JSDOS_ARCHIVE = jsdos/game12.jsdos
 
 # Floppy image size (1.44MB = 2880 sectors * 512 bytes/sector)
 FLOPPY_SECTORS = 2880
@@ -44,6 +46,10 @@ $(BOOTLOADER): src/boot.asm | $(BIN_DIR)
 
 # Compile game (game)
 $(GAME): src/game.asm | $(BIN_DIR)
+	$(ASM) $< $@
+
+# Compile game as COM file for DOS/jsdos
+$(GAME_COM): src/game.asm | $(BIN_DIR)
 	$(ASM) $< $@
 
 # Create empty floppy image
@@ -68,6 +74,13 @@ qemu: $(FLOPPY_IMG)
 debug: $(FLOPPY_IMG)
 	$(BOCHS)
 
+# Build jsdos version
+jsdos: $(GAME_COM)
+	@echo "Updating jsdos archive with new game.com..."
+	cp $(GAME_COM) game.com
+	zip -u $(JSDOS_ARCHIVE) game.com
+	@echo "jsdos build complete! Updated $(JSDOS_ARCHIVE)"
+
 # Burn game to physical floppy disk
 burn: $(FLOPPY_IMG)
 	@echo "WARNING: This will overwrite all data on $(USB_FLOPPY)!"
@@ -80,7 +93,7 @@ burn: $(FLOPPY_IMG)
 
 # Clean build artifacts
 clean:
-	$(RM) $(BOOTLOADER) $(GAME) $(FLOPPY_IMG) $(IMG_DIR)/floppy_empty.img
+	$(RM) $(BOOTLOADER) $(GAME) $(GAME_COM) $(FLOPPY_IMG) $(IMG_DIR)/floppy_empty.img game.com
 	$(RMDIR) $(BUILD_DIR)
 
 # Test floppy drive
@@ -90,4 +103,22 @@ test-floppy:
 		echo "Drive detected successfully"; \
 	else echo "Drive not detected or accessible"; fi
 
-.PHONY: all run qemu debug clean burn test-floppy
+# Display help information
+help:
+	@echo "GAME-12 Makefile - Available targets:"
+	@echo ""
+	@echo "  all         - Build bootable floppy image (default)"
+	@echo "  run         - Run game in 86Box emulator"
+	@echo "  qemu        - Run game in QEMU"
+	@echo "  debug       - Debug game in Bochs"
+	@echo "  jsdos       - Build jsdos version (updates jsdos/game12.jsdos)"
+	@echo "  burn        - Burn game to physical floppy disk"
+	@echo "  test-floppy - Test floppy drive accessibility"
+	@echo "  clean       - Clean build artifacts"
+	@echo "  help        - Show this help message"
+	@echo ""
+	@echo "Build outputs:"
+	@echo "  $(FLOPPY_IMG) - Bootable floppy image"
+	@echo "  $(JSDOS_ARCHIVE) - jsdos archive with game.com"
+
+.PHONY: all run qemu debug clean burn test-floppy jsdos help
