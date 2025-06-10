@@ -312,7 +312,7 @@ main_loop:
 
   movzx bx, byte [_GAME_STATE_]    ; Load state into BX
   shl bx, 1                        ; Multiply by 2 (word size)
-  jmp word [StateJumpTable + bx]   ; Jump to handle
+  call word [StateJumpTable + bx]   ; Jump to handle
 
 game_state_satisfied:
 
@@ -321,7 +321,7 @@ game_state_satisfied:
 check_keyboard:
   mov ah, 01h         ; BIOS keyboard status function
   int 16h             ; Call BIOS interrupt
-  jz .done
+  jz .keyboard_done
 
   mov ah, 00h         ; BIOS keyboard read function
   int 16h             ; Call BIOS interrupt
@@ -345,7 +345,7 @@ check_keyboard:
     add si, 3           ; Move to next entry
     loop .check_transitions
 
-  .transitions_done:
+.transitions_done:
 
 ; ========================================= GAME LOGIC INPUT =============|80
 
@@ -360,20 +360,66 @@ check_keyboard:
     je .check_keypress
     mov bl, [_SCENE_MODE_]
     cmp bl, [si+1]      ; Check current mode
-    jne .next_entry
+    jne .next_input
 
     .check_keypress:
     cmp ah, [si+2]      ; Check key press
-    jne .next_entry
+    jne .next_input
 
     mov bx, [si+3]
-    jmp bx
+    call bx
+    jmp .keyboard_done
 
   .next_input:
     add si, 5           ; Move to next entry
   loop .check_input
 
-  .done:
+.keyboard_done:
+
+; =========================================== GAME TICK =====================|80
+
+.cpu_delay:
+  xor ax, ax            ; Function 00h: Read system timer counter
+  int 0x1a              ; Returns tick count in CX:DX
+  mov bx, dx            ; Store low word of tick count
+  mov si, cx            ; Store high word of tick count
+  .wait_loop:
+    xor ax, ax
+    int 0x1a
+    cmp cx, si          ; Compare high word
+    jne .tick_changed
+    cmp dx, bx          ; Compare low word
+    je .wait_loop       ; If both are the same, keep waiting
+  .tick_changed:
+
+.update_system_tick:
+  cmp dword [_GAME_TICK_], 0xF0000000
+  jb .skip_tick_reset
+    mov dword [_GAME_TICK_], 0
+  .skip_tick_reset:
+  inc dword [_GAME_TICK_]
+
+call update_audio
+
+; =========================================== ESC OR LOOP ===================|80
+
+jmp main_loop
+
+; =========================================== EXIT TO DOS ===================|80
+
+exit:
+   call stop_sound
+   mov ax, 0x0003       ; Set video mode to 80x25 text mode
+   int 0x10             ; Call BIOS interrupt
+   mov si, QuitText     ; Draw message after exit
+   xor dx, dx           ; At 0/0 position
+   call draw_text
+
+   mov ax, 0x4c00      ; Exit to DOS
+   int 0x21            ; Call DOS
+   ret                 ; Return to DOS
+
+
 
 game_logic:
 
@@ -493,59 +539,8 @@ game_logic:
     call draw_cursor
     jmp .done
 
-.done:
-
-; =========================================== GAME TICK =====================|80
-
-.cpu_delay:
-  xor ax, ax            ; Function 00h: Read system timer counter
-  int 0x1a              ; Returns tick count in CX:DX
-  mov bx, dx            ; Store low word of tick count
-  mov si, cx            ; Store high word of tick count
-  .wait_loop:
-    xor ax, ax
-    int 0x1a
-    cmp cx, si          ; Compare high word
-    jne .tick_changed
-    cmp dx, bx          ; Compare low word
-    je .wait_loop       ; If both are the same, keep waiting
-  .tick_changed:
-
-.update_system_tick:
-  cmp dword [_GAME_TICK_], 0xF0000000
-  jb .skip_tick_reset
-    mov dword [_GAME_TICK_], 0
-  .skip_tick_reset:
-  inc dword [_GAME_TICK_]
-
-call update_audio
-
-; =========================================== ESC OR LOOP ===================|80
-
-jmp main_loop
-
-; =========================================== EXIT TO DOS ===================|80
-
-exit:
-   call stop_sound
-   mov ax, 0x0003       ; Set video mode to 80x25 text mode
-   int 0x10             ; Call BIOS interrupt
-   mov si, QuitText     ; Draw message after exit
-   xor dx, dx           ; At 0/0 position
-   call draw_text
-
-   mov ax, 0x4c00      ; Exit to DOS
-   int 0x21            ; Call DOS
-   ret                 ; Return to DOS
-
-
-
-
-
-
-
-
-
+    .done:
+ret
 
 
 
@@ -612,7 +607,7 @@ InputTable:
   dw game_logic.move_cursor_left
   db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_RIGHT
   dw game_logic.move_cursor_right
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_ENTER
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_SPACE
   dw game_logic.infrastructure_place
 
 InputTableEnd:
@@ -628,7 +623,7 @@ init_engine:
   call generate_map
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN_INIT
 
-jmp game_state_satisfied
+ret
 
 reset_to_default_values:
   mov byte [_GAME_TICK_], 0x0
@@ -668,7 +663,7 @@ init_title_screen:
   call start_music
 
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
-jmp game_state_satisfied
+ret
 
 live_title_screen:
   mov si, PressEnterText
@@ -680,7 +675,7 @@ live_title_screen:
   .blink:
   call draw_text
 
-jmp game_state_satisfied
+ret
 
 init_menu:
   mov al, COLOR_DEEP_PURPLE
@@ -710,11 +705,11 @@ init_menu:
 
   mov bx, TITLE_MUSIC
   call start_music
-jmp game_state_satisfied
+ret
 
 live_menu:
   nop
-jmp game_state_satisfied
+ret
 
 new_game:
   call generate_map
@@ -722,7 +717,7 @@ new_game:
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
   mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
-jmp game_state_satisfied
+ret
 
 init_game:
   call draw_terrain
@@ -730,22 +725,24 @@ init_game:
   call draw_cursor
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
+  mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
+
   mov bx, GAME_MUSIC
   call start_music
-jmp game_state_satisfied
+ret
 
 live_game:
   nop
-jmp game_state_satisfied
+ret
 
 init_map_view:
   call draw_minimap
   mov byte [_GAME_STATE_], STATE_MAP_VIEW
-jmp game_state_satisfied
+ret
 
 live_map_view:
   nop
-jmp game_state_satisfied
+ret
 
 init_debug_view:
   mov al, COLOR_BLACK
@@ -770,11 +767,11 @@ init_debug_view:
   loop .spr
 
   mov byte [_GAME_STATE_], STATE_DEBUG_VIEW
-jmp game_state_satisfied
+ret
 
 live_debug_view:
   nop
-jmp game_state_satisfied
+ret
 
 
 
