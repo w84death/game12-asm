@@ -32,6 +32,10 @@ INTRO_JINGLE:
   dw NOTE_F5
   dw NOTE_E5
   dw NOTE_E5
+  dw 0x00
+
+MENU_JINGLE:
+MAP_JINGLE:
   dw NOTE_D5
   dw NOTE_C5
   dw NOTE_C5

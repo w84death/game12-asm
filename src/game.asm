@@ -74,7 +74,9 @@ STATE_MAP_VIEW_INIT     equ 9
 STATE_MAP_VIEW          equ 10
 STATE_DEBUG_VIEW_INIT   equ 11
 STATE_DEBUG_VIEW        equ 12
-STATE_GENERATE_MAP      equ 13
+STATE_HELP_INIT         equ 13
+STATE_HELP              equ 14
+STATE_GENERATE_MAP      equ 15
 
 ; =========================================== KEYBOARD CODES ================|80
 
@@ -209,6 +211,8 @@ META_DIRECTION_SHIFT          equ 0x06
 
 MODE_MAIN_MENU                equ 0x00
 MODE_SETTINGS_MENU            equ 0x01
+MODE_HELP_PAGE1               equ 0x02
+MODE_HELP_PAGE2               equ 0x03
 
 MODE_ALL                      equ 0x00
 MODE_VIEWPORT_MOVE         equ 0x01
@@ -605,14 +609,22 @@ StateJumpTable:
   dw live_map_view
   dw init_debug_view
   dw live_debug_view
+  dw init_help
+  dw live_help
 
 StateTransitionTable:
   db STATE_TITLE_SCREEN, KB_ESC,   STATE_QUIT
   db STATE_TITLE_SCREEN, KB_ENTER, STATE_MENU_INIT
+
   db STATE_MENU,         KB_ESC,   STATE_QUIT
-  db STATE_MENU,         KB_F1,    STATE_GAME_NEW
   db STATE_MENU,         KB_ENTER, STATE_GAME_INIT
+  db STATE_MENU,         KB_F1,    STATE_GAME_NEW
   db STATE_MENU,         KB_F2,    STATE_DEBUG_VIEW_INIT
+  db STATE_MENU,         KB_F3,    STATE_DEBUG_VIEW_INIT
+  db STATE_MENU,         KB_F4,    STATE_HELP_INIT
+
+  db STATE_HELP,        KB_ESC,   STATE_MENU_INIT
+
   db STATE_GAME,         KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,         KB_TAB,   STATE_MAP_VIEW_INIT
   db STATE_MAP_VIEW,     KB_ESC,   STATE_MENU_INIT
@@ -749,19 +761,26 @@ init_menu:
   mov al, COLOR_DEEP_PURPLE
   call clear_screen
 
-  mov di, SCREEN_WIDTH*48
+  mov di, SCREEN_WIDTH*8
   mov al, COLOR_DEEP_PURPLE
   call draw_gradient
 
   mov si, MainMenuTitleText
-  mov dx, 0x090A
+  mov dx, 0x040A
   mov bl, COLOR_WHITE
   call draw_text
 
   mov si, MainMenuText
-  mov dx, 0x0C01
   mov bl, COLOR_YELLOW
-  call draw_text
+  mov dx, 0x060A
+  .menu_entry:
+    cmp byte [si], 0x00
+    jz .done
+    call draw_text
+    add dh, 0x2
+  jmp .menu_entry
+
+  .done:
 
   mov si, MainMenuCopyText
   mov dx, 0x140D
@@ -770,10 +789,33 @@ init_menu:
 
   mov byte [_GAME_STATE_], STATE_MENU
   mov byte [_SCENE_MODE_], MODE_MAIN_MENU
+  mov bx, MENU_JINGLE
+  call play_sfx
 ret
 
 live_menu:
   nop
+ret
+
+init_help:
+  mov al, COLOR_DARK_GRAY
+  call clear_screen
+
+  mov si, HelpText
+  mov bl, COLOR_YELLOW
+  xor dx, dx
+  .help_entry:
+    cmp byte [si], 0x00
+    jz .done
+    call draw_text
+    inc dh
+  jmp .help_entry
+  .done:
+  mov byte [_GAME_STATE_], STATE_HELP
+  mov byte [_SCENE_MODE_], MODE_HELP_PAGE1
+ret
+
+live_help:
 ret
 
 new_game:
@@ -800,6 +842,8 @@ ret
 init_map_view:
   call draw_minimap
   mov byte [_GAME_STATE_], STATE_MAP_VIEW
+  mov bx, MAP_JINGLE
+  call play_sfx
 ret
 
 live_map_view:
@@ -1645,16 +1689,45 @@ ret
 
 WelcomeText db 'P1X ASSEMBLY ENGINE V12.02', 0x0
 PressEnterText db 'PRESS ENTER', 0x0
-QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in for more games..', 0x0D, 0x0A, 0x0
-MainMenuTitleText db '"Mycelium Overlords"',0x0
-MainMenuText db 'F1: New Map | ENTER: Play | ESC: Quit',0x0
-MainMenuCopyText db '(C) 2025 P1X',0x0
+QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in for more games...', 0x0D, 0x0A, 0x0
 FakeNumberText db '0000', 0x0
 UIExploreModeText db 'F2: Explore Mode', 0x0
 UIBuildModeText db 'F2: Build Mode', 0x0
 UIEditModeText db 'F2: Edit Mode', 0x0
 UIRemoveModeText db 'F2: Remove Mode', 0x0
 UIScoreText db 'Score:', 0x0
+
+MainMenuText:
+  db 'ENTER: Play',0x0
+  db 'F1: Generate new map',0x0
+  db 'F2: Tileset debug',0x0
+  db 'F3: Settings',0x0
+  db 'F4: How to play',0x0
+  db 'ESC: Quit',0x0
+  db 0x00
+
+HelpText:
+  db '      -== HOW TO PLAY THE GAME ==-      ',0x0
+  db 'Get as much points by refining blue ore.',0x0
+  db 'Collect resources using extraction',0x0
+  db 'facility and refine it in the rafinery.',0x0
+  db 'Transport goods using carts on rails.',0x0
+  db 'Build stations on rals. Building on the',0x0
+  db 'fundation blocks, next to the stations.',0x0
+  db '        -== INTERACTION MODES ==-       ',0x0
+  db 'F1: Move map using arrows',0x0
+  db 'F2: Move cursor, build rails using SPACE',0x0
+  db 'F3: Swap switches, rafinery type',0x0
+  db 'F4: Clear trees, rocks for rails placing',0x0
+  db '           -== RESOURCES ==-            ',0x0
+  db 'Refine red and green ore to get resource',0x0
+  db 'Red: to build rails (1) and stations (10)',0x0
+  db 'Yellow: buidings(50), clearing (5)',0x0
+  db 'Blue ore: increase overall score.',0x0
+  db 0x00
+
+MainMenuCopyText db '(C) 2025 P1X',0x0
+MainMenuTitleText db '"Codename: GAME12"',0x0
 
 ; =========================================== TERRAIN GEN RULES =============|80
 

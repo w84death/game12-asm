@@ -53,6 +53,23 @@ Gain as much points and conquer whole map. Waisting resources, bad track managem
 
 Player chooses a best spot and start building rails (tracks). Rails can be only placed on clean tiles (no trees or mountains). Player can clean terrain using one of the resources. Number of rails is limited starting with 100. New rails can be produced in the factory building using resource.
 
+### Strategy Design
+
+The rocket lands n the middle of the map. This is the main building where the blue resoure is collected to gain score points. Build rails to the closest blue resource.
+
+Rails are the main infrastructure. Build stations on the rails. Foundations will spawn next to the station. Place new buildings on those fundations.
+
+Resouce plant -> Extraction Facility -> Station -> Cart -> Station (next to) -> Rafinery -> Resource increased.
+
+Placing rafineries is very costly. Build them in strategic place to and bring ore from closes resource source.
+
+    (R)---+
+          |   (*)
+          +-(#)|
+               +----(B)
+               |
+              (G)
+
 ### Resources
 
 - Red ore - for producing new rails
@@ -84,3 +101,18 @@ Player chooses a best spot and start building rails (tracks). Rails can be only 
   3
 0   2
   1
+
+
+0 0000
+2 0010
+
+1 0001
+3 0011
+
+
+## placing infrastructure
+
+F2 the tool
+1 - placing rails
+2 - placing station under rails
+3 - placing fudation (near station)
