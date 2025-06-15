@@ -259,7 +259,7 @@ COLOR_WHITE         equ 15
 ; Note values are frequency divisors for the PC speaker
 ; Formula: divisor = 1193180 / frequency_hz
 
-NOTE_REST   equ 0xFF  ; Rest (silence)
+NOTE_REST   equ 0xFF    ; Rest (silence)
 NOTE_C3     equ 0x2394  ; 130.81 Hz
 NOTE_CS3    equ 0x2187  ; 138.59 Hz
 NOTE_D3     equ 0x1F8F  ; 146.83 Hz
@@ -272,7 +272,6 @@ NOTE_GS3    equ 0x14FC  ; 207.65 Hz
 NOTE_A3     equ 0x1365  ; 220.00 Hz
 NOTE_AS3    equ 0x11D9  ; 233.08 Hz
 NOTE_B3     equ 0x1056  ; 246.94 Hz
-
 NOTE_C4     equ 0x11CA  ; 261.63 Hz (Middle C)
 NOTE_CS4    equ 0x10C4  ; 277.18 Hz
 NOTE_D4     equ 0x0FC8  ; 293.66 Hz
@@ -285,7 +284,6 @@ NOTE_GS4    equ 0x0A7E  ; 415.30 Hz
 NOTE_A4     equ 0x09B3  ; 440.00 Hz
 NOTE_AS4    equ 0x08ED  ; 466.16 Hz
 NOTE_B4     equ 0x082B  ; 493.88 Hz
-
 NOTE_C5     equ 0x08E5  ; 523.25 Hz
 NOTE_CS5    equ 0x0862  ; 554.37 Hz
 NOTE_D5     equ 0x07E4  ; 587.33 Hz
@@ -298,6 +296,8 @@ NOTE_GS5    equ 0x053F  ; 830.61 Hz
 NOTE_A5     equ 0x04D9  ; 880.00 Hz
 NOTE_AS5    equ 0x0476  ; 932.33 Hz
 NOTE_B5     equ 0x0416  ; 987.77 Hz
+NOTE_C6     equ 0x0473  ; 1046.50 Hz
+NOTE_E6     equ 0x037A  ; 1318.51 Hz
 
 ; =========================================== INITIALIZATION ================|80
 
@@ -833,6 +833,8 @@ init_game:
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
   mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
+  mov bx, GAME_JINGLE
+  call play_sfx
 ret
 
 live_game:
@@ -1638,34 +1640,45 @@ play_sfx:
 ret
 
 update_audio:
-  mov ax, [_GAME_TICK_]
-  and ax, 0x3
-  dec ax
-  jz .skip_audio
+
+
 
   mov si, [_SFX_POINTER_]
   mov ax, [si]
   test ax, ax
   jz .stop_audio
 
-  call play_sound
-  add word [_SFX_POINTER_], 2
+  cmp ax, NOTE_REST
+  jz .skip_note
 
-   .skip_audio:
+  mov bx, [_GAME_TICK_]
+  and bx, 0x1
+  dec bx
+  jz .play_pitched
+
+
+
+  call play_sound
+  .skip_note:
+  add word [_SFX_POINTER_], 2
+ret
+  .play_pitched:
+   shl ah, 3
+   call play_sound
 ret
   .stop_audio:
   call stop_sound
 ret
 
-; IN: AL - Low byte of frequency, AH - High byte of frequency
+; IN: AX - Low byte of frequency, AH - High byte of frequency
 play_sound:
-  out 42h, al         ; Low byte first
+  out 42h, al         ; Low byte
   mov al, ah
-  out 42h, al         ; High byte[2]
+  out 42h, al         ; High byte
 
   in al, 61h          ; Read current port state
   or al, 00000011b    ; Set bits 0 and 1
-  out 61h, al         ; Enable speaker output[2][3]
+  out 61h, al         ; Enable speaker output
 ret
 
 stop_sound:
@@ -1673,7 +1686,6 @@ stop_sound:
   and al, 11111100b   ; Clear bits 0-1
   out 61h, al
 ret
-
 
 
 
