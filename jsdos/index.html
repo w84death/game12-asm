@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Smol Assembly Games by P1X</title>
+    <link
+      rel="stylesheet"
+      href="base.css"
+      type="text/css"
+      media="screen"
+      charset="utf-8"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>Smol Assembly</h1>
+      <p>
+        Games made 100% in x86 assembly language. Programmed by Krzysztof
+        Krystian Jankowski.
+      </p>
+      <nav>
+        <h2>MENU</h2>
+        <b>0x00 X86 Assembly Language</b>
+        <ul>
+          <li><a href="#introduction">INTRODUCTION</a></li>
+          <li><a href="#how-to">HOW TO RUN</a></li>
+          <li><a href="#resources">RESOURCES</a></li>
+        </ul>
+        <b>0x01 BOOTSECTOR GAMES</b>
+        <ul>
+          <li>512B <a href="#land-me">LAND ME</a></li>
+          <li>512B <a href="#fly-escape">FLY ESCAPE</a></li>
+          <li>512B <a href="#bit-of-treasure">BIT OF A TREASURE</a></li>
+        </ul>
+        <b>0x02 MS-DOS GAMES</b>
+        <ul>
+          <li>512B <a href="#moth-hunter">MOTH HUNTER</a></li>
+        </ul>
+
+        <b>0x03 BOOT FLOPPY & MS-DOS GAMES</b>
+        <ul>
+          <li>5K <a href="#forgotten-isles">FORGOTTEN ISLES</a></li>
+          <li>4K <a href="#game12">GAME12</a></li>
+        </ul>
+
+        <b>0x04 FLOPPY OPERATING SYSTEM</b>
+        <ul>
+          <li>
+            512B + 8K <a href="#smolix">SMOLiX OPERATING SYSTEM</a
+            ><sup>NEW</sup>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <article id="introduction">
+      <h2>INTRODUCTION</h2>
+      <pre style="float: left; margin: 1em">
+      _________________
+     /_/ Intel x86  /_/;
+    / ' boot disk  ' //
+   / '------------' //
+  /   .--------.   //
+ /   /         /  //
+.___/_________/__//
+'===\_________\=='
+        </pre
+      >
+
+      <p>
+        Assembly is a wild beast. You can tame it and become a real programmer
+        or run away screaming and get lost in a mist of abstractions.
+      </p>
+      <p>
+        Current compilers can summon incredible machine code. They fear no man
+        except this one place called boot sector. 512 bytes of space. No more no
+        less. Only the best of the best would be able to fit in such narrow
+        passage.
+      </p>
+      <p>
+        A hero is in need. Where we are going there will be no Operating
+        Systems. No debuggers. One small mistake and the world freezes. A fatal
+        system crash is unavoidable.
+      </p>
+      <p>I took my tools, floppy disks and run for the incredible journey!</p>
+    </article>
+
+    <article id="how-to">
+      <h2>HOW TO RUN?</h2>
+      <h3>Boot from a floppy</h3>
+      <p>It's simple.</p>
+
+      <h4>Native</h4>
+      <p>
+        Burn the image to a clean floppy using
+        <a href="https://freeextractor.sourceforge.net/diskwrite/">DiskWrite</a>
+        or dd command. Restart computer with the floppy inserted. Boot from it.
+      </p>
+      <p>Grab gameXX.com file and run it on MS-DOS or Windows 9x.</p>
+
+      <h4>Emulation</h4>
+      <p>
+        Use the browser and click on jsdos instance link or download floppy
+        image and run on <a href="https://copy.sh/v86/">copy.sh</a>.
+      </p>
+      <p>Use qemu or 86box for offline emulation.</p>
+
+      <p>
+        Using online emulation is also possible. You can use
+        <a href="https://copy.sh/v86/">copy.sh</a> (floppy image) or
+        <a href="https://www.bootsector.games/">BootSector.Games</a> (source
+        code) to run the games.
+      </p>
+
+      <h4>Run in DOS</h4>
+      <p>
+        Download the COM file and run it in DOSBox/dosemu or on a real machine
+        with FreeDOS or MS-DOS.
+      </p>
+    </article>
+    <article id="resources">
+      <h2>ON-LINE RESOURCES</h2>
+      <p>
+        All the useful things I found for the x86 Assembly and boot sector
+        programming.
+      </p>
+      <h3>Software</h3>
+      <ul>
+        <li>
+          <a href="https://fresh.flatassembler.net">Fresh</a> - a visual
+          assembly language IDE with built-in FASM assembler.
+        </li>
+        <li><a href="https://copy.sh/v86/">copy.sh</a></li>
+        <li><a href="https://www.bootsector.games/">BootSector.Games</a></li>
+      </ul>
+      <h3>Knowledge</h3>
+      <ul>
+        <li>
+          <a href="instructions.html"
+            >Intel x86 Instruction Set Reference (Up to 80486 DX4)</a
+          >
+        </li>
+        <li><a href="registers.html">80x86 16bit Registers List</a></li>
+        <li>
+          <a href="https://www.youtube.com/watch?v=TPbroUDHG0s"
+            >"Game Development in Eight Bits" by Kevin Zurawel</a
+          >
+        </li>
+        <li>
+          <a href="https://www.youtube.com/watch?v=qatzd0niz9A"
+            >Cycle-Accurate 8088 Emulation by Daniel Balsom</a
+          >
+        </li>
+      </ul>
+      <h3>Real Pixel Art</h3>
+      <ul>
+        <li>
+          <a href="https://youtu.be/aMcJ1Jvtef0"
+            >8 Bit & '8 Bitish' Graphics-Outside the Box</a
+          >
+        </li>
+      </ul>
+    </article>
+
+    <article id="land-me">
+      <h2>LAND ME</h2>
+
+      <p>
+        My first game for boot sector. I learned basics needed to have a minimum
+        viable game engine. Double-buffering. Keyboard input. A lot and a lot of
+        try and error.
+      </p>
+      <p>I survived. As a result I'm present this simple game.</p>
+      <h4>Game-play</h4>
+      <p>
+        Player steers movement of a rocket: left or right. Trying to avoid
+        blocks and land on a sailing platform instead of an ocean.
+      </p>
+      <div class="gallery">
+        <img src="game1/screen1.jpg" alt="Screenshot 1 of Land Me game." />
+        <img src="game1/screen2.jpg" alt="Screenshot 2 of Land Me game." />
+        <img src="game1/game1-gameplay.gif" alt="Gameplay of Land Me game." />
+      </div>
+      <fieldset>
+        <legend>DOWNLOAD</legend>
+        <ul class="infobox">
+          <li>Codename: GAME1</li>
+          <li>Size: 512B</li>
+          <li>
+            Download:
+            <a href="game1/floppy.img" class="download-btn">Boot Floppy 386+</a>
+          </li>
+          <li>Source Code: <a href="game1/game1.asm">game1.asm</a></li>
+        </ul>
+      </fieldset>
+    </article>
+
+    <article id="fly-escape">
+      <h2>FLY ESCAPE</h2>
+      <p>
+        Fly Escape is a boot sector game developed by Krzysztof Krystian
+        Jankowski ^ P1X, released version 2.1 on May 26, 2024. The game runs on
+        Intel 286 processors in 16-bit real mode and features a simple yet
+        engaging game-play experience in a VGA 320x200x256 graphics mode. The
+        objective of the game is to control a fly, avoid spiders, and collect
+        flowers to advance through levels.
+      </p>
+      <h4>Features</h4>
+      <ul>
+        <li>VGA Graphics: Runs in 320x200 resolution with 256 colors.</li>
+        <li>Double Buffering: Smooth rendering with minimal flickering.</li>
+        <li>
+          Player Control: Control a fly, avoiding spiders and collecting
+          flowers.
+        </li>
+        <li>
+          Randomized Levels: Entity positions and rotations are pseudo-randomly
+          generated.
+        </li>
+        <li>Collision Detection: Accurate pixel-based collision detection.</li>
+        <li>
+          Multiple Levels: Progress through increasing levels of difficulty.
+        </li>
+        <li>
+          Life System: Start with 4 lives; lose a life when colliding with
+          spiders.
+        </li>
+        <li>Animated sprites: Three sprites each 8x7 pixels in 2 frames</li>
+        <li>
+          Level and live indicator: Dots in top-left of the screen and a line
+          under fly.
+        </li>
+        <li>
+          Keyboard Controls: Rotate the fly to navigate through the game
+          environment.
+        </li>
+        <li>Compact Size: Entire game fits within a 512-byte boot sector.</li>
+      </ul>
+      <div class="gallery">
+        <img src="game3/screen1.gif" alt="Screenshot 1 of Fly Escape! game." />
+        <img src="game3/screen2.gif" alt="Screenshot 2 of Fly Escape! game." />
+        <img
+          src="game3/game3-gameplay.gif"
+          alt="Gameplay of Fly Escape! game."
+        />
+      </div>
+      <fieldset>
+        <legend>Download</legend>
+        <ul>
+          <li>Codename: GAME3</li>
+          <li>Size: 512B</li>
+          <li>
+            Play:
+            <a href="game3/game3.html" class="download-btn">Run in browser</a>
+          </li>
+          <li>
+            Download:
+            <a href="game3/floppy.img" class="download-btn">Boot Floppy 386+</a>
+          </li>
+          <li>Source Code: <a href="game3/game3.asm">game3.asm</a></li>
+          <li>
+            Scene:
+            <a href="https://www.pouet.net/prod.php?which=97179">Pouet</a>
+          </li>
+          <li>
+            Support: <a href="https://w84death.itch.io/fly-escape">Itch.io</a>
+          </li>
+        </ul>
+      </fieldset>
+    </article>
+
+    <article id="bit-of-treasure">
+      <h2>BIT OF A TREASURE</h2>
+      <p>
+        The game involves navigating a player character through a level to
+        collect a treasure while avoiding collisions with non-movable tiles. The
+        game features simple but effective isometric graphics to create a
+        pseudo-3D effect.
+      </p>
+
+      <h3>Game-play</h3>
+      <p>
+        Collect the <b>treasure</b> and avoid the walls. Swap level designs to
+        find the best path.
+      </p>
+      <h3>Controls</h3>
+      <ul>
+        <li><b>Arrow keys</b> - move the player</li>
+        <li><b>Enter</b> - toggle level designs (4 in total)</li>
+        <li>
+          <b>ESC</b> - restart game after failed move (Spacebar on bootsector
+          version)
+        </li>
+      </ul>
+      <div class="gallery">
+        <img
+          src="game6/screen1.gif"
+          alt="Screenshot 1 of Bit of a Treasure game."
+        />
+        <img
+          src="game6/game6-gameplay.gif"
+          alt="Screenshot 2 of Bit of a Treasure game."
+        />
+      </div>
+
+      <h3>Features</h3>
+      <ul>
+        <li><b>Pixel Art Sprites</b>: 8x8 with 2 colors</li>
+        <li>
+          <b>Isometric Graphics</b>: The game employs isometric projection to
+          create a 3D-like visual experience using 2D sprites.
+        </li>
+        <li>
+          <b>Map</b>: One, procedurally generated, map with four level designs.
+        </li>
+        <li>
+          <b>VGA Mode</b>: Utilizes 320x200 pixels VGA mode with 256 colors.
+        </li>
+        <li>
+          <b>Keyboard Controls</b>: Intuitive input is used to control the
+          player character. Auto alignment moves to the grid.
+        </li>
+        <li>
+          <b>Double Buffering</b>: Implements double buffering to reduce
+          flickering and provide smoother animations.
+        </li>
+      </ul>
+
+      <div class="gallery">
+        <img
+          src="game6/screen1.gif"
+          alt="Screenshot 1 of Bit of a Treasure game."
+        />
+        <img
+          src="game6/game6-gameplay.gif"
+          alt="Gameplay of Bit of a Treasure game."
+        />
+      </div>
+
+      <fieldset>
+        <legend>Download</legend>
+        <ul>
+          <li>Codename: GAME6</li>
+          <li>Size: 512B</li>
+          <li>
+            Play:
+            <a href="game6/game6.html" class="download-btn">Run in browser</a>
+          </li>
+          <li>
+            Download:
+            <a href="game6/floppy.img" class="download-btn">Boot Floppy 386+</a>
+            <a href="game6/game6-dos.com" class="download-btn">MS-DOS</a>
+          </li>
+          <li>
+            Source Code: <a href="game6/game6.asm">game6.asm</a>
+            <a href="game6/game6-dos.asm">game6-dos.asm</a>
+          </li>
+        </ul>
+      </fieldset>
+    </article>
+
+    <article>
+      <h2>MOTH HUNTER</h2>
+      <p>IMPORTANT: Mouse support is required!</p>
+      <p>
+        Moth Hunter is an arcade game for DOS. The player aims to shoot incoming
+        moths. The color of a moth indicates how long it is on the screen. White
+        moths attacks player taking one life.
+      </p>
+
+      <h3>Game-play</h3>
+      <p>Player aims to the incoming moths.</p>
+      <div class="gallery">
+        <img src="game7/screen1.jpg" alt="Screenshot 1 of Moth Hunter game." />
+        <img src="game7/screen2.jpg" alt="Screenshot 2 of Moth Hunter game." />
+      </div>
+      <fieldset>
+        <legend>Download</legend>
+        <ul>
+          <li>Codename: GAME7</li>
+          <li>Size: 508B</li>
+          <li>
+            Play:
+            <a href="game7/game7.html" class="download-btn">Run in browser</a>
+          </li>
+          <li>
+            Download: <a href="game7/game7.com" class="download-btn">MS-DOS</a>
+          </li>
+          <li>Source Code: <a href="game7/game7.asm">game7.asm</a></li>
+          <li>Graphics Gale: <a href="game7/game7.gal">sketches</a></li>
+        </ul>
+      </fieldset>
+    </article>
+
+    <article id="forgotten-isles">
+      <h2>(MYSTERIES OF THE) FORGOTTEN ISLES<sup>IN-PROGRESS</sup></h2>
+      <p>Logic 2D game in VGA graphics, with PC Speaker sounds.</p>
+      <p>Explore the islands. Find all gold and bring it to the chest.</p>
+      <p>
+        Use rocks to build bridges on shallow water. Avoid wildlife.
+        <img src="snake.png" alt="Snake from Forgotten Isles game." />
+      </p>
+
+      <div class="gallery">
+        <img
+          src="game10/boot.jpg"
+          alt="Screenshot bootloader of Forgotten Isles game."
+        />
+        <img
+          src="game10/screen1.jpg"
+          alt="Screenshot 1 of Forgotten Isles game."
+        />
+        <img
+          src="game10/screen2.jpg"
+          alt="Screenshot 2 of Forgotten Isles game."
+        />
+      </div>
+
+      <h3>Features</h3>
+      <ul>
+        <li><strong>16-bit Assembly</strong>, FLAT assembler</li>
+        <li>
+          no operating system need, <strong>runs on bare-metal</strong> x86 IBM
+          compatible, starting from 386 40MHz, 1MB RAM
+        </li>
+        <li>512 bytes for custom bootloader with game instructions</li>
+        <li><strong>5KB for game code</strong>, ten floppy sectors</li>
+        <li>custom bootloader with game title and description</li>
+        <li>keyboard input, arrow keys, enter, esc</li>
+        <li>music tune and sound effects from PC Speaker</li>
+        <li>VGA graphics, 320x200, 256 colors</li>
+        <li>double-buffering</li>
+        <li>custom, shared palettes (GameBoy Color style)</li>
+        <li>sprites/tiles, 2-bit, 4 color sprites (with transparency)</li>
+        <li>
+          maps: made of 16x8 meta-tiles, meta-tile made of 2x2 tiles, 32x16
+          gameplay grid
+        </li>
+        <li>
+          entities system, simple interactions (building bridge using rock)
+        </li>
+        <li>z-sorting (you can hide behind a tree)</li>
+        <li>simple compression of data (grouped by ID)</li>
+        <li>player entitie can move objects</li>
+        <li>intro/outro</li>
+      </ul>
+
+      <fieldset>
+        <legend>Source Code</legend>
+        <p>
+          Game is free and open source. Get commented code from those places:
+        </p>
+        <ul>
+          <li><a href="game10_sources.zip">game10_sources.zip</a></li>
+          <li>
+            <a href="source.html">HTML human readable version (main file)</a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/w84death/x86-assembly/blob/main/bios/game10/"
+              >Latest form Github</a
+            >
+          </li>
+        </ul>
+      </fieldset>
+
+      <h3>How to run the game?</h3>
+      <ul>
+        <li>
+          Native from a floppy (recommended)
+          <a href="game10/game10_floppy.img">download floppy mage</a>
+        </li>
+        <li>
+          Native from MS-DOS <a href="game10/game10.com">download com file</a>
+        </li>
+        <li>Native emulator</li>
+        <li>
+          Online emulator (easiest) <a href="game10/game10.html">run jsdosr</a>
+        </li>
+      </ul>
+
+      <fieldset>
+        <legend>Download</legend>
+        <ul>
+          <li>Codename: GAME10</li>
+          <li>Size: 4.7KB</li>
+          <li>
+            Play:
+            <a href="game10/game10.html" class="download-btn">Run in browser</a>
+          </li>
+          <li>Boot: <a href="game10/game10_floppy.img">Floppy Image</a></li>
+          <li>
+            Download:
+            <a href="game10/game10.com" class="download-btn">MS-DOS</a>
+          </li>
+          <li>ProMotion NG: <a href="game10/game10.pmp">sketches</a></li>
+        </ul>
+      </fieldset>
+    </article>
+
+    <article id="game12">
+      <h2>(UNTITLED) GAME12</h2>
+      <p>New branch of the engine, new ideas.</p>
+      <p>TBA.</p>
+      <div class="gallery">
+        <img src="game12/titlescreen.png" alt="Title screen" />
+        <img src="game12/menu.png" alt="Screenshot of Game12 menu." />
+        <img src="game12/screen1.png" alt="Screenshot of Game12 terrain." />
+      </div>
+      <h3>Features</h3>
+      <ul>
+        <li>VGA 320x200, 16 colors, 4 colors per sprite/tile</li>
+        <li>Arne 16 palette</li>
+        <li>2D tile-based top-down view</li>
+        <li>Procedural map generation</li>
+        <li>Big, 64x64 tiles, map</li>
+        <li>No framebuffer, redrawing only parts that changed</li>
+        <li>Title screen</li>
+        <li>State machine</li>
+        <li>Viewport shows 20x12 tiles</li>
+        <li>Panning game viewport on big map</li>
+        <li>Alien creatures</li>
+      </ul>
+      <fieldset>
+        <legend>Download</legend>
+        <ul>
+          <li>Codename: GAME12</li>
+          <li>Size: 8KB</li>
+          <li>
+            Play:
+            <a href="game12/game12.html" class="download-btn">Run in browser</a>
+          </li>
+          <li>Boot: <a href="game12/game12_floppy.img">Floppy Image</a></li>
+          <li>
+            Download:
+            <a href="game12/game12.com" class="download-btn">MS-DOS</a>
+          </li>
+          <li>Source Code: <a href="game12/game12.asm">game12.asm</a></li>
+          <li>
+            GitHub:
+            <a href="https://github.com/w84death/game12-asm">live repository</a>
+          </li>
+        </ul>
+      </fieldset>
+    </article>
+
+    <article id="smolix">
+      <h2>SMOLiX OPERATING SYSTEM<sup>NEW</sup></h2>
+      <p><b>Real Mode, Raw Power.</b></p>
+      <p>A homebrew operating system for Intel 486 processors.</p>
+
+      <fieldset>
+        <legend>Download</legend>
+        <ul>
+          <li>Codename: SMOLiX</li>
+          <li>Size: 512B + 8KB</li>
+          <li>Boot: <a href="smolix/floppy.zip">floppy.zip</a></li>
+          <li>Source Code: <a href="smolix/release.zip">release.zip</a></li>
+          <li>
+            GitHub:
+            <a href="https://github.com/w84death/smolix">live repository</a>
+          </li>
+        </ul>
+      </fieldset>
+    </article>
+
+    <footer>
+      <p>Contact: <a href="mailto:smol@p1x.in">smol@p1x.in</a></p>
+      <p>
+        Follow me on Mastodon:
+        <a href="https://fosstodon.org/@w84death">@w84death@fosstodon.org</a>
+      </p>
+      <br />
+      <small
+        >&copy;2025 by Krzysztof Krystian Jankowski &amp; Cyfrowy Nomada</small
+      >
+    </footer>
+  </body>
+</html>
