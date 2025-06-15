@@ -52,9 +52,7 @@ _ECONOMY_BLUE_RES_        equ _BASE_ + 0x12   ; 2 bytes
 _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x14   ; 2 bytes
 _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
-_MUSIC_POINTER_           equ _BASE_ + 0x1A    ; 2 bytes
-_SFX_POINTER_             equ _BASE_ + 0x1C    ; 2 bytes
-_CURRENT_SONG_            equ _BASE_ + 0x1E    ; 2 bytes
+_SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
 
 _TILES_                   equ _BASE_ + 0x0100  ; 64 tiles = 16K
 _MAP_                     equ _BASE_ + 0x4100  ; Map data 128*128*1b= 0x4000
@@ -98,6 +96,16 @@ KB_F2       equ 0x3C
 KB_F3       equ 0x3D
 KB_F4       equ 0x3E
 KB_F5       equ 0x3F
+KB_1        equ 0x02
+KB_2        equ 0x03
+KB_3        equ 0x04
+KB_4        equ 0x05
+KB_5        equ 0x06
+KB_6        equ 0x07
+KB_7        equ 0x08
+KB_8        equ 0x09
+KB_9        equ 0x0A
+KB_0        equ 0x0B
 
 ; =========================================== TILES NAMES ===================|80
 
@@ -243,11 +251,11 @@ COLOR_CYAN          equ 13
 COLOR_YELLOW        equ 14
 COLOR_WHITE         equ 15
 
-; =========================================== MUSICAL NOTES =================|80
+; =========================================== AUDIO NOTES ===================|80
 ; Note values are frequency divisors for the PC speaker
 ; Formula: divisor = 1193180 / frequency_hz
 
-NOTE_REST   equ 0x0000  ; Rest (silence)
+NOTE_REST   equ 0xFF  ; Rest (silence)
 NOTE_C3     equ 0x2394  ; 130.81 Hz
 NOTE_CS3    equ 0x2187  ; 138.59 Hz
 NOTE_D3     equ 0x1F8F  ; 146.83 Hz
@@ -489,7 +497,7 @@ game_logic:
     mov byte [_SCENE_MODE_], MODE_TERRAIN_REMOVE
     jmp .redraw_tile
 
-  .infrastructure_place:
+  .rails_place:
     cmp word [_ECONOMY_TRACKS_], 0      ; check economy: track count
     jz .error
 
@@ -517,16 +525,21 @@ game_logic:
     call draw_ui
   jmp .redraw_tile
 
+  .station_place:
+  jmp .redraw_tile
+
+  .cart_place:
+  jmp .redraw_tile
+
   .infrastructure_edit:
     mov ax, [_CURSOR_Y_]                ; calculate map position
     shl ax, 7   ; Y * 128
     add ax, [_CURSOR_X_]
-    mov si, _METADATA_                  ; add it to the _METADATA_ for same pos
-    add si, ax
-    xor ax, ax
-    mov al, [si]                        ; read _METADATA_ for this tile
+    mov si, _METADATA_
+    add si, ax                          ; set tile position in _METADATA_
+    mov al, [si]                        ; read _METADATA_ for this tile pos
     test al, METADATA_SWITCH_INITIALIZED
-    jz .done
+    jz .done                            ; not a swich, skip
     mov bl, al                          ; save the metadata value
     mov bh, 0xFF                        ; calculate the bit mask
     sub bh, METADATA_SWITCH_MASK        ; to everything beside switch
@@ -635,7 +648,11 @@ InputTable:
   db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_RIGHT
   dw game_logic.move_cursor_right
   db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_SPACE
-  dw game_logic.infrastructure_place
+  dw game_logic.rails_place
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_1
+  dw game_logic.station_place
+  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_2
+  dw game_logic.cart_place
 
   db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_UP
   dw game_logic.move_cursor_up
@@ -709,8 +726,9 @@ init_title_screen:
   mov bl, COLOR_WHITE
   call draw_text
 
-  mov bx, INTRO_MUSIC
-  call start_music
+  mov bx, INTRO_JINGLE
+  call play_sfx
+
 
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 ret
@@ -752,9 +770,6 @@ init_menu:
 
   mov byte [_GAME_STATE_], STATE_MENU
   mov byte [_SCENE_MODE_], MODE_MAIN_MENU
-
-  mov bx, TITLE_MUSIC
-  call start_music
 ret
 
 live_menu:
@@ -776,9 +791,6 @@ init_game:
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
   mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
-
-  mov bx, GAME_MUSIC
-  call start_music
 ret
 
 live_game:
@@ -1570,19 +1582,10 @@ ret
 ; =========================================== AUDIO SYSTEM ==================|80
 
 init_audio_system:
-  mov word [_MUSIC_POINTER_], 0
   mov byte [_SFX_POINTER_], 0
-  mov word [_CURRENT_SONG_], 0
 
   mov al, 182         ; Binary mode, square wave, 16-bit divisor
   out 43h, al         ; Write to PIT command register[2]
-ret
-
-; Start playing a song
-; Input: BX = pointer to song data
-start_music:
-  mov [_CURRENT_SONG_], bx
-  mov [_MUSIC_POINTER_], bx
 ret
 
 ; Input: BX = pointer to sound effect data
@@ -1594,55 +1597,38 @@ update_audio:
   mov ax, [_GAME_TICK_]
   and ax, 0x3
   dec ax
-  jz .done
+  jz .skip_audio
 
   mov si, [_SFX_POINTER_]
   mov ax, [si]
   test ax, ax
-  jz .play_music
+  jz .stop_audio
 
   call play_sound
   add word [_SFX_POINTER_], 2
 
+   .skip_audio:
 ret
-
-  .play_music:
-    mov si, [_MUSIC_POINTER_]
-    mov ax, [si]
-    test ax, ax
-    jne .play_note
-
-    ; Loop the song
-    mov si, [_CURRENT_SONG_]
-    mov [_MUSIC_POINTER_], si
-    mov ax, [si]
-
-  .play_note:
-    add word [_MUSIC_POINTER_], 2
-    cmp ax, NOTE_REST
-    je .done
-
-    call play_sound
-
-  .done:
+  .stop_audio:
+  call stop_sound
 ret
 
 ; IN: AL - Low byte of frequency, AH - High byte of frequency
 play_sound:
-   out 42h, al         ; Low byte first
-   mov al, ah
-   out 42h, al         ; High byte[2]
+  out 42h, al         ; Low byte first
+  mov al, ah
+  out 42h, al         ; High byte[2]
 
-   in al, 61h          ; Read current port state
-   or al, 00000011b    ; Set bits 0 and 1
-   out 61h, al         ; Enable speaker output[2][3]
+  in al, 61h          ; Read current port state
+  or al, 00000011b    ; Set bits 0 and 1
+  out 61h, al         ; Enable speaker output[2][3]
 ret
 
 stop_sound:
-   in al, 61h
-   and al, 11111100b   ; Clear bits 0-1
-   out 61h, al
-   ret
+  in al, 61h
+  and al, 11111100b   ; Clear bits 0-1
+  out 61h, al
+ret
 
 
 
@@ -1698,7 +1684,7 @@ db 0xA         ; Mountain
 RailroadsList:
 db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
 
-include 'music_and_sfx.asm'
+include 'sfx.asm'
 
 include 'tiles.asm'
 
