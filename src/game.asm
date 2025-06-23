@@ -421,16 +421,16 @@ jmp main_loop
 ; =========================================== EXIT TO DOS ===================|80
 
 exit:
-   call stop_sound
-   mov ax, 0x0003       ; Set video mode to 80x25 text mode
-   int 0x10             ; Call BIOS interrupt
-   mov si, QuitText     ; Draw message after exit
-   xor dx, dx           ; At 0/0 position
-   call draw_text
+  call stop_sound
+  mov ax, 0x0003       ; Set video mode to 80x25 text mode
+  int 0x10             ; Call BIOS interrupt
+  mov si, QuitText     ; Draw message after exit
+  xor dx, dx           ; At 0/0 position
+  call draw_text
 
-   mov ax, 0x4c00      ; Exit to DOS
-   int 0x21            ; Call DOS
-   ret                 ; Return to DOS
+  mov ax, 0x4c00      ; Exit to DOS
+  int 0x21            ; Call DOS
+  ret                 ; Return to DOS
 
 
 
