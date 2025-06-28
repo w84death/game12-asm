@@ -97,3 +97,120 @@ TAB - toggle mini map view
 - Quick help
 - Credits
 - Quit
+
+
+## Data organization
+
+### Map
+Map is made of 16386 tiles, 128x128, has two layer of data (each 1b)
+
+Layer terrain background (1b):
+```
+0 0 0 0 0000
+| | | | |
+| | | | '- background sprite id (16)
+| | | '- empty, clean terrain / non-movable (mountains/rocks/building)
+| | '- rail
+| '- resource
+'- infrastructure building, station
+```
+Layer terrain forground (1b):
+000 00000
+|    |
+|    '- sprite id (32) - rails / buildings
+'- sprite id (8) - building variants
+
+Layer metadata (1b):
+```
+000 00 00 0
+|   |  |  |
+|   |  |  '- switch on rail (or not initialized)
+|   |  '- switch position (up/down/left/right)
+|   '- resource type (4)
+'- resource size (8)
+```
+
+Layer entity id (1b):
+00000000
+
+### Entites
+
+Position X 1b:
+```
+0 0000000
+|    |
+|    '- position x 128
+'- direction x (left/right)
+```
+
+Position Y 1b:
+```
+0 0000000
+|    |
+|    '- position y 128
+'- direction y (top/down)
+```
+
+Metadata 2b:
+```
+0000 0000 0000 0000
+                |
+                '- sprite id (16)
+```
+
+## Terrain rendering
+- render background sprite
+- render forground sprite(s):
+  - check type
+  - rail station
+  - rail
+  - rail switch
+  - resource
+  - building
+
+## Rail System
+
+Calculate once
+set sprites as needed
+
+when expanding:
+  - recaclulate type:
+    - for all near 8 tiles
+  - update sprites
+  - check if switch needed
+    - put proper switch
+    - set switch bit to initialized
+    - if not needed set switch bit to 0
+
+
+## UI
+
+if ARROWS
+  - moves cursor
+  - if cursor 4 tiles to the edge
+    - shift view
+    - update cursor position
+
+if hit SPACEBAR
+  - on empty terrain
+    - if tile is next to rails
+      - build rail
+      - recalculate rails at this spot (9 tiles)
+    - if on the rail
+      - if not conjunction or crossing
+        - build station
+          - and spawn fundaments
+            - up/down or left/right (if possible)
+            - set non-movable bit
+      - if switch
+        - swap switch
+    - if on fundament
+      - [popup window] to choose type of infrastructure
+      - spawn building
+    - if on infrastructure
+      - [popup window] show building information
+    - if on resource
+      - [popup window] show resource information
+
+if hit TAB
+  - [popup window] show map
