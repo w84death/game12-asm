@@ -55,7 +55,7 @@ _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
 _SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
 
-_TILES_                   equ _BASE_ + 0x0100  ; 80 tiles = 24K
+_TILES_                   equ _BASE_ + 0x0100  ; 80 tiles =  20K
 _MAP_                     equ _BASE_ + 0x5100  ; Map data 128*128*1b= 0x4000
 _METADATA_                equ _BASE_ + 0x9100  ; Map metadata 128*128*1b= 0x4000
 _ENTITIES_                equ _BASE_ + 0xD100  ; Entities 128*128*1b= 0x4000
@@ -779,7 +779,7 @@ init_menu:
 
   ; draw window
   mov ax, 0x090C
-  mov bx, 0x1014
+  mov bx, 0x0608
   call draw_window
 
   mov si, MainMenuText
@@ -1079,6 +1079,7 @@ ret
 ; BX - size
 draw_window:
 
+  push bx
   xor di, di
   xor bx, bx
   mov bl, ah        ; Y coordinate
@@ -1089,9 +1090,72 @@ draw_window:
   add bx, ax        ; Y * 64 + X
   add di, bx
 
-  mov ax, TILE_WINDOW_1
-  call draw_tile
+  pop bx
 
+  mov ax, TILE_WINDOW_1
+  call draw_sprite
+  add di, 0x10
+  inc ax
+  movzx cx, bl
+  sub cx, 2
+  .draw_line_1:
+    call draw_sprite
+    add di, 0x10
+  loop .draw_line_1
+  inc ax
+  call draw_sprite
+  add di, 0x10
+
+  movzx dx, bl
+  shl dx, 0x4
+
+  movzx cx, bh
+  sub cx, 0x2
+  .next_line:
+    push cx
+
+    add di, SCREEN_WIDTH*16
+    sub di, dx
+
+    mov ax, TILE_WINDOW_4
+    call draw_sprite
+    add di, 0x10
+
+    inc ax
+
+    movzx cx, bl
+    sub cx, 2
+    .draw_line_2n:
+      call draw_sprite
+      add di, 0x10
+    loop .draw_line_2n
+
+    inc ax
+    call draw_sprite
+    add di, 0x10
+
+    pop cx
+  loop .next_line
+
+  add di, SCREEN_WIDTH*16
+  sub di, dx
+
+  inc ax
+
+  call draw_sprite
+  add di, 0x10
+
+  inc ax
+
+  movzx cx, bl
+  sub cx, 2
+  .draw_line_3:
+    call draw_sprite
+    add di, 0x10
+  loop .draw_line_3
+
+  inc ax
+  call draw_sprite
 ret
 
 TERRAIN_RULES_MASK equ 0x03

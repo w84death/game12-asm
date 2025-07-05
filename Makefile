@@ -79,7 +79,6 @@ jsdos: $(GAME_COM)
 	@echo "Updating jsdos archive with new game.com..."
 	cp $(GAME_COM) game.com
 	zip -u $(JSDOS_ARCHIVE) game.com
-	$(RM) game.com
 	@echo "jsdos build complete! Updated $(JSDOS_ARCHIVE)"
 
 # Burn game to physical floppy disk
