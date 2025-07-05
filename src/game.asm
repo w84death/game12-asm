@@ -33,6 +33,7 @@
 ; ==============================================================================
 
 org 0x0100
+
 GAME_STACK_POINTER        equ 0xFFFE
 GAME_SEGMENT              equ 0x9000
 
@@ -54,10 +55,10 @@ _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
 _SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
 
-_TILES_                   equ _BASE_ + 0x0100  ; 64 tiles = 16K
-_MAP_                     equ _BASE_ + 0x4100  ; Map data 128*128*1b= 0x4000
-_METADATA_                equ _BASE_ + 0x8100  ; Map metadata 128*128*1b= 0x4000
-_ENTITIES_                equ _BASE_ + 0xC100  ; Entities 128*128*1b= 0x4000
+_TILES_                   equ _BASE_ + 0x0100  ; 80 tiles = 24K
+_MAP_                     equ _BASE_ + 0x5100  ; Map data 128*128*1b= 0x4000
+_METADATA_                equ _BASE_ + 0x9100  ; Map metadata 128*128*1b= 0x4000
+_ENTITIES_                equ _BASE_ + 0xD100  ; Entities 128*128*1b= 0x4000
 
 ; =========================================== GAME STATES ===================|80
 
@@ -111,7 +112,7 @@ KB_0        equ 0x0B
 
 ; =========================================== TILES NAMES ===================|80
 
-TILES_COUNT                     equ 0x40    ; 64 tiles
+TILES_COUNT                     equ 0x50    ; 80 tiles
 TILE_MUD_1                      equ 0x00
 TILE_MUD_2                      equ 0x01
 TILE_MUD_GRASS_1                equ 0x02
@@ -123,69 +124,80 @@ TILE_TREES_2                    equ 0x07
 TILE_MOUNTAINS_1                equ 0x08
 TILE_MOUNTAINS_2                equ 0x09
 
-TILE_RIVER_1                    equ 0x0A
-TILE_RIVER_2                    equ 0x0B
-TILE_RIVER_3                    equ 0x0C
-TILE_RIVER_4                    equ 0x0D
-TILE_RIVER_5                    equ 0x0E
-TILE_RIVER_6                    equ 0x0F
-TILE_RIVER_7                    equ 0x10
-TILE_RIVER_8                    equ 0x11
+TILE_FOUNDATION_OFF             equ 0x0A
+TILE_FOUNDATION_ON              equ 0x0B
+TILE_FOUNDATION_STATION_2       equ 0x0C
 
-TILE_FOUNDATION                 equ 0x12
-TILE_FOUNDATION_STATION_1       equ 0x13
-TILE_FOUNDATION_STATION_2       equ 0x14
+TILE_RES_YELLOW_1               equ 0x0D
+TILE_RES_YELLOW_2               equ 0x0E
+TILE_RES_BLUE_1                 equ 0x0F
+TILE_RES_BLUE_2                 equ 0x10
+TILE_RES_RED_1                  equ 0x11
+TILE_RES_RED_2                  equ 0x12
 
-TILE_PLANT_YELLOW_1             equ 0x15
-TILE_PLANT_YELLOW_2             equ 0x16
-TILE_PLANT_BLUE_1               equ 0x17
-TILE_PLANT_BLUE_2               equ 0x18
-TILE_PLANT_RED_1                equ 0x19
-TILE_PLANT_RED_2                equ 0x1A
+TILE_RAILS_1                    equ 0x13
+TILE_RAILS_2                    equ 0x14
+TILE_RAILS_3                    equ 0x15
+TILE_RAILS_4                    equ 0x16
+TILE_RAILS_5                    equ 0x17
+TILE_RAILS_6                    equ 0x18
+TILE_RAILS_7                    equ 0x19
+TILE_RAILS_8                    equ 0x1A
+TILE_RAILS_9                    equ 0x1B
+TILE_RAILS_10                   equ 0x1C
+TILE_RAILS_11                   equ 0x1D
 
-TILE_CART_VERTICAL              equ 0x1B
-TILE_CART_HORIZONTAl            equ 0x1C
+TILE_BUILDING_LANDER            equ 0x1E
+TILE_BUILDING_PODS              equ 0x1F
+TILE_BUILDING_FACTORY           equ 0x20
+TILE_BUILDING_RADAR             equ 0x21
+TILE_BUILDING_EXTRACT           equ 0x22
+TILE_BUILDING_SILOS             equ 0x23
+TILE_BUILDING_POWER             equ 0x24
+TILE_BUILDING_EXTRACT_RED       equ 0x25
 
-TILE_RAILS_1                    equ 0x1D
-TILE_RAILS_2                    equ 0x1E
-TILE_RAILS_3                    equ 0x1F
-TILE_RAILS_4                    equ 0x20
-TILE_RAILS_5                    equ 0x21
-TILE_RAILS_6                    equ 0x22
-TILE_RAILS_7                    equ 0x23
-TILE_RAILS_8                    equ 0x24
-TILE_RAILS_9                    equ 0x25
-TILE_RAILS_10                   equ 0x26
-TILE_RAILS_11                   equ 0x27
+TILE_PIPE_1                     equ 0x26
+TILE_PIPE_2                     equ 0x27
 
-TILE_BUILDING_BARRACK           equ 0x28
-TILE_BUILDING_RAFINERY          equ 0x29
-TILE_BUILDING_RADAR             equ 0x2A
-TILE_BUILDING_ARM               equ 0x2B
-TILE_BUILDING_EXTRACT           equ 0x2C
-TILE_BUILDING_EXTRACT_BLUE      equ 0x2D
-TILE_BUILDING_EXTRACT_YELLOW    equ 0x2E
-TILE_BUILDING_EXTRACT_RED       equ 0x2F
+TILE_CART_VERTICAL              equ 0x28
+TILE_CART_HORIZONTAL            equ 0x29
 
-TILE_ORE_BLUE                   equ 0x30
-TILE_ORE_YELLOW                 equ 0x31
-TILE_ORE_RED                    equ 0x32
+TILE_SWITCH_LEFT                equ 0x2A
+TILE_SWITCH_DOWN                equ 0x2B
+TILE_SWITCH_RIGHT               equ 0x2C
+TILE_SWITCH_UP                  equ 0x2D
+TILE_SWITCH_STOP                equ 0x2E
 
-TILE_SWITCH_LEFT                equ 0x33
-TILE_SWITCH_DOWN                equ 0x34
-TILE_SWITCH_RIGHT               equ 0x35
-TILE_SWITCH_UP                  equ 0x36
-TILE_SWITCH_STOP                equ 0x37
+TILE_ORE_BLUE                   equ 0x2F
+TILE_ORE_YELLOW                 equ 0x30
+TILE_ORE_RED                    equ 0x31
 
-TILE_CURSOR_BUILD               equ 0x38
-TILE_CURSOR_PAN                 equ 0x39
+TILE_EXTRACT_BLUE                   equ 0x32
+TILE_EXTRACT_YELLOW                 equ 0x33
+TILE_EXTRACT_RED                    equ 0x34
+
+TILE_SILO_BLUE                  equ 0x35
+TILE_SILO_YELLOW                equ 0x36
+TILE_SILO_RED                   equ 0x37
+
+TILE_CURSOR_PAN                equ 0x38
+TILE_CURSOR_BUILD                equ 0x39
 TILE_CURSOR_EDIT                equ 0x3A
 TILE_CURSOR_REMOVE              equ 0x3B
+
+TILE_WINDOW_1                   equ 0x3C
+TILE_WINDOW_2                   equ 0x3D
+TILE_WINDOW_3                   equ 0x3E
+TILE_WINDOW_4                   equ 0x3F
+TILE_WINDOW_5                   equ 0x40
+TILE_WINDOW_6                   equ 0x41
+TILE_WINDOW_7                   equ 0x42
+TILE_WINDOW_8                   equ 0x43
+TILE_WINDOW_9                   equ 0x44
 
 META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
 META_INVISIBLE_WALL           equ 0x20  ; For collision detection
 META_TRANSPORT                equ 0x40  ; For railroads
-META_FOG                      equ 0x80  ; Fog of War
 
 METADATA_SWITCH_INITIALIZED   equ 0x01
 METADATA_SWITCH_MASK          equ 0x06
@@ -232,7 +244,7 @@ SCREEN_WIDTH                  equ 320
 SCREEN_HEIGHT                 equ 200
 MAP_SIZE                      equ 128     ; Map size in cells DO NOT CHANGE
 VIEWPORT_WIDTH                equ 20      ; Size in tiles 20 = 320 pixels
-VIEWPORT_HEIGHT               equ 10      ; by 10 = 192 pixels
+VIEWPORT_HEIGHT               equ 12      ; by 10 = 192 pixels
 VIEWPORT_GRID_SIZE            equ 16      ; Individual cell size DO NOT CHANGE
 SPRITE_SIZE                   equ 16      ; Sprite size 16x16
 
@@ -298,6 +310,8 @@ NOTE_AS5    equ 0x0476  ; 932.33 Hz
 NOTE_B5     equ 0x0416  ; 987.77 Hz
 NOTE_C6     equ 0x0473  ; 1046.50 Hz
 NOTE_E6     equ 0x037A  ; 1318.51 Hz
+
+
 
 ; =========================================== INITIALIZATION ================|80
 
@@ -721,16 +735,16 @@ reset_to_default_values:
 ret
 
 init_title_screen:
-  mov si, start
+  mov si, start       ; Points to start of this code, wil be used as RNG
   mov cx, 40*25
   .random_numbers:
-    lodsb
-    and ax, 0x1
-    add al, 0x30
-    mov ah, 0x0e
-    mov bh, 0
+    lodsb             ; load values from source code
+    and ax, 0x7       ; 0-7 values
+    add al, 0x30      ; move to ASCII numbers position
+    mov ah, 0x0e      ; BIOS write character
+    mov bh, 0         ; set page number
     mov bl, COLOR_DARK_GRAY
-    int 0x10
+    int 0x10          ; draw character
   loop .random_numbers
 
   mov si, WelcomeText
@@ -758,21 +772,21 @@ live_title_screen:
 ret
 
 init_menu:
-  mov al, COLOR_DEEP_PURPLE
+  mov al, COLOR_NAVY_BLUE
   call clear_screen
 
-  mov di, SCREEN_WIDTH*8
-  mov al, COLOR_DEEP_PURPLE
-  call draw_gradient
+  call draw_terrain
 
-  mov si, MainMenuTitleText
-  mov dx, 0x040A
-  mov bl, COLOR_WHITE
-  call draw_text
+  ; draw logo sprites
+
+  ; draw window
+  mov ax, 0x0408
+  mov bx, 0x1014
+  call draw_window
 
   mov si, MainMenuText
   mov bl, COLOR_YELLOW
-  mov dx, 0x060A
+  mov dx, 0x0A0D
   .menu_entry:
     cmp byte [si], 0x00
     jz .done
@@ -783,7 +797,7 @@ init_menu:
   .done:
 
   mov si, MainMenuCopyText
-  mov dx, 0x140D
+  mov dx, 0x160D
   mov bl, COLOR_LIGHT_GRAY
   call draw_text
 
@@ -1044,7 +1058,7 @@ ret
 ; AL - Color
 ; OUT: VGA memory filled with gradient
 draw_gradient:
-mov ah, al
+  mov ah, al
   mov dl, 0xD                ; Number of bars to draw
   .draw_gradient:
     mov cx, SCREEN_WIDTH*4           ; Number of pixels high for each bar
@@ -1059,6 +1073,16 @@ mov ah, al
     xchg al, ah             ; Swap colors (left/right pixel)
     dec dl                  ; Decrease number of bars to draw
     jg .draw_gradient       ; Loop until all bars are drawn
+ret
+
+; =========================================== DRAW WINDOW ===================|80
+; IN:
+; AX - Position
+; BX - size
+draw_window:
+
+
+
 ret
 
 TERRAIN_RULES_MASK equ 0x03
@@ -1699,7 +1723,7 @@ ret
 
 ; =========================================== TEXT DATA =====================|80
 
-WelcomeText db 'P1X ASSEMBLY ENGINE V12.02', 0x0
+WelcomeText db 'P1X ASSEMBLY ENGINE V12.03', 0x0
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in for more games...', 0x0D, 0x0A, 0x0
 FakeNumberText db '0000', 0x0
@@ -1709,12 +1733,15 @@ UIEditModeText db 'F2: Edit Mode', 0x0
 UIRemoveModeText db 'F2: Remove Mode', 0x0
 UIScoreText db 'Score:', 0x0
 
+MainMenuTitleText:
+db 0x2F,0x20,0x27,0x20,0x2F,0x27,0x5C,0x20,0x7C,0x5F,0x29,0x20,0x2D,0x2D,0x2D,0x20,0x5C,0x27,0x5F,0x20,0x5C,0x20,0x2F,0x20,0x20,0x20,0x7C,0x20,0x20,0x2F,0x5F,0x5C,0x20,0x7C,0x5F,0x29,0x20,0x28,0x5F,0x20
+db 0x5C,0x5F,0x5F,0x20,0x5C,0x5F,0x27,0x20,0x7C,0x20,0x5C,0x20,0x20,0x7C,0x20,0x20,0x2F,0x5F,0x5F,0x20,0x2F,0x20,0x5C,0x20,0x20,0x20,0x7C,0x5F,0x20,0x7C,0x20,0x7C,0x20,0x7C,0x5F,0x29,0x20,0x2E,0x5F,0x29,0x0
+
 MainMenuText:
   db 'ENTER: Play',0x0
-  db 'F1: Generate new map',0x0
-  db 'F2: Tileset debug',0x0
-  db 'F3: Settings',0x0
-  db 'F4: How to play',0x0
+  db 'F2: Save',0x0
+  db 'F6: Load',0x0
+  db 'F1: Help',0x0
   db 'ESC: Quit',0x0
   db 0x00
 
@@ -1739,7 +1766,6 @@ HelpText:
   db 0x00
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
-MainMenuTitleText db '"Codename: GAME12"',0x0
 
 ; =========================================== TERRAIN GEN RULES =============|80
 

@@ -3,15 +3,23 @@ Krzysztof Krystian Jankowski
 (C) 2025.06  P1X
 
 ## Name propostions
-"Expedition Unit 7"
+"Cortex Labs"
+
+CORTEX LABS in sprites 10x16 = 160b
+
+```
+/ ' /'\ |_) --- \'_ \ /   |  /_\ |_) (_ 
+\__ \_' | \  |  /__ / \   |_ | | |_) ._)
+```
+40*2=80b
 
 ## Story
 
-In 2157, humanity discovered an extraordinary resource on the distant planet Kepler-438b, located 470 light-years from Earth. The planet harbors a unique fungal organism known as Cerebrospore - a bioluminescent mushroom-like plant that contains compounds capable of triggering neurogenesis in the human brain. When processed and consumed, Cerebrospore dramatically enhances cognitive abilities, repairs damaged neural tissue, and extends human lifespan by up to 200 years.
+In 2157, humanity discovered an extraordinary resource on the distant planet Kepler-486i, located 486 light-years from Earth. The planet harbors a unique fungal organism known as Cerebrospore - a bioluminescent mushroom-like plant that contains compounds capable of triggering neurogenesis in the human brain. When processed and consumed, Cerebrospore dramatically enhances cognitive abilities, repairs damaged neural tissue, and extends human lifespan by up to 200 years.
 
-Kepler-438b's harsh environment makes it impossible for human colonization. The planet's toxic atmosphere, extreme radiation levels, and unpredictable electromagnetic storms would kill any human within minutes. The only viable solution is the deployment of remotely controlled robotic expeditions, operated from orbital relay stations positioned at safe distances.
+Kepler-486i's harsh environment makes it impossible for human colonization. The planet's toxic atmosphere, extreme radiation levels, and unpredictable electromagnetic storms would kill any human within minutes. The only viable solution is the deployment of remotely controlled robotic expeditions, operated from orbital relay stations positioned at safe distances.
 
-You are Commander of Expedition Unit 7, tasked with establishing and managing an automated extraction facility on the planet's surface. Your mission is to build a self-sustaining robotic base capable of harvesting, processing, and launching regular shipments of Cerebrospore back to Earth. The future of human evolution depends on your success - but you're not alone. Competing nations and corporations have also deployed their own robotic expeditions, and resources on Kepler-438b are limited. Time is running out before the next solar storm season makes extraction impossible for the next decade.
+You are Commander of Expedition Unit 7, tasked with establishing and managing an automated extraction facility on the planet's surface. Your mission is to build a self-sustaining robotic base capable of harvesting, processing, and launching regular shipments of Cerebrospore back to Earth. The future of human evolution depends on your success - but you're not alone. Competing nations and corporations have also deployed their own robotic expeditions, and resources on Kepler-486i are limited. Time is running out before the next solar storm season makes extraction impossible for the next decade.
 
 ## Example game play session
 
@@ -98,27 +106,30 @@ TAB - toggle mini map view
 - Credits
 - Quit
 
-
 ## Data organization
 
 ### Map
-Map is made of 16386 tiles, 128x128, has two layer of data (each 1b)
+The map consists of 16,384 tiles arranged in a 128x128 grid, with four data layers (each 1 byte) resulting in a total map size of 65,536 bytes or 64KB in memory.
 
 Layer terrain background (1b):
 ```
 0 0 0 0 0000
 | | | | |
 | | | | '- background sprite id (16)
-| | | '- empty, clean terrain / non-movable (mountains/rocks/building)
-| | '- rail
-| '- resource
-'- infrastructure building, station
+| | | '- terrain traversal (1) (movable or forest/mountains/building)
+| | '- rail (1)
+| '- resource (1)
+'- infrastructure building, station (1)
 ```
+
 Layer terrain forground (1b):
-000 00000
-|    |
-|    '- sprite id (32) - rails / buildings
-'- sprite id (8) - building variants
+```
+00 0 00000
+|  | |
+|  | '- sprite id (32) (rails / buildings)
+|  '- cart (1) (horizontal/vertical)
+'- unused (4)
+```
 
 Layer metadata (1b):
 ```
@@ -126,34 +137,31 @@ Layer metadata (1b):
 |   |  |  |
 |   |  |  '- switch on rail (or not initialized)
 |   |  '- switch position (up/down/left/right)
-|   '- resource type (4)
-'- resource size (8)
+|   '- resource type (4) (for source/pods cargo/buildings)
+'- unused (8)
 ```
 
 Layer entity id (1b):
+```
 00000000
+|
+'- id (256)
+```
 
 ### Entites
 
-Position X 1b:
+Position & direction 2b:
 ```
-0 0000000
-|    |
-|    '- position x 128
-'- direction x (left/right)
-```
-
-Position Y 1b:
-```
-0 0000000
-|    |
-|    '- position y 128
-'- direction y (top/down)
+00 0000000 0000000
+|  |       |
+|  |       '- position x 128
+|  '- position y 128
+'- direction (4) (up/down/left/right)
 ```
 
 Metadata 2b:
 ```
-0000 0000 0000 0000
+0000 0000 0000  0000
                 |
                 '- sprite id (16)
 ```
