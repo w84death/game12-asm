@@ -113,6 +113,7 @@ KB_0        equ 0x0B
 ; =========================================== TILES NAMES ===================|80
 
 TILES_COUNT                     equ 0x50    ; 80 tiles
+
 TILE_MUD_1                      equ 0x00
 TILE_MUD_2                      equ 0x01
 TILE_MUD_GRASS_1                equ 0x02
@@ -126,74 +127,71 @@ TILE_MOUNTAINS_2                equ 0x09
 
 TILE_FOUNDATION_OFF             equ 0x0A
 TILE_FOUNDATION_ON              equ 0x0B
-TILE_FOUNDATION_STATION_2       equ 0x0C
 
-TILE_RES_YELLOW_1               equ 0x0D
-TILE_RES_YELLOW_2               equ 0x0E
-TILE_RES_BLUE_1                 equ 0x0F
-TILE_RES_BLUE_2                 equ 0x10
-TILE_RES_RED_1                  equ 0x11
-TILE_RES_RED_2                  equ 0x12
+TILE_RES_YELLOW_1               equ 0x0C
+TILE_RES_YELLOW_2               equ 0x0D
+TILE_RES_BLUE_1                 equ 0x0E
+TILE_RES_BLUE_2                 equ 0x0F
+TILE_RES_RED_1                  equ 0x10
+TILE_RES_RED_2                  equ 0x11
 
-TILE_RAILS_1                    equ 0x13
-TILE_RAILS_2                    equ 0x14
-TILE_RAILS_3                    equ 0x15
-TILE_RAILS_4                    equ 0x16
-TILE_RAILS_5                    equ 0x17
-TILE_RAILS_6                    equ 0x18
-TILE_RAILS_7                    equ 0x19
-TILE_RAILS_8                    equ 0x1A
-TILE_RAILS_9                    equ 0x1B
-TILE_RAILS_10                   equ 0x1C
-TILE_RAILS_11                   equ 0x1D
+TILE_RAILS_1                    equ 0x12
+TILE_RAILS_2                    equ 0x13
+TILE_RAILS_3                    equ 0x14
+TILE_RAILS_4                    equ 0x15
+TILE_RAILS_5                    equ 0x16
+TILE_RAILS_6                    equ 0x17
+TILE_RAILS_7                    equ 0x18
+TILE_RAILS_8                    equ 0x19
+TILE_RAILS_9                    equ 0x1A
+TILE_RAILS_10                   equ 0x1B
+TILE_RAILS_11                   equ 0x1C
 
-TILE_BUILDING_LANDER            equ 0x1E
-TILE_BUILDING_PODS              equ 0x1F
-TILE_BUILDING_FACTORY           equ 0x20
-TILE_BUILDING_RADAR             equ 0x21
-TILE_BUILDING_EXTRACT           equ 0x22
-TILE_BUILDING_SILOS             equ 0x23
-TILE_BUILDING_POWER             equ 0x24
-TILE_BUILDING_EXTRACT_RED       equ 0x25
+TILE_BUILDING_LANDER            equ 0x1D
+TILE_BUILDING_PODS              equ 0x1E
+TILE_BUILDING_FACTORY           equ 0x1F
+TILE_BUILDING_RADAR             equ 0x20
+TILE_BUILDING_EXTRACT           equ 0x21
+TILE_BUILDING_SILOS             equ 0x22
+TILE_BUILDING_POWER             equ 0x23
 
-TILE_PIPE_1                     equ 0x26
-TILE_PIPE_2                     equ 0x27
+TILE_PIPE_1                     equ 0x24
+TILE_PIPE_2                     equ 0x25
 
-TILE_CART_VERTICAL              equ 0x28
-TILE_CART_HORIZONTAL            equ 0x29
+TILE_CART_VERTICAL              equ 0x26
+TILE_CART_HORIZONTAL            equ 0x27
 
-TILE_SWITCH_LEFT                equ 0x2A
-TILE_SWITCH_DOWN                equ 0x2B
-TILE_SWITCH_RIGHT               equ 0x2C
-TILE_SWITCH_UP                  equ 0x2D
-TILE_SWITCH_STOP                equ 0x2E
+TILE_SWITCH_LEFT                equ 0x28
+TILE_SWITCH_DOWN                equ 0x29
+TILE_SWITCH_RIGHT               equ 0x2A
+TILE_SWITCH_UP                  equ 0x2B
 
-TILE_ORE_BLUE                   equ 0x2F
-TILE_ORE_YELLOW                 equ 0x30
-TILE_ORE_RED                    equ 0x31
+TILE_ORE_BLUE                   equ 0x2C
+TILE_ORE_YELLOW                 equ 0x2D
+TILE_ORE_RED                    equ 0x2E
 
-TILE_EXTRACT_BLUE                   equ 0x32
-TILE_EXTRACT_YELLOW                 equ 0x33
-TILE_EXTRACT_RED                    equ 0x34
+TILE_EXTRACT_BLUE               equ 0x2F
+TILE_EXTRACT_YELLOW             equ 0x30
+TILE_EXTRACT_RED                equ 0x31
 
-TILE_SILO_BLUE                  equ 0x35
-TILE_SILO_YELLOW                equ 0x36
-TILE_SILO_RED                   equ 0x37
+TILE_SILO_BLUE                  equ 0x32
+TILE_SILO_YELLOW                equ 0x33
+TILE_SILO_RED                   equ 0x34
 
-TILE_CURSOR_PAN                equ 0x38
-TILE_CURSOR_BUILD                equ 0x39
-TILE_CURSOR_EDIT                equ 0x3A
-TILE_CURSOR_REMOVE              equ 0x3B
+TILE_CURSOR_PAN                 equ 0x35
+TILE_CURSOR_BUILD               equ 0x36
+TILE_CURSOR_EDIT                equ 0x37
+TILE_CURSOR_REMOVE              equ 0x38
 
-TILE_WINDOW_1                   equ 0x3C
-TILE_WINDOW_2                   equ 0x3D
-TILE_WINDOW_3                   equ 0x3E
-TILE_WINDOW_4                   equ 0x3F
-TILE_WINDOW_5                   equ 0x40
-TILE_WINDOW_6                   equ 0x41
-TILE_WINDOW_7                   equ 0x42
-TILE_WINDOW_8                   equ 0x43
-TILE_WINDOW_9                   equ 0x44
+TILE_WINDOW_1                   equ 0x39
+TILE_WINDOW_2                   equ 0x3A
+TILE_WINDOW_3                   equ 0x3B
+TILE_WINDOW_4                   equ 0x3C
+TILE_WINDOW_5                   equ 0x3D
+TILE_WINDOW_6                   equ 0x3E
+TILE_WINDOW_7                   equ 0x3F
+TILE_WINDOW_8                   equ 0x40
+TILE_WINDOW_9                   equ 0x41
 
 META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
 META_INVISIBLE_WALL           equ 0x20  ; For collision detection
@@ -780,7 +778,7 @@ init_menu:
   ; draw logo sprites
 
   ; draw window
-  mov ax, 0x0408
+  mov ax, 0x090C
   mov bx, 0x1014
   call draw_window
 
@@ -1081,7 +1079,18 @@ ret
 ; BX - size
 draw_window:
 
+  xor di, di
+  xor bx, bx
+  mov bl, ah        ; Y coordinate
+  shl bx, 0x3
+  imul bx, SCREEN_WIDTH
+  and ax, 0x00FF
+  shl ax, 0x3
+  add bx, ax        ; Y * 64 + X
+  add di, bx
 
+  mov ax, TILE_WINDOW_1
+  call draw_tile
 
 ret
 
