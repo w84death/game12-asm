@@ -1669,73 +1669,55 @@ draw_minimap:
   push VGA_SEGMENT
   pop es
 
-  .draw_frame:
-    mov di, SCREEN_WIDTH*30+90
-    mov ax, COLOR_BROWN
-    mov cx, 140
-    .draw_line:
-      push cx
-      mov cx, 70
-      rep stosw
-      pop cx
-      add di, 320-140
-    loop .draw_line
+  mov ax, 0x040B
+  mov bx, 0x0909
+  call draw_window
 
-   .draw_mini_map:
-    mov si, _MAP_              ; Map data
-    mov di, SCREEN_WIDTH*36+96          ; Map position on screen
-    mov bx, TerrainColors      ; Terrain colors array
-    mov cx, MAP_SIZE           ; Columns
-    .draw_loop:
-      push cx
-      mov cx, MAP_SIZE        ; Rows
-      .draw_row:
-        lodsb                ; Load map cell
-        and al, META_TILES_MASK ; Clear metadata
-        xlatb                ; Translate to color
-        mov ah, al           ; Copy color for second pixel
-        mov [es:di], al      ; Draw 1 pixels
-        add di, 1            ; Move to next column
-      loop .draw_row
-      pop cx
-      add di, 320-MAP_SIZE    ; Move to next row
-    loop .draw_loop
+  .draw_mini_map:
+  mov si, _MAP_              ; Map data
+  mov di, SCREEN_WIDTH*36+96          ; Map position on screen
+  mov bx, TerrainColors      ; Terrain colors array
+  mov cx, MAP_SIZE           ; Columns
+  .draw_loop:
+    push cx
+    mov cx, MAP_SIZE        ; Rows
+    .draw_row:
+      lodsb                ; Load map cell
+      and al, META_TILES_MASK ; Clear metadata
+      push es
+      push GAME_SEGMENT
+      pop es
+      xlatb                ; Translate to color
+      pop es
+      mov ah, al           ; Copy color for second pixel
+      mov [es:di], al      ; Draw 1 pixels
+      add di, 1            ; Move to next column
+    loop .draw_row
+    pop cx
+    add di, 320-MAP_SIZE    ; Move to next row
+  loop .draw_loop
 
-    xor ax, ax
+  xor ax, ax
 
 
-    push ENTITIES_SEGMENT
-    pop ds
+  push ENTITIES_SEGMENT
+  pop ds
 
-    mov si, _ENTITIES_
-    .next_entity:
-      lodsw
-      test ax, ax
-      jz .end_entities
-      movzx bx, ah
-      imul bx, SCREEN_WIDTH
-      movzx cx, al
-      add bx, cx
-      mov di, SCREEN_WIDTH*35+96
-      add di, bx
-      inc si
-      mov byte [es:di], COLOR_WHITE
-   loop .next_entity
-   .end_entities:
-
-   .draw_viewport_box:
-      mov di, SCREEN_WIDTH*35+96
-      mov ax, [_VIEWPORT_Y_]  ; Y coordinate
-      imul ax, 320
-      add ax, [_VIEWPORT_X_]  ; Y * 64 + X
-      add di, ax
-      mov ax, COLOR_WHITE
-      mov ah, al
-      mov cx, VIEWPORT_WIDTH/2
-      rep stosw
-      add di, SCREEN_WIDTH*VIEWPORT_HEIGHT-VIEWPORT_WIDTH
-      mov cx, VIEWPORT_WIDTH/2
-      rep stosw
+  mov si, _ENTITIES_
+  .next_entity:
+    lodsw
+    test ax, ax
+    jz .end_entities
+    movzx bx, ah
+    imul bx, SCREEN_WIDTH
+    movzx cx, al
+    add bx, cx
+    mov di, SCREEN_WIDTH*35+96
+    add di, bx
+    inc si
+    mov byte [es:di], COLOR_WHITE
+  loop .next_entity
+  .end_entities:
 
   pop ds
   pop es
