@@ -64,7 +64,7 @@ _SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
 
 _TILES_                   equ 0x0000
 _MAP_                     equ 0x0000  ; Map data 128*128*1b= 0x4000
-_METADATA_                equ 0x4000  ; Map metadata 128*128*1b= 0x4000
+_METADATA_                equ 0x0000  ; Map metadata 128*128*1b= 0x4000
 _ENTITIES_                equ 0x0000  ; Entities 128*128*1b= 0x4000
 
 ; =========================================== GAME STATES ===================|80
@@ -1242,15 +1242,20 @@ generate_map:
     jnz .next_col
   loop .next_row
 
+
   .set_metadata:
+    push MAP_METADATA_SEGMENT
+    pop ds
     xor si, si
+    xor di, di
     mov cx, MAP_SIZE*MAP_SIZE
     .meta_next_cell:
       cmp byte [es:si], TILE_TREES_1
       jge .skip
-      add byte [es:si], META_INVISIBLE_WALL
+      add byte [ds:di], META_INVISIBLE_WALL
       .skip:
       inc si
+      inc di
     loop .meta_next_cell
 
     pop ds
@@ -1260,10 +1265,10 @@ ret
 ; =========================================== DRAW TERRAIN ==================|80
 ; OUT: Terrain drawn on the screen
 draw_terrain:
-  push ds
+  push es
 
   push MAP_SEGMENT
-  pop ds
+  pop es
 
   xor di, di
 
@@ -1277,7 +1282,7 @@ draw_terrain:
 
     mov cx, VIEWPORT_WIDTH
     .draw_cell:
-      lodsb
+      mov al, [es:si]
       mov bl, al
       and al, META_TILES_MASK ; clear metadata
       call draw_tile
@@ -1286,8 +1291,8 @@ draw_terrain:
       jz .skip_rails
         call caculate_and_draw_rails
       .skip_rails:
-
       add di, SPRITE_SIZE
+      inc si
     loop .draw_cell
 
     add di, SCREEN_WIDTH*(SPRITE_SIZE-1)
@@ -1295,15 +1300,7 @@ draw_terrain:
     pop cx
   loop .draw_line
 
-  xor di, di
-  mov cx, 320
-  mov al, COLOR_WHITE
-  rep stosb
-  mov cx, 320
-  mov al, COLOR_NAVY_BLUE
-  rep stosb
-
-  pop ds
+  pop es
 ret
 
 ; =========================================== DRAW TERRAIN TILE ============|80
