@@ -35,11 +35,14 @@
 org 0x0100
 
 GAME_STACK_POINTER        equ 0xFFFE
-GAME_SEGMENT              equ 0x1000
-TILES_SEGMENT             equ 0x6000    ; 80 tiles =  20K
-MAP_SEGMENT               equ 0x7000    ; Segment for map and metadata
-ENTITIES_SEGMENT          equ 0x8000    ; Segment for entities
-VGA_SEGMENT               equ 0xA000
+GAME_SEGMENT              equ 0x1000    ; Game code (up to ~144KB available)
+TILES_SEGMENT             equ 0x5000    ; 80 tiles = 20K (0x5000 bytes)
+MAP_SEGMENT               equ 0x6000    ; First map layer (16KB)
+MAP_METADATA_SEGMENT      equ 0x6400    ; Metadata layer (16KB)
+MAP_LAYER2_SEGMENT        equ 0x6800    ; Additional layer (16KB)
+MAP_LAYER3_SEGMENT        equ 0x6C00    ; Additional layer (16KB)
+ENTITIES_SEGMENT          equ 0x7000    ; Entities data
+VGA_SEGMENT               equ 0xA000    ; VGA memory (fixed by hardware)
 
 ; =========================================== MEMORY ALLOCATION =============|80
 
@@ -789,7 +792,11 @@ init_menu:
 
   call draw_terrain
 
-  mov di, 100+48*320
+  mov ax, 0x040C
+  mov bx, 0x0207
+  call draw_window
+
+  mov di, 112+39*320
   mov ax, TILE_LOGO_1
   mov cx, 5
   .logo_loop:
@@ -1052,12 +1059,27 @@ ret
 ; =========================================== GET RANDOM ====================|80
 ; OUT: AX - Random number
 get_random:
-  mov ax, [_RNG_]
+  push es
+  push si
+  push di
+
+  push GAME_SEGMENT
+  pop es
+
+  mov si, _RNG_
+  mov di, _GAME_TICK_
+
+  mov ax, [es:si]
   inc ax
   rol ax, 1
   xor ax, 0x1337
-  add ax, [_GAME_TICK_]
-  mov [_RNG_], ax
+  add ax, [es:di]
+  mov si, _RNG_
+  mov [es:si], ax
+
+  pop di
+  pop si
+  pop es
 ret
 
 ; =========================================== CLEAR SCREEN ==================|80
@@ -1130,6 +1152,8 @@ draw_window:
   shl dx, 0x4
 
   movzx cx, bh
+  cmp cx, 0x2
+  jle .skip_middle
   sub cx, 0x2
   .next_line:
     push cx
@@ -1140,7 +1164,6 @@ draw_window:
     mov ax, TILE_WINDOW_4
     call draw_sprite
     add di, 0x10
-
     inc ax
 
     movzx cx, bl
@@ -1157,10 +1180,12 @@ draw_window:
     pop cx
   loop .next_line
 
+  .skip_middle:
+
   add di, SCREEN_WIDTH*16
   sub di, dx
 
-  inc ax
+  mov ax, TILE_WINDOW_7
 
   call draw_sprite
   add di, 0x10
