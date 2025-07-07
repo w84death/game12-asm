@@ -5,14 +5,6 @@ Krzysztof Krystian Jankowski
 ## Name propostions
 "Cortex Labs"
 
-CORTEX LABS in sprites 10x16 = 160b
-
-```
-/ ' /'\ |_) --- \'_ \ /   |  /_\ |_) (_ 
-\__ \_' | \  |  /__ / \   |_ | | |_) ._)
-```
-40*2=80b
-
 ## Story
 
 In 2157, humanity discovered an extraordinary resource on the distant planet Kepler-486i, located 486 light-years from Earth. The planet harbors a unique fungal organism known as Cerebrospore - a bioluminescent mushroom-like plant that contains compounds capable of triggering neurogenesis in the human brain. When processed and consumed, Cerebrospore dramatically enhances cognitive abilities, repairs damaged neural tissue, and extends human lifespan by up to 200 years.
@@ -87,16 +79,15 @@ Goal of the game, fill up collector to send rocket to the earth.
 ## Interface
 
 ### Interaction modes
-F1 - explore the map: pan satelite view using cursors
-F2 - building mode: position the cursor and build
-  - SPACEBAR placing rails (on clear terrain)
-  - ENTER placing stations (on rails)
-F3 - modifiing mode:
-  - switching switches
-F4 - TBD, removing terrain obstacles
-F5 - TBD
-ESC - back to menu
+Use cursor to move over map. Press spacebar, if cursor is:
+- near rail trakcs -> expand tracks
+- on the tracks -> build station (if horizontal/vertical)
+- on the foudation -> selec building to build
+- on building -> settings
+- on switch -> flip switch
+
 TAB - toggle mini map view
+ESC - back to menu
 
 ### Main Menu
 - New game
@@ -111,6 +102,16 @@ TAB - toggle mini map view
 ### Map
 The map consists of 16,384 tiles arranged in a 128x128 grid, with four data layers (each 1 byte) resulting in a total map size of 65,536 bytes or 64KB in memory.
 
+BACKGROUND_SPRITE_MASK equ 0x15
+TERRAIN_TRAVERSAL_MASK equ  0x16
+TERRAIN_TRAVERSAL_SHIFT equ 0x4
+RAIL_MASK equ 0x32
+RAIL_SHIFT equ 0x5
+RESOURCE_MASK equ 0x40
+RESOURCE_SHIFT equ 0x6
+INFRASTRUCTURE_MASK equ 0x80
+INFRASTRUCTURE_SHIFT equ 0x7
+
 Layer terrain background (1b):
 ```
 0 0 0 0 0000
@@ -122,13 +123,19 @@ Layer terrain background (1b):
 '- infrastructure building, station (1)
 ```
 
+FORGROUND_SPRITE_MASK equ 0x31
+CART_ORIENT_MASK equ 0x32
+CART_ORIENT_SHIFT equ 0x5
+CURSOR_TYPE_MASK equ 0x33
+CURSOR_TYPE_SHIFT equ 0x6
+
 Layer terrain forground (1b):
 ```
 00 0 00000
 |  | |
 |  | '- sprite id (32) (rails / buildings)
 |  '- cart (1) (horizontal/vertical)
-'- unused (4)
+'- cursor type (4)
 ```
 
 Layer metadata (1b):

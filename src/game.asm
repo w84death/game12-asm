@@ -1675,7 +1675,7 @@ draw_minimap:
 
   .draw_mini_map:
   mov si, _MAP_              ; Map data
-  mov di, SCREEN_WIDTH*36+96          ; Map position on screen
+  mov di, SCREEN_WIDTH*40+94          ; Map position on screen
   mov bx, TerrainColors      ; Terrain colors array
   mov cx, MAP_SIZE           ; Columns
   .draw_loop:
