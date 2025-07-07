@@ -34,15 +34,17 @@
 
 org 0x0100
 
-GAME_STACK_POINTER        equ 0xFFFE
-GAME_SEGMENT              equ 0x1000    ; Game code (up to ~144KB available)
-TILES_SEGMENT             equ 0x5000    ; 80 tiles = 20K (0x5000 bytes)
-MAP_SEGMENT               equ 0x6000    ; First map layer (16KB)
-MAP_METADATA_SEGMENT      equ 0x6400    ; Metadata layer (16KB)
-MAP_LAYER2_SEGMENT        equ 0x6800    ; Additional layer (16KB)
-MAP_LAYER3_SEGMENT        equ 0x6C00    ; Additional layer (16KB)
-ENTITIES_SEGMENT          equ 0x7000    ; Entities data
-VGA_SEGMENT               equ 0xA000    ; VGA memory (fixed by hardware)
+; =========================================== MEMORY LAYOUT =================|80
+
+GAME_STACK_POINTER          equ 0xFFFE    ; Stack pointer for game code
+SEGMENT_GAME_CODE           equ 0x1000    ; Game code (up to ~144KB available)
+SEGMENT_SPRITES             equ 0x5000    ; 80 tiles = 20K (0x5000 bytes)
+SEGMENT_TERRAIN_BACKGROUND  equ 0x6000    ; First map layer (16KB)
+SEGMENT_TERRAIN_FOREGROUND  equ 0x6400    ; Metadata layer (16KB)
+SEGMENT_RAILS_DATA          equ 0x6800    ; Additional layer (16KB)
+SEGMENT_MAP_ENTITIES        equ 0x6C00    ; Additional layer (16KB)
+SEGMENT_ENTITIES            equ 0x7000    ; Entities data
+SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
 
 ; =========================================== MEMORY ALLOCATION =============|80
 
@@ -206,6 +208,57 @@ TILE_LOGO_3                     equ 0x44
 TILE_LOGO_4                     equ 0x45
 TILE_LOGO_5                     equ 0x46
 
+; SEGMENT_TERRAIN_BACKGROUND
+; 0 0 0 0 0000
+; | | | | |
+; | | | | '- background sprite id (16)
+; | | | '- terrain traversal (1) (movable or forest/mountains/building)
+; | | '- rail (1)
+; | '- resource (1)
+; '- infrastructure building, station (1)
+;
+BACKGROUND_SPRITE_MASK equ 0xF
+TERRAIN_TRAVERSAL_MASK equ 0x10
+TERRAIN_TRAVERSAL_SHIFT equ 0x4
+TERRAIN_SECOND_LAYER_DRAW_CLIP equ 0xE0
+RAIL_MASK equ 0x20
+RAIL_SHIFT equ 0x5
+RESOURCE_MASK equ 0x40
+RESOURCE_SHIFT equ 0x6
+INFRASTRUCTURE_MASK equ 0x80
+INFRASTRUCTURE_SHIFT equ 0x7
+
+; SEGMENT_TERRAIN_FOREGROUND
+; 00 0 00000
+; |  | |
+; |  | '- sprite id (32) (rails / buildings)
+; |  '- cart (1)
+; '- cursor type (4)
+;
+FORGROUND_SPRITE_MASK equ 0x31
+CART_DRAW_MASK equ 0x32
+CART_DRAW_SHIFT equ 0x5
+CURSOR_TYPE_MASK equ 0x33
+CURSOR_TYPE_SHIFT equ 0x6
+
+; SEGMENT_RAILS_DATA
+; 000 00 00 0
+; |   |  |  |
+; |   |  |  '- switch on rail (or not initialized)
+; |   |  '- switch position (up/down/left/right)
+; |   '- resource type (4) (for source/pods cargo/buildings)
+; '- unused (8)
+;
+SWITCH_INITIALIED_MASK equ 0x1
+SWITCH_TYPE_MASK equ 0x6
+SWITCH_TYPE_SHIFT equ 0x1
+RESOURCE_TYPE_MASK equ 0x24
+RESOURCE_TYPE_SHIFT equ 0x3
+UNUSED_MASK equ 0x224
+UNUSED_SHIFT equ 0x5
+
+TERRAIN_RULES_MASK equ 0x03
+
 META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
 META_INVISIBLE_WALL           equ 0x20  ; For collision detection
 META_TRANSPORT                equ 0x40  ; For railroads
@@ -329,11 +382,11 @@ start:
   mov ax, 0x13          ; Init 320x200, 256 colors mode
   int 0x10              ; Video BIOS interrupt
 
-  push VGA_SEGMENT           ; VGA memory segment
+  push SEGMENT_VGA           ; VGA memory segment
   pop es                ; Set ES to VGA memory segment
   xor di, di            ; Set DI to 0
 
-  push GAME_SEGMENT
+  push SEGMENT_GAME_CODE
   pop ss
   mov sp, GAME_STACK_POINTER
 
@@ -539,7 +592,7 @@ game_logic:
     add di, ax
 
     push es
-    push MAP_SEGMENT
+    push SEGMENT_TERRAIN_BACKGROUND
     pop es
     mov al, [es:di]                        ; get tile data at current place
     pop es
@@ -1063,7 +1116,7 @@ get_random:
   push si
   push di
 
-  push GAME_SEGMENT
+  push SEGMENT_GAME_CODE
   pop es
 
   mov si, _RNG_
@@ -1202,16 +1255,16 @@ draw_window:
   call draw_sprite
 ret
 
-TERRAIN_RULES_MASK equ 0x03
+
 ; =========================================== GENERATE MAP ==================|80
 generate_map:
   push es
   push ds
 
-  push MAP_SEGMENT
+  push SEGMENT_TERRAIN_BACKGROUND
   pop es
 
-  push GAME_SEGMENT
+  push SEGMENT_GAME_CODE
   pop ds
 
   xor di, di
@@ -1242,33 +1295,47 @@ generate_map:
     jnz .next_col
   loop .next_row
 
-
-  .set_metadata:
-    push MAP_METADATA_SEGMENT
-    pop ds
+  .set_background_metadata:
     xor si, si
     xor di, di
     mov cx, MAP_SIZE*MAP_SIZE
     .meta_next_cell:
       cmp byte [es:si], TILE_TREES_1
       jge .skip
-      add byte [ds:di], META_INVISIBLE_WALL
+      add byte [es:di], TERRAIN_TRAVERSAL_MASK
       .skip:
       inc si
       inc di
     loop .meta_next_cell
 
+  .clear_foreground_metadata:
+    push SEGMENT_TERRAIN_FOREGROUND
     pop ds
-    pop es
+
+    xor di, di
+    mov cx, MAP_SIZE*MAP_SIZE
+    .meta_next_cell2:
+      mov byte [ds:di], 0x0
+      inc di
+    loop .meta_next_cell2
+
+  pop ds
+  pop es
+
+
 ret
 
 ; =========================================== DRAW TERRAIN ==================|80
 ; OUT: Terrain drawn on the screen
 draw_terrain:
   push es
+  push ds
 
-  push MAP_SEGMENT
+  push SEGMENT_TERRAIN_BACKGROUND
   pop es
+
+  push SEGMENT_TERRAIN_FOREGROUND
+  pop ds
 
   xor di, di
 
@@ -1284,13 +1351,25 @@ draw_terrain:
     .draw_cell:
       mov al, [es:si]
       mov bl, al
-      and al, META_TILES_MASK ; clear metadata
+      and al, BACKGROUND_SPRITE_MASK
       call draw_tile
 
-      test bl, META_TRANSPORT
-      jz .skip_rails
-        call caculate_and_draw_rails
-      .skip_rails:
+      and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
+      cmp bl, 0x0
+      jz .skip_foreground
+        mov al, [ds:si]
+        and al, FORGROUND_SPRITE_MASK
+        call draw_sprite
+      .skip_foreground:
+
+      mov al, [ds:si]
+      test al, CART_DRAW_MASK
+      jz .skip_cart
+        shr al, CART_DRAW_SHIFT
+        add al, TILE_CART_HORIZONTAL
+        call draw_sprite
+      .skip_cart:
+
       add di, SPRITE_SIZE
       inc si
     loop .draw_cell
@@ -1300,6 +1379,7 @@ draw_terrain:
     pop cx
   loop .draw_line
 
+  pop ds
   pop es
 ret
 
@@ -1314,7 +1394,7 @@ redraw_terrain_tile:
   add si, ax
   lodsb
   mov bl, al
-  and al, META_TILES_MASK ; clear metadata
+  and al, BACKGROUND_SPRITE_MASK ; clear metadata
   call draw_tile
   pop si
 ret
@@ -1375,7 +1455,7 @@ caculate_and_draw_rails:
   add si, _METADATA_                    ; add it to the _METADATA_ for same pos
 
   push es
-  push MAP_SEGMENT
+  push SEGMENT_TERRAIN_BACKGROUND
   pop es
 
   mov al, [es:si]                          ; read _METADATA_ for this tile
@@ -1424,7 +1504,7 @@ decompress_sprite:
       add bx, dx     ; add palette shift
       mov byte bl, [Palettes+bx] ; get color from palette
       push es
-      push TILES_SEGMENT
+      push SEGMENT_SPRITES
       pop es
       mov byte [es:di], bl  ; Write pixel color
       inc di
@@ -1439,7 +1519,7 @@ ret
 ; OUT: Tiles decompressed to _TILES_
 decompress_tiles:
   push es
-  push GAME_SEGMENT
+  push SEGMENT_GAME_CODE
   pop es
   mov si, Tiles
   .decompress_next:
@@ -1463,10 +1543,10 @@ draw_tile:
   push ds
   push es
 
-  push TILES_SEGMENT
+  push SEGMENT_SPRITES
   pop ds
 
-  push VGA_SEGMENT
+  push SEGMENT_VGA
   pop es
 
   shl ax, 8         ; Multiply by 256 (tile size in array)
@@ -1494,10 +1574,10 @@ draw_sprite:
   push ds
   push es
 
-  push TILES_SEGMENT
+  push SEGMENT_SPRITES
   pop ds
 
-  push VGA_SEGMENT
+  push SEGMENT_VGA
   pop es
 
   shl ax, 8
@@ -1526,7 +1606,7 @@ ret
 init_entities:
   ; TODO: revrite
   push es
-  push ENTITIES_SEGMENT
+  push SEGMENT_ENTITIES
   pop es
 
   mov di, _ENTITIES_
@@ -1663,10 +1743,10 @@ draw_minimap:
   push es
   push ds
 
-  push MAP_SEGMENT
+  push SEGMENT_TERRAIN_BACKGROUND
   pop ds
 
-  push VGA_SEGMENT
+  push SEGMENT_VGA
   pop es
 
   mov ax, 0x040B
@@ -1683,9 +1763,9 @@ draw_minimap:
     mov cx, MAP_SIZE        ; Rows
     .draw_row:
       lodsb                ; Load map cell
-      and al, META_TILES_MASK ; Clear metadata
+      and al, BACKGROUND_SPRITE_MASK ; Clear metadata
       push es
-      push GAME_SEGMENT
+      push SEGMENT_GAME_CODE
       pop es
       xlatb                ; Translate to color
       pop es
@@ -1700,7 +1780,7 @@ draw_minimap:
   xor ax, ax
 
 
-  push ENTITIES_SEGMENT
+  push SEGMENT_ENTITIES
   pop ds
 
   mov si, _ENTITIES_

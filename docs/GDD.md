@@ -102,16 +102,6 @@ ESC - back to menu
 ### Map
 The map consists of 16,384 tiles arranged in a 128x128 grid, with four data layers (each 1 byte) resulting in a total map size of 65,536 bytes or 64KB in memory.
 
-BACKGROUND_SPRITE_MASK equ 0x15
-TERRAIN_TRAVERSAL_MASK equ  0x16
-TERRAIN_TRAVERSAL_SHIFT equ 0x4
-RAIL_MASK equ 0x32
-RAIL_SHIFT equ 0x5
-RESOURCE_MASK equ 0x40
-RESOURCE_SHIFT equ 0x6
-INFRASTRUCTURE_MASK equ 0x80
-INFRASTRUCTURE_SHIFT equ 0x7
-
 Layer terrain background (1b):
 ```
 0 0 0 0 0000
@@ -123,22 +113,16 @@ Layer terrain background (1b):
 '- infrastructure building, station (1)
 ```
 
-FORGROUND_SPRITE_MASK equ 0x31
-CART_ORIENT_MASK equ 0x32
-CART_ORIENT_SHIFT equ 0x5
-CURSOR_TYPE_MASK equ 0x33
-CURSOR_TYPE_SHIFT equ 0x6
-
 Layer terrain forground (1b):
 ```
 00 0 00000
 |  | |
 |  | '- sprite id (32) (rails / buildings)
-|  '- cart (1) (horizontal/vertical)
+|  '- cart (1)
 '- cursor type (4)
 ```
 
-Layer metadata (1b):
+Layer rails metadata (1b):
 ```
 000 00 00 0
 |   |  |  |
