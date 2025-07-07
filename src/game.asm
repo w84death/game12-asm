@@ -35,11 +35,15 @@
 org 0x0100
 
 GAME_STACK_POINTER        equ 0xFFFE
-GAME_SEGMENT              equ 0x9000
+GAME_SEGMENT              equ 0x1000
+TILES_SEGMENT             equ 0x6000    ; 80 tiles =  20K
+MAP_SEGMENT               equ 0x7000    ; Segment for map and metadata
+ENTITIES_SEGMENT          equ 0x8000    ; Segment for entities
+VGA_SEGMENT               equ 0xA000
 
 ; =========================================== MEMORY ALLOCATION =============|80
 
-_BASE_                    equ 0x2000          ; Memory base address
+_BASE_                    equ 0x3000          ; Memory base address
 _GAME_TICK_               equ _BASE_ + 0x00   ; 4 bytes
 _GAME_STATE_              equ _BASE_ + 0x04   ; 1 byte
 _RNG_                     equ _BASE_ + 0x05   ; 2 bytes
@@ -55,10 +59,10 @@ _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
 _SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
 
-_TILES_                   equ _BASE_ + 0x0100  ; 80 tiles =  20K
-_MAP_                     equ _BASE_ + 0x5100  ; Map data 128*128*1b= 0x4000
-_METADATA_                equ _BASE_ + 0x9100  ; Map metadata 128*128*1b= 0x4000
-_ENTITIES_                equ _BASE_ + 0xD100  ; Entities 128*128*1b= 0x4000
+_TILES_                   equ 0x0000
+_MAP_                     equ 0x0000  ; Map data 128*128*1b= 0x4000
+_METADATA_                equ 0x4000  ; Map metadata 128*128*1b= 0x4000
+_ENTITIES_                equ 0x0000  ; Entities 128*128*1b= 0x4000
 
 ; =========================================== GAME STATES ===================|80
 
@@ -193,6 +197,12 @@ TILE_WINDOW_7                   equ 0x3F
 TILE_WINDOW_8                   equ 0x40
 TILE_WINDOW_9                   equ 0x41
 
+TILE_LOGO_1                     equ 0x42
+TILE_LOGO_2                     equ 0x43
+TILE_LOGO_3                     equ 0x44
+TILE_LOGO_4                     equ 0x45
+TILE_LOGO_5                     equ 0x46
+
 META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
 META_INVISIBLE_WALL           equ 0x20  ; For collision detection
 META_TRANSPORT                equ 0x40  ; For railroads
@@ -310,14 +320,13 @@ NOTE_C6     equ 0x0473  ; 1046.50 Hz
 NOTE_E6     equ 0x037A  ; 1318.51 Hz
 
 
-
 ; =========================================== INITIALIZATION ================|80
 
 start:
   mov ax, 0x13          ; Init 320x200, 256 colors mode
   int 0x10              ; Video BIOS interrupt
 
-  push 0xA000           ; VGA memory segment
+  push VGA_SEGMENT           ; VGA memory segment
   pop es                ; Set ES to VGA memory segment
   xor di, di            ; Set DI to 0
 
@@ -526,7 +535,12 @@ game_logic:
     mov di, _MAP_
     add di, ax
 
-    mov al, [di]                        ; get tile data at current place
+    push es
+    push MAP_SEGMENT
+    pop es
+    mov al, [es:di]                        ; get tile data at current place
+    pop es
+
     test al, META_TRANSPORT             ; check if empty
     jnz .done
     test al, META_INVISIBLE_WALL
@@ -536,7 +550,7 @@ game_logic:
 
     and al, 0x3
     add al, META_TRANSPORT
-    mov [di], al               ; set railroad tile
+    mov [es:di], al               ; set railroad tile
 
     call draw_ui
   jmp .redraw_tile
@@ -591,7 +605,7 @@ game_logic:
 
   .redraw_terrain:
     call draw_terrain
-    call draw_entities
+    ;call draw_entities
     call draw_cursor
     jmp .done
 
@@ -775,11 +789,17 @@ init_menu:
 
   call draw_terrain
 
-  ; draw logo sprites
+  mov di, 100+48*320
+  mov ax, TILE_LOGO_1
+  mov cx, 5
+  .logo_loop:
+    call draw_sprite
+    inc ax
+    add di, 0x10
+  loop .logo_loop
 
-  ; draw window
   mov ax, 0x090C
-  mov bx, 0x0608
+  mov bx, 0x0607
   call draw_window
 
   mov si, MainMenuText
@@ -840,7 +860,7 @@ ret
 
 init_game:
   call draw_terrain
-  call draw_entities
+  ;call draw_entities
   call draw_cursor
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
@@ -1146,7 +1166,6 @@ draw_window:
   add di, 0x10
 
   inc ax
-
   movzx cx, bl
   sub cx, 2
   .draw_line_3:
@@ -1161,7 +1180,16 @@ ret
 TERRAIN_RULES_MASK equ 0x03
 ; =========================================== GENERATE MAP ==================|80
 generate_map:
-  mov di, _MAP_
+  push es
+  push ds
+
+  push MAP_SEGMENT
+  pop es
+
+  push GAME_SEGMENT
+  pop ds
+
+  xor di, di
   mov si, TerrainRules
   mov cx, MAP_SIZE                      ; Height
   .next_row:
@@ -1169,20 +1197,20 @@ generate_map:
     .next_col:
       call get_random                   ; AX is random value
       and ax, TERRAIN_RULES_MASK        ; Crop to 0-3
-      mov [di], al                      ; Save terrain tile
+      mov [es:di], al                      ; Save terrain tile
       cmp dx, MAP_SIZE                  ; Check if first col
       je .skip_cell
       cmp cx, MAP_SIZE                  ; Check if first row
       je .skip_cell
-      movzx bx, [di-1]                  ; Get left tile
+      movzx bx, [es:di-1]                  ; Get left tile
       test al, 0x1                      ; If odd value skip checking top
       jz .skip_top
-      movzx bx, [di-MAP_SIZE]           ; Get top tile
+      movzx bx, [es:di-MAP_SIZE]           ; Get top tile
       .skip_top:
       shl bx, 2                         ; Mul by 4 to fit rules table
       add bx, ax                        ; Get random rule for the tile ID
-      mov al, [si+bx]                   ; Get the tile ID from rules table
-      mov [di], al                      ; Save terrain tile
+      mov al, [ds:si+bx]                   ; Get the tile ID from rules table
+      mov [es:di], al                      ; Save terrain tile
       .skip_cell:
       inc di                            ; Next map tile cell
       dec dx                            ; Next column (couner is top-down)
@@ -1190,30 +1218,38 @@ generate_map:
   loop .next_row
 
   .set_metadata:
-    mov si, _MAP_
+    xor si, si
     mov cx, MAP_SIZE*MAP_SIZE
     .meta_next_cell:
-      cmp byte [si], TILE_TREES_1
+      cmp byte [es:si], TILE_TREES_1
       jge .skip
-      add byte [si], META_INVISIBLE_WALL
+      add byte [es:si], META_INVISIBLE_WALL
       .skip:
       inc si
     loop .meta_next_cell
+
+    pop ds
+    pop es
 ret
 
 ; =========================================== DRAW TERRAIN ==================|80
 ; OUT: Terrain drawn on the screen
 draw_terrain:
+  push ds
+
+  push MAP_SEGMENT
+  pop ds
+
   xor di, di
-  mov si, _MAP_
-  mov ax, [_VIEWPORT_Y_]  ; Y coordinate
-  shl ax, 7               ; Y * 64
-  add ax, [_VIEWPORT_X_]  ; Y * 64 + X
-  add si, ax
-  xor ax, ax
+
+  mov si, [_VIEWPORT_Y_]  ; Y coordinate
+  shl si, 7               ; Y * 64
+  add si, [_VIEWPORT_X_]  ; Y * 64 + X
+
   mov cx, VIEWPORT_HEIGHT
   .draw_line:
     push cx
+
     mov cx, VIEWPORT_WIDTH
     .draw_cell:
       lodsb
@@ -1228,6 +1264,7 @@ draw_terrain:
 
       add di, SPRITE_SIZE
     loop .draw_cell
+
     add di, SCREEN_WIDTH*(SPRITE_SIZE-1)
     add si, MAP_SIZE-VIEWPORT_WIDTH
     pop cx
@@ -1240,6 +1277,8 @@ draw_terrain:
   mov cx, 320
   mov al, COLOR_NAVY_BLUE
   rep stosb
+
+  pop ds
 ret
 
 ; =========================================== DRAW TERRAIN TILE ============|80
@@ -1312,11 +1351,17 @@ caculate_and_draw_rails:
   dec si
   sub si, _MAP_                         ; calculate position in _MAP_
   add si, _METADATA_                    ; add it to the _METADATA_ for same pos
-  mov al, [si]                          ; read _METADATA_ for this tile
+
+  push es
+  push MAP_SEGMENT
+  pop es
+
+  mov al, [es:si]                          ; read _METADATA_ for this tile
+
   test al, METADATA_SWITCH_INITIALIZED
   jnz .switch_initialized
   .initialize_switch:
-    mov byte [si], dh                   ; save horizontal/vertical to _METADATA_
+    mov byte [es:si], dh                   ; save horizontal/vertical to _METADATA_
     mov al, dl                          ; save switch ID for drawing
   jmp .draw_initialized_switch
   .switch_initialized:
@@ -1324,6 +1369,7 @@ caculate_and_draw_rails:
   shr al, METADATA_SWITCH_SHIFT
   .draw_initialized_switch:
   add al, TILE_SWITCH_LEFT              ; shift to first switch sprite data
+  pop es
   pop si                                ; load tile position
   call draw_sprite
   .no_switch:
@@ -1355,8 +1401,12 @@ decompress_sprite:
       and bx, 0x3    ; Cut last 2 bits
       add bx, dx     ; add palette shift
       mov byte bl, [Palettes+bx] ; get color from palette
-      mov byte [di], bl  ; Write pixel color
-      inc di           ; Move destination to next pixel
+      push es
+      push TILES_SEGMENT
+      pop es
+      mov byte [es:di], bl  ; Write pixel color
+      inc di
+      pop es      ; Move destination to next pixel
     loop .draw_pixel
 
   pop cx                   ; Restore line counter
@@ -1366,26 +1416,39 @@ ret
 ; =========================================== DECOMPRESS TILES ============|80
 ; OUT: Tiles decompressed to _TILES_
 decompress_tiles:
-  xor di, _TILES_
+  push es
+  push GAME_SEGMENT
+  pop es
   mov si, Tiles
   .decompress_next:
-    cmp byte [si], 0xFF
+    cmp byte [es:si], 0xFF
     jz .done
+
     call decompress_sprite
   jmp .decompress_next
   .done:
+  pop es
 ret
 
 ; =========================================== DRAW TILE =====================|80
-; `: SI - Tile data
+; IN: SI - Tile data
 ; AL - Tile ID
 ; DI - Position
 ; OUT: Tile drawn on the screen
 draw_tile:
   pusha
+
+  push ds
+  push es
+
+  push TILES_SEGMENT
+  pop ds
+
+  push VGA_SEGMENT
+  pop es
+
   shl ax, 8         ; Multiply by 256 (tile size in array)
-  mov si, _TILES_   ; Point to tile data
-  add si, ax        ; Point to tile data
+  mov si, ax        ; Point to tile data
   mov bx, SPRITE_SIZE
   .draw_tile_line:
     mov cx, SPRITE_SIZE/4
@@ -1393,6 +1456,9 @@ draw_tile:
     add di, SCREEN_WIDTH-SPRITE_SIZE ; Next line
     dec bx
   jnz .draw_tile_line
+
+  pop es
+  pop ds
   popa
 ret
 
@@ -1403,9 +1469,17 @@ ret
 ; OUT: Sprite drawn on the screen
 draw_sprite:
   pusha
-  mov si, _TILES_   ; Point to tile data
+  push ds
+  push es
+
+  push TILES_SEGMENT
+  pop ds
+
+  push VGA_SEGMENT
+  pop es
+
   shl ax, 8
-  add si, ax
+  mov si, ax
   mov bx, SPRITE_SIZE
   .draw_tile_line:
     mov cx, SPRITE_SIZE
@@ -1420,11 +1494,19 @@ draw_sprite:
     add di, SCREEN_WIDTH-SPRITE_SIZE ; Next line
     dec bx
   jnz .draw_tile_line
+
+  pop es
+  pop ds
   popa
 ret
 
 ; =========================================== INIT ENTITIES =================|80
 init_entities:
+  ; TODO: revrite
+  push es
+  push ENTITIES_SEGMENT
+  pop es
+
   mov di, _ENTITIES_
   mov cx, 0x80
   .next_entity:
@@ -1444,11 +1526,13 @@ init_entities:
     loop .next_entity
 
   mov word [di], 0x0      ; Terminator
+  pop es
 ret
 
 ; =========================================== DRAW ENTITIES =================|80
 ; OUT: Entities drawn on the screen
 draw_entities:
+  ; TODO: revrite
   mov si, _ENTITIES_
   .next_entity:
     lodsw
@@ -1554,6 +1638,15 @@ draw_cursor:
 ret
 
 draw_minimap:
+  push es
+  push ds
+
+  push MAP_SEGMENT
+  pop ds
+
+  push VGA_SEGMENT
+  pop es
+
   .draw_frame:
     mov di, SCREEN_WIDTH*30+90
     mov ax, COLOR_BROWN
@@ -1588,8 +1681,12 @@ draw_minimap:
 
     xor ax, ax
 
-   mov si, _ENTITIES_
-   .next_entity:
+
+    push ENTITIES_SEGMENT
+    pop ds
+
+    mov si, _ENTITIES_
+    .next_entity:
       lodsw
       test ax, ax
       jz .end_entities
@@ -1617,6 +1714,9 @@ draw_minimap:
       add di, SCREEN_WIDTH*VIEWPORT_HEIGHT-VIEWPORT_WIDTH
       mov cx, VIEWPORT_WIDTH/2
       rep stosw
+
+  pop ds
+  pop es
 ret
 
 ; =========================================== DRAW UI =======================|80
@@ -1737,9 +1837,6 @@ play_sfx:
 ret
 
 update_audio:
-
-
-
   mov si, [_SFX_POINTER_]
   mov ax, [si]
   test ax, ax
@@ -1752,8 +1849,6 @@ update_audio:
   and bx, 0x1
   dec bx
   jz .play_pitched
-
-
 
   call play_sound
   .skip_note:
@@ -1805,10 +1900,6 @@ UIBuildModeText db 'F2: Build Mode', 0x0
 UIEditModeText db 'F2: Edit Mode', 0x0
 UIRemoveModeText db 'F2: Remove Mode', 0x0
 UIScoreText db 'Score:', 0x0
-
-MainMenuTitleText:
-db 0x2F,0x20,0x27,0x20,0x2F,0x27,0x5C,0x20,0x7C,0x5F,0x29,0x20,0x2D,0x2D,0x2D,0x20,0x5C,0x27,0x5F,0x20,0x5C,0x20,0x2F,0x20,0x20,0x20,0x7C,0x20,0x20,0x2F,0x5F,0x5C,0x20,0x7C,0x5F,0x29,0x20,0x28,0x5F,0x20
-db 0x5C,0x5F,0x5F,0x20,0x5C,0x5F,0x27,0x20,0x7C,0x20,0x5C,0x20,0x20,0x7C,0x20,0x20,0x2F,0x5F,0x5F,0x20,0x2F,0x20,0x5C,0x20,0x20,0x20,0x7C,0x5F,0x20,0x7C,0x20,0x7C,0x20,0x7C,0x5F,0x29,0x20,0x2E,0x5F,0x29,0x0
 
 MainMenuText:
   db 'ENTER: Play',0x0
@@ -1869,7 +1960,6 @@ RailroadsList:
 db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
 
 include 'sfx.asm'
-
 include 'tiles.asm'
 
 ; =========================================== THE END =======================|80
