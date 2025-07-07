@@ -235,10 +235,10 @@ INFRASTRUCTURE_SHIFT equ 0x7
 ; |  '- cart (1)
 ; '- cursor type (4)
 ;
-FORGROUND_SPRITE_MASK equ 0x31
-CART_DRAW_MASK equ 0x32
+FORGROUND_SPRITE_MASK equ 0x1F
+CART_DRAW_MASK equ 0x20
 CART_DRAW_SHIFT equ 0x5
-CURSOR_TYPE_MASK equ 0x33
+CURSOR_TYPE_MASK equ 0xC0
 CURSOR_TYPE_SHIFT equ 0x6
 
 ; SEGMENT_RAILS_DATA
@@ -913,6 +913,7 @@ ret
 new_game:
   call generate_map
   call reset_to_default_values
+  call generate_test_map
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
   mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
@@ -1321,8 +1322,26 @@ generate_map:
 
   pop ds
   pop es
+ret
 
 
+generate_test_map:
+  push es
+  push ds
+  push SEGMENT_TERRAIN_BACKGROUND
+  pop es
+  push SEGMENT_TERRAIN_FOREGROUND
+  pop ds
+  mov di, 32*32+4
+  mov cx, 0x5
+  .lll:
+  add byte [es:di], RAIL_MASK
+  add byte [ds:di], 0x06 + CART_DRAW_MASK
+  inc di
+  loop .lll
+
+  pop ds
+  pop es
 ret
 
 ; =========================================== DRAW TERRAIN ==================|80
@@ -1359,6 +1378,7 @@ draw_terrain:
       jz .skip_foreground
         mov al, [ds:si]
         and al, FORGROUND_SPRITE_MASK
+        add al, TILE_RES_YELLOW_1
         call draw_sprite
       .skip_foreground:
 
