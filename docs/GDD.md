@@ -118,18 +118,19 @@ Layer terrain forground (1b):
 00 0 00000
 |  | |
 |  | '- sprite id (32) (rails / buildings)
-|  '- cart (1)
+|  '- draw cart (1)
 '- cursor type (4)
 ```
 
 Layer rails metadata (1b):
 ```
-000 00 00 0
-|   |  |  |
-|   |  |  '- switch on rail (or not initialized)
-|   |  '- switch position (up/down/left/right)
-|   '- resource type (4) (for source/pods cargo/buildings)
-'- unused (8)
+0 00 00 00 0
+| |  |  |  |
+| |  |  |  '- switch on rail (or not initialized)
+| |  |  '- switch position (up/down/left/right)
+| |  '- resource type (4) (for source/pods cargo/buildings)
+| '- cart direction
+'- unused (1)
 ```
 
 Layer entity id (1b):

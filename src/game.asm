@@ -137,6 +137,8 @@ TILE_MOUNTAINS_2                equ 0x09
 TILE_FOUNDATION_OFF             equ 0x0A
 TILE_FOUNDATION_ON              equ 0x0B
 
+TILE_FOREGROUND_SHIFT           equ 0x0C
+
 TILE_RES_YELLOW_1               equ 0x0C
 TILE_RES_YELLOW_2               equ 0x0D
 TILE_RES_BLUE_1                 equ 0x0E
@@ -232,7 +234,7 @@ INFRASTRUCTURE_SHIFT equ 0x7
 ; 00 0 00000
 ; |  | |
 ; |  | '- sprite id (32) (rails / buildings)
-; |  '- cart (1)
+; |  '- draw cart (1)
 ; '- cursor type (4)
 ;
 FORGROUND_SPRITE_MASK equ 0x1F
@@ -242,20 +244,26 @@ CURSOR_TYPE_MASK equ 0xC0
 CURSOR_TYPE_SHIFT equ 0x6
 
 ; SEGMENT_RAILS_DATA
-; 000 00 00 0
-; |   |  |  |
-; |   |  |  '- switch on rail (or not initialized)
-; |   |  '- switch position (up/down/left/right)
-; |   '- resource type (4) (for source/pods cargo/buildings)
-; '- unused (8)
+; 0 00 00 00 0
+; | |  |  |  |
+; | |  |  |  '- switch on rail (or not initialized)
+; | |  |  '- switch position (up/down/left/right)
+; | |  '- resource type (4) (for source/pods cargo/buildings)
+; | '- cart direction
+; '- unused (1)
 ;
 SWITCH_INITIALIED_MASK equ 0x1
 SWITCH_TYPE_MASK equ 0x6
 SWITCH_TYPE_SHIFT equ 0x1
-RESOURCE_TYPE_MASK equ 0x24
+RESOURCE_TYPE_MASK equ 0x18
 RESOURCE_TYPE_SHIFT equ 0x3
-UNUSED_MASK equ 0x224
-UNUSED_SHIFT equ 0x5
+CART_DIRECTION_MASK equ 0x60
+CART_DIRECTION_SHIFT equ 0x5
+
+CART_UP equ 0x00
+CART_DOWN equ 0x01
+CART_LEFT equ 0x02
+CART_RIGHT equ 0x03
 
 TERRAIN_RULES_MASK equ 0x03
 
@@ -1332,13 +1340,25 @@ generate_test_map:
   pop es
   push SEGMENT_TERRAIN_FOREGROUND
   pop ds
+
   mov di, 32*32+4
   mov cx, 0x5
   .lll:
   add byte [es:di], RAIL_MASK
-  add byte [ds:di], 0x06 + CART_DRAW_MASK
+  add byte [ds:di], TILE_RAILS_1-TILE_FOREGROUND_SHIFT
   inc di
   loop .lll
+
+  push SEGMENT_RAILS_DATA
+  pop es
+
+  mov di, 32*32+6
+  add byte [ds:di], CART_DRAW_MASK
+  mov byte [es:di], 0x60
+
+  inc di
+  add byte [ds:di], CART_DRAW_MASK
+  mov byte [es:di], 0x68
 
   pop ds
   pop es
@@ -1378,16 +1398,37 @@ draw_terrain:
       jz .skip_foreground
         mov al, [ds:si]
         and al, FORGROUND_SPRITE_MASK
-        add al, TILE_RES_YELLOW_1
+        add al, TILE_FOREGROUND_SHIFT
         call draw_sprite
       .skip_foreground:
 
-      mov al, [ds:si]
-      test al, CART_DRAW_MASK
+      mov dl, [ds:si]
+      test dl, CART_DRAW_MASK
       jz .skip_cart
-        shr al, CART_DRAW_SHIFT
-        add al, TILE_CART_HORIZONTAL
+        push es
+        push SEGMENT_RAILS_DATA
+        pop es
+        mov bl, [es:si]
+        and bl, CART_DIRECTION_MASK
+        shr bl, CART_DIRECTION_SHIFT
+        mov al, TILE_CART_HORIZONTAL
+        cmp bl, CART_DOWN
+        jg .skip_vertical
+        mov al, TILE_CART_VERTICAL
+        .skip_vertical:
+
         call draw_sprite
+
+        mov bl, [es:si]
+        and bl, RESOURCE_TYPE_MASK
+        cmp bl, 0x0
+        jz .skip_resource
+          shr bl, RESOURCE_TYPE_SHIFT
+          mov al, TILE_ORE_BLUE-1
+          add al, bl
+          call draw_sprite
+        .skip_resource:
+        pop es
       .skip_cart:
 
       add di, SPRITE_SIZE
@@ -1826,21 +1867,10 @@ ret
 ; =========================================== DRAW UI =======================|80
 
 draw_ui:
-   mov di, UI_POSITION
-   mov cx, 160*UI_LINES
-   mov ax, COLOR_BLACK
-   rep stosw
 
-   mov di, UI_POSITION
-   mov cx, 320
-   mov al, COLOR_NAVY_BLUE
-   rep stosb
-   mov cx, 320
-   mov al, COLOR_WHITE
-   rep stosb
-   mov cx, 320
-   add di, 320*37
-   rep stosb
+  mov ax, 0x1502
+  mov bx, 0x0212
+  call draw_window
 
    mov di, UI_FIRST_LINE+8
    mov al, TILE_RAILS_3     ; Crossing
@@ -1860,7 +1890,7 @@ draw_ui:
    call draw_sprite
 
    mov si, [_ECONOMY_BLUE_RES_]  ; Blue resource count
-   mov dx, 0x0150C
+   mov dx, 0x0160D
    mov bl, COLOR_WHITE
    call draw_number
 
@@ -1869,7 +1899,7 @@ draw_ui:
    call draw_sprite
 
    mov si, [_ECONOMY_YELLOW_RES_]  ; Yellow resource count
-   mov dx, 0x01514
+   mov dx, 0x01615
    mov bl, COLOR_WHITE
    call draw_number
 
@@ -1878,44 +1908,7 @@ draw_ui:
    call draw_sprite
 
    mov si, [_ECONOMY_RED_RES_]  ; Red resource count
-   mov dx, 0x0151C
-   mov bl, COLOR_WHITE
-   call draw_number
-
-   cmp byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
-   jz .panning_mode
-   cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_PLACE
-   jz .placing_mode
-   cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
-   jz .edit_mode
-   cmp byte [_SCENE_MODE_], MODE_TERRAIN_REMOVE
-   jz .remove_mode
-
-  .panning_mode:
-    mov si, UIExploreModeText
-    jmp .write_mode
-  .placing_mode:
-    mov si, UIBuildModeText
-    jmp .write_mode
-  .edit_mode:
-    mov si, UIEditModeText
-    jmp .write_mode
-  .remove_mode:
-    mov si, UIRemoveModeText
-
-
-   .write_mode:
-   mov dx, 0x01714
-   mov bl, COLOR_NAVY_BLUE
-   call draw_text
-
-   mov si, UIScoreText
-   mov dx, 0x01701
-   mov bl, COLOR_NAVY_BLUE
-   call draw_text
-
-   mov si, [_ECONOMY_SCORE_]  ; Score value
-   mov dx, 0x01708
+   mov dx, 0x0161D
    mov bl, COLOR_WHITE
    call draw_number
 
