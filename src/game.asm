@@ -1610,12 +1610,13 @@ draw_tile:
   push SEGMENT_VGA
   pop es
 
-  shl ax, 8         ; Multiply by 256 (tile size in array)
+  mov ah, al        ; Multiply by 256 (tile size in array) by swapping nibles
+  xor al, al        ; clear low nibble
   mov si, ax        ; Point to tile data
   mov bx, SPRITE_SIZE
   .draw_tile_line:
     mov cx, SPRITE_SIZE/4
-    rep movsd      ; Move 2px at a time
+    rep movsd       ; Move 4px at a time
     add di, SCREEN_WIDTH-SPRITE_SIZE ; Next line
     dec bx
   jnz .draw_tile_line
@@ -1641,17 +1642,23 @@ draw_sprite:
   push SEGMENT_VGA
   pop es
 
-  shl ax, 8
-  mov si, ax
+  mov ah, al        ; Multiply by 256 (tile size in array) by swapping nibles
+  xor al, al        ; clear low nibble
+  mov si, ax        ; Point to tile data
   mov bx, SPRITE_SIZE
   .draw_tile_line:
-    mov cx, SPRITE_SIZE
+    mov cx, SPRITE_SIZE/2
     .draw_next_pixel:
-      lodsb
+      lodsw
       test al, al
       jz .skip_transparent_pixel
         mov byte [es:di], al
       .skip_transparent_pixel:
+      inc di
+      test ah, ah
+      jz .skip_transparent_pixel2
+        mov byte [es:di], ah
+      .skip_transparent_pixel2:
       inc di
     loop .draw_next_pixel
     add di, SCREEN_WIDTH-SPRITE_SIZE ; Next line
