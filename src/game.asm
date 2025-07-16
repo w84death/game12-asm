@@ -298,15 +298,14 @@ MODE_SETTINGS_MENU            equ 0x01
 MODE_HELP_PAGE1               equ 0x02
 MODE_HELP_PAGE2               equ 0x03
 
-MODE_ALL                      equ 0x00
-MODE_VIEWPORT_MOVE         equ 0x01
-MODE_INFRASTRUCTURE_PLACE   equ 0x02
-MODE_INFRASTRUCTURE_EDIT      equ 0x03
-MODE_TERRAIN_REMOVE    equ 0x04
+MODE_GAMEPLAY                      equ 0x00
+MODE_INFRASTRUCTURE_PLACE     equ 0x01
+MODE_SWITCH_CHANGE            equ 0x02
+MODE_STATION_PLACE            equ 0x03
 
-UI_POSITION                   equ 320*160
-UI_FIRST_LINE                 equ 320*164
-UI_LINES                      equ 40
+UI_STATS_WINDOW_POS           equ 0x1502
+UI_STATS_GFX_LINE             equ 320*172
+UI_STATS_TXT_LINE             equ 0x16
 
 DEFAULT_ECONOMY_TRACKS        equ 0x64
 
@@ -342,7 +341,7 @@ COLOR_WHITE         equ 15
 ; =========================================== AUDIO NOTES ===================|80
 ; Note values are frequency divisors for the PC speaker
 ; Formula: divisor = 1193180 / frequency_hz
-
+Notes:
 NOTE_REST   equ 0xFF    ; Rest (silence)
 NOTE_C3     equ 0x2394  ; 130.81 Hz
 NOTE_CS3    equ 0x2187  ; 138.59 Hz
@@ -454,7 +453,7 @@ check_keyboard:
     cmp bl, [si]        ; Check current state
     jne .next_input
 
-    cmp byte [si+1], MODE_ALL
+    cmp byte [si+1], MODE_GAMEPLAY
     je .check_keypress
     mov bl, [_SCENE_MODE_]
     cmp bl, [si+1]      ; Check current mode
@@ -520,75 +519,89 @@ exit:
 
 
 game_logic:
+  .move_cursor_up:
+    mov ax, [_VIEWPORT_Y_]      ; viewport top position
+    cmp word [_CURSOR_Y_], ax   ; check if cursor at the top edge
+    je .move_viewport_up        ; try move the viewport up
+    dec word [_CURSOR_Y_]       ; or just move the cursor up
+  jmp .redraw_tile
+
+  .move_cursor_down:
+    mov ax, [_VIEWPORT_Y_]      ; viewport top position
+    add ax, VIEWPORT_HEIGHT-1   ; add screen height to get viewport bottom
+    cmp word [_CURSOR_Y_], ax   ; check if cursro at the bottom
+    jae .move_viewport_down     ; try to move viewport down
+    inc word [_CURSOR_Y_]       ; or just move the cursor down
+  jmp .redraw_tile
+
+  .move_cursor_left:
+    mov ax, [_VIEWPORT_X_]      ; viewport left position
+    cmp word [_CURSOR_X_], ax   ; check if cursor at the left edge
+    je .move_viewport_left      ; try to move viewport left
+    dec word [_CURSOR_X_]       ; or just move the cursor left
+  jmp .redraw_tile
+
+  .move_cursor_right:
+    mov ax, [_VIEWPORT_X_]      ; viewport left position
+    add ax, VIEWPORT_WIDTH-1    ; add screen width to get viewport right
+    cmp word [_CURSOR_X_], ax   ; check if cursor at the right edge
+    jae .move_viewport_right    ; try to move viewport right
+    inc word [_CURSOR_X_]       ; or just move the cursor right
+  jmp .redraw_tile
 
   .move_viewport_up:
-    cmp word [_VIEWPORT_Y_], 0
-    je .done
-    dec word [_VIEWPORT_Y_]
-    dec word [_CURSOR_Y_]
+    cmp word [_VIEWPORT_Y_], 0  ; check if viewport at the top edge of map
+    je .done                    ; do nothing if on edge
+    dec word [_VIEWPORT_Y_]     ; move viewport up
+    dec word [_CURSOR_Y_]       ; move cursor up
   jmp .redraw_terrain
+
   .move_viewport_down:
-    cmp word [_VIEWPORT_Y_], MAP_SIZE-VIEWPORT_HEIGHT
-    jae .done
-    inc word [_VIEWPORT_Y_]
-    inc word [_CURSOR_Y_]
+    cmp word [_VIEWPORT_Y_], MAP_SIZE-VIEWPORT_HEIGHT ; check if viewport at the bottom edge of map
+    jae .done                 ; do nothing if on edge
+    inc word [_VIEWPORT_Y_]   ; move viewport down
+    inc word [_CURSOR_Y_]     ; move cursor down
   jmp .redraw_terrain
+
   .move_viewport_left:
-    cmp word [_VIEWPORT_X_], 0
-    je .done
-    dec word [_VIEWPORT_X_]
-    dec word [_CURSOR_X_]
+    cmp word [_VIEWPORT_X_], 0  ; check if viewport at the left edge of map
+    je .done                    ; do nothing if on edge
+    dec word [_VIEWPORT_X_]     ; move viewport left
+    dec word [_CURSOR_X_]       ; move cursor left
   jmp .redraw_terrain
+
   .move_viewport_right:
-    cmp word [_VIEWPORT_X_], MAP_SIZE-VIEWPORT_WIDTH
-    jae .done
-    inc word [_VIEWPORT_X_]
-    inc word [_CURSOR_X_]
+    cmp word [_VIEWPORT_X_], MAP_SIZE-VIEWPORT_WIDTH ; check if viewport at the right edge of map
+    jae .done                 ; do nothing if on edge
+    inc word [_VIEWPORT_X_]   ; move viewport right
+    inc word [_CURSOR_X_]     ; move cursor right
   jmp .redraw_terrain
 
-  .move_cursor_up:
-    mov ax, [_VIEWPORT_Y_]
-    cmp word [_CURSOR_Y_], ax
-    je .done
-    dec word [_CURSOR_Y_]
+  .switch_change:
+    mov ax, [_CURSOR_Y_]                ; calculate map position
+    shl ax, 7   ; Y * 128
+    add ax, [_CURSOR_X_]
+    mov si, _METADATA_
+    add si, ax                          ; set tile position in _METADATA_
+    mov al, [si]                        ; read _METADATA_ for this tile pos
+    test al, METADATA_SWITCH_INITIALIZED
+    jz .done                            ; not a swich, skip
+    mov bl, al                          ; save the metadata value
+    mov bh, 0xFF                        ; calculate the bit mask
+    sub bh, METADATA_SWITCH_MASK        ; to everything beside switch
+    and bl, bh                          ; clear switch data (in saved value)
+    and al, METADATA_SWITCH_MASK        ; mask swich data
+    shr al, METADATA_SWITCH_SHIFT       ; move to right to conv to number
+    xor al, 0x2                         ; invert swich top-down or left-right
+    shl al, METADATA_SWITCH_SHIFT       ; move back to left for correct position
+    or bl, al                           ; set new sitch to saved metadata value
+    mov [si], bl                        ; save in _METADATA_
   jmp .redraw_tile
-  .move_cursor_down:
-    mov ax, [_VIEWPORT_Y_]
-    add ax, VIEWPORT_HEIGHT-1
-    cmp word [_CURSOR_Y_], ax
-    jae .done
-    inc word [_CURSOR_Y_]
-  jmp .redraw_tile
-  .move_cursor_left:
-    mov ax, [_VIEWPORT_X_]
-    cmp word [_CURSOR_X_], ax
-    je .done
-    dec word [_CURSOR_X_]
-  jmp .redraw_tile
-  .move_cursor_right:
-    mov ax, [_VIEWPORT_X_]
-    add ax, VIEWPORT_WIDTH-1
-    cmp word [_CURSOR_X_], ax
-    jae .done
-    inc word [_CURSOR_X_]
-  jmp .redraw_tile
-
-  .set_mode_panning:
-    mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
-    jmp .redraw_tile
-  .set_mode_placing:
-    mov byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_PLACE
-    jmp .redraw_tile
-  .set_mode_editing:
-    mov byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
-    jmp .redraw_tile
-  .set_mode_removing:
-    mov byte [_SCENE_MODE_], MODE_TERRAIN_REMOVE
-    jmp .redraw_tile
 
   .rails_place:
-    cmp word [_ECONOMY_TRACKS_], 0      ; check economy: track count
-    jz .error
+    ; TODO: check for build resources and reduce
+    ;cmp word [_ECONOMY_TRACKS_], 0      ; check if
+    ;jz .error
 
     mov bx, SFX_BUILD
     call play_sfx
@@ -616,38 +629,9 @@ game_logic:
     add al, META_TRANSPORT
     mov [es:di], al               ; set railroad tile
 
-    call draw_ui
   jmp .redraw_tile
 
   .station_place:
-  jmp .redraw_tile
-
-  .cart_place:
-  jmp .redraw_tile
-
-  .infrastructure_edit:
-    mov ax, [_CURSOR_Y_]                ; calculate map position
-    shl ax, 7   ; Y * 128
-    add ax, [_CURSOR_X_]
-    mov si, _METADATA_
-    add si, ax                          ; set tile position in _METADATA_
-    mov al, [si]                        ; read _METADATA_ for this tile pos
-    test al, METADATA_SWITCH_INITIALIZED
-    jz .done                            ; not a swich, skip
-    mov bl, al                          ; save the metadata value
-    mov bh, 0xFF                        ; calculate the bit mask
-    sub bh, METADATA_SWITCH_MASK        ; to everything beside switch
-    and bl, bh                          ; clear switch data (in saved value)
-    and al, METADATA_SWITCH_MASK        ; mask swich data
-    shr al, METADATA_SWITCH_SHIFT       ; move to right to conv to number
-    xor al, 0x2                         ; invert swich top-down or left-right
-    shl al, METADATA_SWITCH_SHIFT       ; move back to left for correct position
-    or bl, al                           ; set new sitch to saved metadata value
-    mov [si], bl                        ; save in _METADATA_
-
-  jmp .redraw_tile
-
-  .terrain_remove:
   jmp .redraw_tile
 
   jmp .no_error
@@ -671,6 +655,7 @@ game_logic:
     call draw_terrain
     ;call draw_entities
     call draw_cursor
+    call draw_ui
     jmp .done
 
     .done:
@@ -723,62 +708,20 @@ StateTransitionTable:
 StateTransitionTableEnd:
 
 InputTable:
-  db STATE_GAME,        MODE_ALL,  KB_F1
-  dw game_logic.set_mode_panning
-  db STATE_GAME,        MODE_ALL,  KB_F2
-  dw game_logic.set_mode_placing
-  db STATE_GAME,        MODE_ALL,  KB_F3
-  dw game_logic.set_mode_editing
-  db STATE_GAME,        MODE_ALL,  KB_F4
-  dw game_logic.set_mode_removing
-
-  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_UP
-  dw game_logic.move_viewport_up
-  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_DOWN
-  dw game_logic.move_viewport_down
-  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_LEFT
-  dw game_logic.move_viewport_left
-  db STATE_GAME,        MODE_VIEWPORT_MOVE,  KB_RIGHT
-  dw game_logic.move_viewport_right
-
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_UP
+  db STATE_GAME,        MODE_GAMEPLAY,  KB_UP
   dw game_logic.move_cursor_up
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_DOWN
+  db STATE_GAME,        MODE_GAMEPLAY,  KB_DOWN
   dw game_logic.move_cursor_down
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_LEFT
+  db STATE_GAME,        MODE_GAMEPLAY,  KB_LEFT
   dw game_logic.move_cursor_left
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_RIGHT
+  db STATE_GAME,        MODE_GAMEPLAY,  KB_RIGHT
   dw game_logic.move_cursor_right
   db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_SPACE
   dw game_logic.rails_place
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_1
+  db STATE_GAME,        MODE_SWITCH_CHANGE,  KB_SPACE
+  dw game_logic.switch_change
+  db STATE_GAME,        MODE_STATION_PLACE,  KB_SPACE
   dw game_logic.station_place
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_2
-  dw game_logic.cart_place
-
-  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_UP
-  dw game_logic.move_cursor_up
-  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_DOWN
-  dw game_logic.move_cursor_down
-  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_LEFT
-  dw game_logic.move_cursor_left
-  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_RIGHT
-  dw game_logic.move_cursor_right
-  db STATE_GAME,        MODE_INFRASTRUCTURE_EDIT,  KB_SPACE
-  dw game_logic.infrastructure_edit
-
-
-  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_UP
-  dw game_logic.move_cursor_up
-  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_DOWN
-  dw game_logic.move_cursor_down
-  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_LEFT
-  dw game_logic.move_cursor_left
-  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_RIGHT
-  dw game_logic.move_cursor_right
-  db STATE_GAME,        MODE_TERRAIN_REMOVE,  KB_SPACE
-  dw game_logic.terrain_remove
-
 InputTableEnd:
 
 
@@ -924,7 +867,7 @@ new_game:
   call generate_test_map
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
-  mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
+  mov byte [_SCENE_MODE_], MODE_GAMEPLAY
 ret
 
 init_game:
@@ -933,7 +876,7 @@ init_game:
   call draw_cursor
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
-  mov byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
+  mov byte [_SCENE_MODE_], MODE_GAMEPLAY
   mov bx, GAME_JINGLE
   call play_sfx
 ret
@@ -1370,6 +1313,11 @@ draw_terrain:
   push es
   push ds
 
+  mov si, [_VIEWPORT_Y_]  ; Y coordinate
+  shl si, 7               ; Y * 64
+  add si, [_VIEWPORT_X_]  ; Y * 64 + X
+
+
   push SEGMENT_TERRAIN_BACKGROUND
   pop es
 
@@ -1378,9 +1326,6 @@ draw_terrain:
 
   xor di, di
 
-  mov si, [_VIEWPORT_Y_]  ; Y coordinate
-  shl si, 7               ; Y * 64
-  add si, [_VIEWPORT_X_]  ; Y * 64 + X
 
   mov cx, VIEWPORT_HEIGHT
   .draw_line:
@@ -1781,29 +1726,8 @@ draw_cursor:
   add bx, ax              ; Y * 16 * 320 + X * 16
   mov di, bx              ; Move result to DI
 
-
-  cmp byte [_SCENE_MODE_], MODE_VIEWPORT_MOVE
-  jz .panning_cursor
-  cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_PLACE
-  jz .placing_cursor
-  cmp byte [_SCENE_MODE_], MODE_INFRASTRUCTURE_EDIT
-  jz .edit_cursor
-  cmp byte [_SCENE_MODE_], MODE_TERRAIN_REMOVE
-  jz .remove_cursor
-
-  .panning_cursor:
-    mov al, TILE_CURSOR_PAN
-    jmp .draw_selected_cursor
-  .placing_cursor:
-    mov al, TILE_CURSOR_BUILD
-    jmp .draw_selected_cursor
-  .edit_cursor:
-    mov al, TILE_CURSOR_EDIT
-    jmp .draw_selected_cursor
-  .remove_cursor:
-    mov al, TILE_CURSOR_REMOVE
-
-  .draw_selected_cursor:
+  ; TODO: check cursor type
+   mov al, TILE_CURSOR_PAN
   call draw_sprite
 ret
 
@@ -1875,47 +1799,37 @@ ret
 
 draw_ui:
 
-  mov ax, 0x1502
+  mov ax, UI_STATS_WINDOW_POS
   mov bx, 0x0212
   call draw_window
 
-   mov di, UI_FIRST_LINE+8
-   mov al, TILE_RAILS_3     ; Crossing
-   call draw_sprite
+  mov di, UI_STATS_GFX_LINE+76   ; Resource blue icon
+  mov al, TILE_ORE_BLUE
+  call draw_sprite
 
-   mov si, [_ECONOMY_TRACKS_]  ; Railroad tracks count
-   mov dx, 0x01504
-   mov bl, COLOR_WHITE
-   cmp si, 0x0A
-   jg .skip_red
-      mov bl, COLOR_RED
-   .skip_red:
-   call draw_number
+  mov si, [_ECONOMY_BLUE_RES_]  ; Blue resource count
+  mov dh, UI_STATS_TXT_LINE
+  mov dl, 0x0D
+  mov bl, COLOR_WHITE
+  call draw_number
 
-   mov di, UI_FIRST_LINE+76   ; Resource blue icon
-   mov al, TILE_ORE_BLUE
-   call draw_sprite
-
-   mov si, [_ECONOMY_BLUE_RES_]  ; Blue resource count
-   mov dx, 0x0160D
-   mov bl, COLOR_WHITE
-   call draw_number
-
-   mov di, UI_FIRST_LINE+140
+   mov di, UI_STATS_GFX_LINE+140
    mov al, TILE_ORE_YELLOW
    call draw_sprite
 
    mov si, [_ECONOMY_YELLOW_RES_]  ; Yellow resource count
-   mov dx, 0x01615
+   mov dh, UI_STATS_TXT_LINE
+   mov dl, 0x15
    mov bl, COLOR_WHITE
    call draw_number
 
-   mov di, UI_FIRST_LINE+204
+   mov di, UI_STATS_GFX_LINE+204
    mov al, TILE_ORE_RED
    call draw_sprite
 
    mov si, [_ECONOMY_RED_RES_]  ; Red resource count
-   mov dx, 0x0161D
+   mov dh, UI_STATS_TXT_LINE
+   mov dl, 0x1D
    mov bl, COLOR_WHITE
    call draw_number
 
