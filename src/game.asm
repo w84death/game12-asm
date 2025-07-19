@@ -40,9 +40,9 @@ GAME_STACK_POINTER          equ 0xFFFE    ; Stack pointer for game code
 SEGMENT_GAME_CODE           equ 0x1000    ; Game code (up to ~144KB available)
 SEGMENT_SPRITES             equ 0x5000    ; 80 tiles = 20K (0x5000 bytes)
 SEGMENT_TERRAIN_BACKGROUND  equ 0x6000    ; First map layer (16KB)
-SEGMENT_TERRAIN_FOREGROUND  equ 0x6400    ; Metadata layer (16KB)
-SEGMENT_RAILS_DATA          equ 0x6800    ; Additional layer (16KB)
-SEGMENT_MAP_ENTITIES        equ 0x6C00    ; Additional layer (16KB)
+SEGMENT_TERRAIN_FOREGROUND  equ 0x6400    ; Second map layer (16KB)
+SEGMENT_META_DATA           equ 0x6800    ; Third map layer (16KB)
+SEGMENT_MAP_ENTITIES        equ 0x6C00    ; Fourth map layer (16KB)
 SEGMENT_ENTITIES            equ 0x7000    ; Entities data
 SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
 
@@ -64,7 +64,6 @@ _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
 _SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
 
-_TILES_                   equ 0x0000
 _MAP_                     equ 0x0000  ; Map data 128*128*1b= 0x4000
 _METADATA_                equ 0x0000  ; Map metadata 128*128*1b= 0x4000
 _ENTITIES_                equ 0x0000  ; Entities 128*128*1b= 0x4000
@@ -243,7 +242,7 @@ CART_DRAW_SHIFT equ 0x5
 CURSOR_TYPE_MASK equ 0xC0
 CURSOR_TYPE_SHIFT equ 0x6
 
-; SEGMENT_RAILS_DATA
+; SEGMENT_META_DATA
 ; 0 00 00 00 0
 ; | |  |  |  |
 ; | |  |  |  '- switch on rail (or not initialized)
@@ -1279,29 +1278,18 @@ ret
 generate_test_map:
   push es
   push ds
+
+  mov di, [_CURSOR_Y_]                ; calculate map position
+  shl di, 7   ; Y * 128
+  add di, [_CURSOR_X_]
+
   push SEGMENT_TERRAIN_BACKGROUND
   pop es
   push SEGMENT_TERRAIN_FOREGROUND
   pop ds
 
-  mov di, 32*32+4
-  mov cx, 0x5
-  .lll:
   add byte [es:di], RAIL_MASK
   add byte [ds:di], TILE_RAILS_1-TILE_FOREGROUND_SHIFT
-  inc di
-  loop .lll
-
-  push SEGMENT_RAILS_DATA
-  pop es
-
-  mov di, 32*32+6
-  add byte [ds:di], CART_DRAW_MASK
-  mov byte [es:di], 0x60
-
-  inc di
-  add byte [ds:di], CART_DRAW_MASK
-  mov byte [es:di], 0x68
 
   pop ds
   pop es
@@ -1314,9 +1302,8 @@ draw_terrain:
   push ds
 
   mov si, [_VIEWPORT_Y_]  ; Y coordinate
-  shl si, 7               ; Y * 64
-  add si, [_VIEWPORT_X_]  ; Y * 64 + X
-
+  shl si, 7               ; Y * 128
+  add si, [_VIEWPORT_X_]  ; Y * 128 + X
 
   push SEGMENT_TERRAIN_BACKGROUND
   pop es
@@ -1325,7 +1312,6 @@ draw_terrain:
   pop ds
 
   xor di, di
-
 
   mov cx, VIEWPORT_HEIGHT
   .draw_line:
@@ -1338,6 +1324,7 @@ draw_terrain:
       and al, BACKGROUND_SPRITE_MASK
       call draw_tile
 
+    .draw_forground:
       and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
       cmp bl, 0x0
       jz .skip_foreground
@@ -1345,36 +1332,38 @@ draw_terrain:
         and al, FORGROUND_SPRITE_MASK
         add al, TILE_FOREGROUND_SHIFT
         call draw_sprite
-      .skip_foreground:
 
-      mov dl, [ds:si]
-      test dl, CART_DRAW_MASK
-      jz .skip_cart
-        push es
-        push SEGMENT_RAILS_DATA
-        pop es
-        mov bl, [es:si]
-        and bl, CART_DIRECTION_MASK
-        shr bl, CART_DIRECTION_SHIFT
-        mov al, TILE_CART_HORIZONTAL
-        cmp bl, CART_DOWN
-        jg .skip_vertical
-        mov al, TILE_CART_VERTICAL
-        .skip_vertical:
+      .draw_cart:
+        mov dl, [ds:si]
+        test dl, CART_DRAW_MASK
+        jz .skip_cart
+          push es
+          push SEGMENT_META_DATA
+          pop es
+          mov bl, [es:si]
+          and bl, CART_DIRECTION_MASK
+          shr bl, CART_DIRECTION_SHIFT
+          mov al, TILE_CART_HORIZONTAL
+          cmp bl, CART_DOWN
+          jg .skip_vertical
+          mov al, TILE_CART_VERTICAL
+          .skip_vertical:
 
-        call draw_sprite
-
-        mov bl, [es:si]
-        and bl, RESOURCE_TYPE_MASK
-        cmp bl, 0x0
-        jz .skip_resource
-          shr bl, RESOURCE_TYPE_SHIFT
-          mov al, TILE_ORE_BLUE-1
-          add al, bl
           call draw_sprite
-        .skip_resource:
-        pop es
-      .skip_cart:
+
+        .draw_resource:
+          mov bl, [es:si]
+          and bl, RESOURCE_TYPE_MASK
+          cmp bl, 0x0
+          jz .skip_resource
+            shr bl, RESOURCE_TYPE_SHIFT
+            mov al, TILE_ORE_BLUE-1
+            add al, bl
+            call draw_sprite
+          .skip_resource:
+          pop es
+        .skip_cart:
+      .skip_foreground:
 
       add di, SPRITE_SIZE
       inc si
@@ -1746,7 +1735,7 @@ draw_minimap:
   call draw_window
 
   .draw_mini_map:
-  mov si, _MAP_              ; Map data
+  xor si, si
   mov di, SCREEN_WIDTH*40+94          ; Map position on screen
   mov bx, TerrainColors      ; Terrain colors array
   mov cx, MAP_SIZE           ; Columns
@@ -1754,13 +1743,10 @@ draw_minimap:
     push cx
     mov cx, MAP_SIZE        ; Rows
     .draw_row:
-      lodsb                ; Load map cell
+      mov al, [ds:si]                ; Load map cell
+      inc si
       and al, BACKGROUND_SPRITE_MASK ; Clear metadata
-      push es
-      push SEGMENT_GAME_CODE
-      pop es
-      xlatb                ; Translate to color
-      pop es
+      ; TODO: colors
       mov ah, al           ; Copy color for second pixel
       mov [es:di], al      ; Draw 1 pixels
       add di, 1            ; Move to next column
@@ -1802,6 +1788,18 @@ draw_ui:
   mov ax, UI_STATS_WINDOW_POS
   mov bx, 0x0212
   call draw_window
+
+  mov si, [_CURSOR_X_]  ; Blue resource count
+  mov dh, UI_STATS_TXT_LINE
+  mov dl, 0x04
+  mov bl, COLOR_WHITE
+  call draw_number
+
+  mov si, [_CURSOR_Y_]  ; Blue resource count
+  mov dh, UI_STATS_TXT_LINE+1
+  mov dl, 0x04
+  mov bl, COLOR_WHITE
+  call draw_number
 
   mov di, UI_STATS_GFX_LINE+76   ; Resource blue icon
   mov al, TILE_ORE_BLUE
