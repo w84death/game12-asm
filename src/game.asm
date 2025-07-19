@@ -1829,23 +1829,10 @@ MainMenuText:
   db 0x00
 
 HelpText:
-  db '      -== HOW TO PLAY THE GAME ==-      ',0x0
-  db 'Get as much points by refining blue ore.',0x0
-  db 'Collect resources using extraction',0x0
-  db 'facility and refine it in the rafinery.',0x0
-  db 'Transport goods using carts on rails.',0x0
-  db 'Build stations on rals. Building on the',0x0
-  db 'fundation blocks, next to the stations.',0x0
-  db '        -== INTERACTION MODES ==-       ',0x0
-  db 'F1: Move map using arrows',0x0
-  db 'F2: Move cursor, build rails using SPACE',0x0
-  db 'F3: Swap switches, rafinery type',0x0
-  db 'F4: Clear trees, rocks for rails placing',0x0
-  db '           -== RESOURCES ==-            ',0x0
-  db 'Refine red and green ore to get resource',0x0
-  db 'Red: to build rails (1) and stations (10)',0x0
-  db 'Yellow: buidings(50), clearing (5)',0x0
-  db 'Blue ore: increase overall score.',0x0
+  db '------== HOW TO PLAY THE GAME ==-----',0x0
+  db 'Here will be the final help menu with',0x0
+  db 'actual help text. Describing gameplay',0x0
+  db 'and controls.',0x0
   db 0x00
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
