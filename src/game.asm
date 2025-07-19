@@ -237,6 +237,7 @@ INFRASTRUCTURE_SHIFT equ 0x7
 ; '- cursor type (4)
 ;
 FORGROUND_SPRITE_MASK equ 0x1F
+FOREROUND_SPRITE_CLIP equ 0xE0
 CART_DRAW_MASK equ 0x20
 CART_DRAW_SHIFT equ 0x5
 CURSOR_TYPE_MASK equ 0xC0
@@ -254,6 +255,7 @@ CURSOR_TYPE_SHIFT equ 0x6
 SWITCH_INITIALIED_MASK equ 0x1
 SWITCH_TYPE_MASK equ 0x6
 SWITCH_TYPE_SHIFT equ 0x1
+SWITCH_DATA_CLIP equ 0xF8
 RESOURCE_TYPE_MASK equ 0x18
 RESOURCE_TYPE_SHIFT equ 0x3
 CART_DIRECTION_MASK equ 0x60
@@ -597,40 +599,48 @@ game_logic:
     mov [si], bl                        ; save in _METADATA_
   jmp .redraw_tile
 
-  .rails_place:
-    ; TODO: check for build resources and reduce
-    ;cmp word [_ECONOMY_TRACKS_], 0      ; check if
-    ;jz .error
+  .build_action:
+    push es
+    push ds
 
     mov bx, SFX_BUILD
     call play_sfx
 
-    mov ax, [_CURSOR_Y_]                ; calculate map position
-    shl ax, 7   ; Y * 128
-    add ax, [_CURSOR_X_]
-    mov di, _MAP_
-    add di, ax
+    mov di, [_CURSOR_Y_]                ; calculate map position
+    shl di, 7   ; Y * 128
+    add di, [_CURSOR_X_]
 
-    push es
+    mov al, [_GAME_TICK_]
+
     push SEGMENT_TERRAIN_BACKGROUND
     pop es
-    mov al, [es:di]                        ; get tile data at current place
+    push SEGMENT_TERRAIN_FOREGROUND
+    pop ds
+
+    .place_rail:
+      and al, 0x1           ; TILE_MUD_1 or TILE_MUD_2
+      mov byte [es:di], al
+      add byte [es:di], RAIL_MASK
+      add byte [ds:di], TILE_RAILS_1-TILE_FOREGROUND_SHIFT
+
+      call recalculate_rails
+      dec di
+      call recalculate_rails
+      add di, 2
+      call recalculate_rails
+      sub di, MAP_SIZE+1
+      call recalculate_rails
+      add di, MAP_SIZE*2
+      call recalculate_rails
+    .skip_place_rail:
+
+    .toggle_switch:
+    .place_station:
+    .place_foundation:
+    .place_building:
+
+    pop ds
     pop es
-
-    test al, META_TRANSPORT             ; check if empty
-    jnz .done
-    test al, META_INVISIBLE_WALL
-    jz .done
-
-    dec word [_ECONOMY_TRACKS_]         ; decrease track count
-
-    and al, 0x3
-    add al, META_TRANSPORT
-    mov [es:di], al               ; set railroad tile
-
-  jmp .redraw_tile
-
-  .station_place:
   jmp .redraw_tile
 
   jmp .no_error
@@ -652,7 +662,6 @@ game_logic:
 
   .redraw_terrain:
     call draw_terrain
-    ;call draw_entities
     call draw_cursor
     call draw_ui
     jmp .done
@@ -715,12 +724,8 @@ InputTable:
   dw game_logic.move_cursor_left
   db STATE_GAME,        MODE_GAMEPLAY,  KB_RIGHT
   dw game_logic.move_cursor_right
-  db STATE_GAME,        MODE_INFRASTRUCTURE_PLACE,  KB_SPACE
-  dw game_logic.rails_place
-  db STATE_GAME,        MODE_SWITCH_CHANGE,  KB_SPACE
-  dw game_logic.switch_change
-  db STATE_GAME,        MODE_STATION_PLACE,  KB_SPACE
-  dw game_logic.station_place
+  db STATE_GAME,        MODE_GAMEPLAY,  KB_SPACE
+  dw game_logic.build_action
 InputTableEnd:
 
 
@@ -863,7 +868,6 @@ ret
 new_game:
   call generate_map
   call reset_to_default_values
-  call generate_test_map
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
   mov byte [_SCENE_MODE_], MODE_GAMEPLAY
@@ -1274,27 +1278,6 @@ generate_map:
   pop es
 ret
 
-
-generate_test_map:
-  push es
-  push ds
-
-  mov di, [_CURSOR_Y_]                ; calculate map position
-  shl di, 7   ; Y * 128
-  add di, [_CURSOR_X_]
-
-  push SEGMENT_TERRAIN_BACKGROUND
-  pop es
-  push SEGMENT_TERRAIN_FOREGROUND
-  pop ds
-
-  add byte [es:di], RAIL_MASK
-  add byte [ds:di], TILE_RAILS_1-TILE_FOREGROUND_SHIFT
-
-  pop ds
-  pop es
-ret
-
 ; =========================================== DRAW TERRAIN ==================|80
 ; OUT: Terrain drawn on the screen
 draw_terrain:
@@ -1319,50 +1302,66 @@ draw_terrain:
 
     mov cx, VIEWPORT_WIDTH
     .draw_cell:
-      mov al, [es:si]
+      mov al, [es:si]                   ; SEGMENT_TERRAIN_BACKGROUND
       mov bl, al
       and al, BACKGROUND_SPRITE_MASK
       call draw_tile
 
-    .draw_forground:
       and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
       cmp bl, 0x0
       jz .skip_foreground
-        mov al, [ds:si]
+      .draw_forground:
+
+        mov al, [ds:si]                 ; SEGMENT_TERRAIN_FOREGROUND
         and al, FORGROUND_SPRITE_MASK
         add al, TILE_FOREGROUND_SHIFT
         call draw_sprite
 
-      .draw_cart:
-        mov dl, [ds:si]
-        test dl, CART_DRAW_MASK
-        jz .skip_cart
-          push es
-          push SEGMENT_META_DATA
-          pop es
-          mov bl, [es:si]
-          and bl, CART_DIRECTION_MASK
-          shr bl, CART_DIRECTION_SHIFT
-          mov al, TILE_CART_HORIZONTAL
-          cmp bl, CART_DOWN
-          jg .skip_vertical
-          mov al, TILE_CART_VERTICAL
-          .skip_vertical:
+        push es
+        push SEGMENT_META_DATA
+        pop es
 
-          call draw_sprite
+        mov dl, [ds:si]                 ; SEGMENT_TERRAIN_FOREGROUND
+        .draw_rails_stuff:
+          test dl, RAIL_MASK
+          jz .skip_rails_stuff
+          .draw_switch:
+            mov al, [es:si]             ; SEGMENT_META_DATA
+            test al, SWITCH_INITIALIED_MASK
+            jz .skip_switch
+              and al, SWITCH_TYPE_MASK
+              shr al, SWITCH_TYPE_SHIFT
+              add al, TILE_SWITCH_LEFT
+              call draw_sprite
+            .skip_switch:
 
-        .draw_resource:
-          mov bl, [es:si]
-          and bl, RESOURCE_TYPE_MASK
-          cmp bl, 0x0
-          jz .skip_resource
-            shr bl, RESOURCE_TYPE_SHIFT
-            mov al, TILE_ORE_BLUE-1
-            add al, bl
-            call draw_sprite
-          .skip_resource:
-          pop es
-        .skip_cart:
+          .draw_cart:
+            test dl, CART_DRAW_MASK
+            jz .skip_cart
+              mov bl, [es:si]           ; SEGMENT_META_DATA
+              and bl, CART_DIRECTION_MASK
+              shr bl, CART_DIRECTION_SHIFT
+              mov al, TILE_CART_HORIZONTAL
+              cmp bl, CART_DOWN
+              jg .skip_vertical
+              mov al, TILE_CART_VERTICAL
+              .skip_vertical:
+
+              call draw_sprite
+
+              .draw_cart_resource:
+                mov bl, [es:si]               ; SEGMENT_META_DATA
+                and bl, RESOURCE_TYPE_MASK
+                cmp bl, 0x0
+                jz .skip_resource
+                  shr bl, RESOURCE_TYPE_SHIFT
+                  mov al, TILE_ORE_BLUE-1
+                  add al, bl
+                  call draw_sprite
+                .skip_resource:
+            .skip_cart:
+        .skip_rails_stuff:
+        pop es
       .skip_foreground:
 
       add di, SPRITE_SIZE
@@ -1372,7 +1371,8 @@ draw_terrain:
     add di, SCREEN_WIDTH*(SPRITE_SIZE-1)
     add si, MAP_SIZE-VIEWPORT_WIDTH
     pop cx
-  loop .draw_line
+    dec cx
+  jnz .draw_line
 
   pop ds
   pop es
@@ -1394,34 +1394,45 @@ redraw_terrain_tile:
   pop si
 ret
 
-
-caculate_and_draw_rails:
+; di: pos
+; es background
+; ds foreground
+recalculate_rails:
   xor ax, ax
-  dec si
   .test_up:
-    test byte [si-MAP_SIZE], META_TRANSPORT
+    test byte [es:di-MAP_SIZE], RAIL_MASK
     jz .test_right
     add al, 0x8
   .test_right:
-    test byte [si+1], META_TRANSPORT
+    test byte [es:di+1], RAIL_MASK
     jz .test_down
     add al, 0x4
   .test_down:
-  test byte [si+MAP_SIZE], META_TRANSPORT
+  test byte [es:di+MAP_SIZE], RAIL_MASK
   jz .test_left
     add al, 0x2
   .test_left:
-  test byte [si-1], META_TRANSPORT
+  test byte [es:di-1], RAIL_MASK
   jz .done_calculating
     add al, 0x1
   .done_calculating:
-  mov dl, al                            ; Save connection pattern
+  mov dl, al                            ; Save connection pattern for switch
 
-  inc si
-  mov bx, RailroadsList
-  xlatb
-  add al, TILE_RAILS_1                  ; Shift to first railroad tiles
-  call draw_sprite
+  .get_correct_rail_sprite:
+    push ds
+    push SEGMENT_GAME_CODE
+    pop ds
+    mov bx, RailroadsList
+    xlatb       ;  DS:[BX + AL]
+    pop ds
+    add al, TILE_RAILS_1                  ; Shift to first railroad tiles
+    sub al, TILE_FOREGROUND_SHIFT
+
+  .save_rail_sprite:
+    and byte [ds:di], FOREROUND_SPRITE_CLIP
+    add byte [ds:di], al
+
+  .calculate_switch:
 
   .calculate_correct_switch:
     cmp dl, 0x7
@@ -1432,45 +1443,29 @@ caculate_and_draw_rails:
     je .prepare_switch_horizontal
     cmp dl, 0x0E
     je .prepare_switch_vertical
-    jmp .no_switch
+    jmp .prepare_no_switch
 
   .prepare_switch_horizontal:
-    mov dl, 0                           ; left switch ID
-    mov dh, METADATA_SWITCH_INITIALIZED ; data for saving in _METADATA_
-    jmp .draw_switch
+    mov dl, SWITCH_INITIALIED_MASK      ; 0 for left switch ID + initialization
+    jmp .save_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
-    mov dh, 1
-    shl dh, METADATA_SWITCH_SHIFT
-    add dh, METADATA_SWITCH_INITIALIZED ; data for saving in _METADATA_
-  .draw_switch:
-  push si                               ; save tile position
-  dec si
-  sub si, _MAP_                         ; calculate position in _MAP_
-  add si, _METADATA_                    ; add it to the _METADATA_ for same pos
+    shl dh, SWITCH_TYPE_SHIFT
+    add dh, SWITCH_INITIALIED_MASK
+    jmp .save_switch
+  .prepare_no_switch:
+    mov dl, 0
 
-  push es
-  push SEGMENT_TERRAIN_BACKGROUND
-  pop es
+  .save_switch:
+    push es
+    push SEGMENT_META_DATA
+    pop es
+    and byte [es:di], SWITCH_DATA_CLIP
+    add byte [es:di], dl
+    pop es
 
-  mov al, [es:si]                          ; read _METADATA_ for this tile
-
-  test al, METADATA_SWITCH_INITIALIZED
-  jnz .switch_initialized
-  .initialize_switch:
-    mov byte [es:si], dh                   ; save horizontal/vertical to _METADATA_
-    mov al, dl                          ; save switch ID for drawing
-  jmp .draw_initialized_switch
-  .switch_initialized:
-  and al, METADATA_SWITCH_MASK
-  shr al, METADATA_SWITCH_SHIFT
-  .draw_initialized_switch:
-  add al, TILE_SWITCH_LEFT              ; shift to first switch sprite data
-  pop es
-  pop si                                ; load tile position
-  call draw_sprite
-  .no_switch:
 ret
+
 
 ; =========================================== DECOMPRESS SPRITE ============|80
 ; IN: SI - Compressed sprite data address
