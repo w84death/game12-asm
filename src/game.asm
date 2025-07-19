@@ -57,7 +57,7 @@ _VIEWPORT_Y_              equ _BASE_ + 0x09   ; 2 bytes
 _CURSOR_X_                equ _BASE_ + 0x0B   ; 2 bytes
 _CURSOR_Y_                equ _BASE_ + 0x0D   ; 2 bytes
 _SCENE_MODE_              equ _BASE_ + 0x0F   ; 1 byte
-_ECONOMY_TRACKS_          equ _BASE_ + 0x10   ; 2 bytes
+_EMPTY_                   equ _BASE_ + 0x10   ; 2 bytes
 _ECONOMY_BLUE_RES_        equ _BASE_ + 0x12   ; 2 bytes
 _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x14   ; 2 bytes
 _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
@@ -218,16 +218,16 @@ TILE_LOGO_5                     equ 0x46
 ; | '- resource (1)
 ; '- infrastructure building, station (1)
 ;
-BACKGROUND_SPRITE_MASK equ 0xF
-TERRAIN_TRAVERSAL_MASK equ 0x10
-TERRAIN_TRAVERSAL_SHIFT equ 0x4
-TERRAIN_SECOND_LAYER_DRAW_CLIP equ 0xE0
-RAIL_MASK equ 0x20
-RAIL_SHIFT equ 0x5
-RESOURCE_MASK equ 0x40
-RESOURCE_SHIFT equ 0x6
-INFRASTRUCTURE_MASK equ 0x80
-INFRASTRUCTURE_SHIFT equ 0x7
+BACKGROUND_SPRITE_MASK          equ 0xF
+TERRAIN_TRAVERSAL_MASK          equ 0x10
+TERRAIN_TRAVERSAL_SHIFT         equ 0x4
+TERRAIN_SECOND_LAYER_DRAW_CLIP  equ 0xE0
+RAIL_MASK                       equ 0x20
+RAIL_SHIFT                      equ 0x5
+RESOURCE_MASK                   equ 0x40
+RESOURCE_SHIFT                  equ 0x6
+INFRASTRUCTURE_MASK             equ 0x80
+INFRASTRUCTURE_SHIFT            equ 0x7
 
 ; SEGMENT_TERRAIN_FOREGROUND
 ; 00 0 00000
@@ -236,12 +236,12 @@ INFRASTRUCTURE_SHIFT equ 0x7
 ; |  '- draw cart (1)
 ; '- cursor type (4)
 ;
-FORGROUND_SPRITE_MASK equ 0x1F
-FOREROUND_SPRITE_CLIP equ 0xE0
-CART_DRAW_MASK equ 0x20
-CART_DRAW_SHIFT equ 0x5
-CURSOR_TYPE_MASK equ 0xC0
-CURSOR_TYPE_SHIFT equ 0x6
+FORGROUND_SPRITE_MASK           equ 0x1F
+FOREROUND_SPRITE_CLIP           equ 0xE0
+CART_DRAW_MASK                  equ 0x20
+CART_DRAW_SHIFT                 equ 0x5
+CURSOR_TYPE_MASK                equ 0xC0
+CURSOR_TYPE_SHIFT               equ 0x6
 
 ; SEGMENT_META_DATA
 ; 0 00 00 00 0
@@ -252,73 +252,55 @@ CURSOR_TYPE_SHIFT equ 0x6
 ; | '- cart direction
 ; '- unused (1)
 ;
-SWITCH_INITIALIED_MASK equ 0x1
-SWITCH_TYPE_MASK equ 0x6
-SWITCH_TYPE_SHIFT equ 0x1
-SWITCH_DATA_CLIP equ 0xF8
-RESOURCE_TYPE_MASK equ 0x18
-RESOURCE_TYPE_SHIFT equ 0x3
-CART_DIRECTION_MASK equ 0x60
-CART_DIRECTION_SHIFT equ 0x5
+SWITCH_MASK                     equ 0x1
+SWITCH_TYPE_MASK                equ 0x6
+SWITCH_TYPE_SHIFT               equ 0x1
+SWITCH_DATA_CLIP                equ 0xF8
+RESOURCE_TYPE_MASK              equ 0x18
+RESOURCE_TYPE_SHIFT             equ 0x3
+CART_DIRECTION_MASK             equ 0x60
+CART_DIRECTION_SHIFT            equ 0x5
 
-CART_UP equ 0x00
-CART_DOWN equ 0x01
-CART_LEFT equ 0x02
-CART_RIGHT equ 0x03
+CART_UP                         equ 0x00
+CART_DOWN                       equ 0x01
+CART_LEFT                       equ 0x02
+CART_RIGHT                      equ 0x03
 
-TERRAIN_RULES_MASK equ 0x03
+TERRAIN_RULES_MASK              equ 0x03
 
-META_TILES_MASK               equ 0x1F  ; 5 bits for sprite data (32 tiles max)
-META_INVISIBLE_WALL           equ 0x20  ; For collision detection
-META_TRANSPORT                equ 0x40  ; For railroads
+CURSOR_MODE_PAN                 equ 0x00
+CURSOR_MODE_PLACE_RAIL          equ 0x01
+CURSOR_MODE_SWITCH              equ 0x02
+CURSOR_MODE_PLACE_STATION       equ 0x03
+CURSOR_MODE_PLACE_FOUNDATION    equ 0x04
+CURSOR_MODE_PLACE_BUILDING      equ 0x05
 
-METADATA_SWITCH_INITIALIZED   equ 0x01
-METADATA_SWITCH_MASK          equ 0x06
-METADATA_SWITCH_SHIFT         equ 0x01
-METADATA_1 equ 0x08
-METADATA_1 equ 0x10
-METADATA_2 equ 0x20
-METADATA_3 equ 0x40
+METADATA_SWITCH_INITIALIZED     equ 0x01
+METADATA_SWITCH_MASK            equ 0x06
+METADATA_SWITCH_SHIFT           equ 0x01
 
-META_ENTITY_MASK              equ 0x1F  ; 5 bits for sprite data (32 tiles max)
-META_CART                     equ 0x01
-META_BUILDING                 equ 0x02
-META_RESOURCE                 equ 0x04
-META_RESOURCE_TYPE_MASK       equ 0xE7  ; 0-3 - for plants and carts
-META_RESOURCE_TYPE_SHIFT      equ 0x04
-META_RESOURCE_BLUE            equ 1
-META_RESOURCE_YELLOW          equ 2
-META_RESOURCE_RED             equ 3
+MODE_MAIN_MENU                  equ 0x00
+MODE_SETTINGS_MENU              equ 0x01
+MODE_HELP_PAGE1                 equ 0x02
+MODE_HELP_PAGE2                 equ 0x03
 
-META_PLANT_SIZE               equ 0x20  ; small - big
-META_DIRECTION_MASK           equ 0xC0  ; for carts
-META_DIRECTION_SHIFT          equ 0x06
+MODE_GAMEPLAY                   equ 0x00
 
-MODE_MAIN_MENU                equ 0x00
-MODE_SETTINGS_MENU            equ 0x01
-MODE_HELP_PAGE1               equ 0x02
-MODE_HELP_PAGE2               equ 0x03
+UI_STATS_WINDOW_POS             equ 0x1502
+UI_STATS_GFX_LINE               equ 320*172
+UI_STATS_TXT_LINE               equ 0x16
 
-MODE_GAMEPLAY                      equ 0x00
-MODE_INFRASTRUCTURE_PLACE     equ 0x01
-MODE_SWITCH_CHANGE            equ 0x02
-MODE_STATION_PLACE            equ 0x03
-
-UI_STATS_WINDOW_POS           equ 0x1502
-UI_STATS_GFX_LINE             equ 320*172
-UI_STATS_TXT_LINE             equ 0x16
-
-DEFAULT_ECONOMY_TRACKS        equ 0x64
+DEFAULT_ECONOMY_TRACKS          equ 0x64
 
 ; =========================================== MISC SETTINGS =================|80
 
-SCREEN_WIDTH                  equ 320
-SCREEN_HEIGHT                 equ 200
-MAP_SIZE                      equ 128     ; Map size in cells DO NOT CHANGE
-VIEWPORT_WIDTH                equ 20      ; Size in tiles 20 = 320 pixels
-VIEWPORT_HEIGHT               equ 12      ; by 10 = 192 pixels
-VIEWPORT_GRID_SIZE            equ 16      ; Individual cell size DO NOT CHANGE
-SPRITE_SIZE                   equ 16      ; Sprite size 16x16
+SCREEN_WIDTH                    equ 320
+SCREEN_HEIGHT                   equ 200
+MAP_SIZE                        equ 128     ; Map size in cells DO NOT CHANGE
+VIEWPORT_WIDTH                  equ 20      ; Size in tiles 20 = 320 pixels
+VIEWPORT_HEIGHT                 equ 12      ; by 10 = 192 pixels
+VIEWPORT_GRID_SIZE              equ 16      ; Individual cell size DO NOT CHANGE
+SPRITE_SIZE                     equ 16      ; Sprite size 16x16
 
 ; =========================================== COLORS / DB16 =================|80
 
@@ -587,6 +569,7 @@ game_logic:
     mov al, [si]                        ; read _METADATA_ for this tile pos
     test al, METADATA_SWITCH_INITIALIZED
     jz .done                            ; not a swich, skip
+
     mov bl, al                          ; save the metadata value
     mov bh, 0xFF                        ; calculate the bit mask
     sub bh, METADATA_SWITCH_MASK        ; to everything beside switch
@@ -753,7 +736,6 @@ reset_to_default_values:
   mov word [_ECONOMY_BLUE_RES_], 0
   mov word [_ECONOMY_YELLOW_RES_], 0
   mov word [_ECONOMY_RED_RES_], 0
-  mov word [_ECONOMY_TRACKS_], DEFAULT_ECONOMY_TRACKS
   mov word [_ECONOMY_SCORE_], 0
 ret
 
@@ -1317,17 +1299,19 @@ draw_terrain:
         add al, TILE_FOREGROUND_SHIFT
         call draw_sprite
 
-        push es
-        push SEGMENT_META_DATA
-        pop es
 
-        mov dl, [ds:si]                 ; SEGMENT_TERRAIN_FOREGROUND
+        mov dl, [es:si]                 ; SEGMENT_TERRAIN_BACKGROUND
         .draw_rails_stuff:
           test dl, RAIL_MASK
           jz .skip_rails_stuff
+
+          push es
+          push SEGMENT_META_DATA
+          pop es
+
           .draw_switch:
             mov al, [es:si]             ; SEGMENT_META_DATA
-            test al, SWITCH_INITIALIED_MASK
+            test al, SWITCH_MASK
             jz .skip_switch
               and al, SWITCH_TYPE_MASK
               shr al, SWITCH_TYPE_SHIFT
@@ -1336,7 +1320,7 @@ draw_terrain:
             .skip_switch:
 
           .draw_cart:
-            test dl, CART_DRAW_MASK
+            test byte [ds:si], CART_DRAW_MASK  ; SEGMENT_TERRAIN_FOREGROUND
             jz .skip_cart
               mov bl, [es:si]           ; SEGMENT_META_DATA
               and bl, CART_DIRECTION_MASK
@@ -1360,8 +1344,10 @@ draw_terrain:
                   call draw_sprite
                 .skip_resource:
             .skip_cart:
+
+            pop es
         .skip_rails_stuff:
-        pop es
+
       .skip_foreground:
 
       add di, SPRITE_SIZE
@@ -1423,16 +1409,14 @@ recalculate_rails:
     push SEGMENT_GAME_CODE
     pop ds
     mov bx, RailroadsList
-    xlatb       ;  DS:[BX + AL]
+    xlatb                               ;  DS:[BX + AL]
     pop ds
-    add al, TILE_RAILS_1                  ; Shift to first railroad tiles
+    add al, TILE_RAILS_1                ; Shift to first railroad tiles
     sub al, TILE_FOREGROUND_SHIFT
 
   .save_rail_sprite:
     and byte [ds:di], FOREROUND_SPRITE_CLIP
     add byte [ds:di], al
-
-  .calculate_switch:
 
   .calculate_correct_switch:
     cmp dl, 0x7
@@ -1446,12 +1430,12 @@ recalculate_rails:
     jmp .prepare_no_switch
 
   .prepare_switch_horizontal:
-    mov dl, SWITCH_INITIALIED_MASK      ; 0 for left switch ID + initialization
+    mov dl, SWITCH_MASK      ; 0 for left switch ID + initialization
     jmp .save_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
-    shl dh, SWITCH_TYPE_SHIFT
-    add dh, SWITCH_INITIALIED_MASK
+    shl dl, SWITCH_TYPE_SHIFT
+    add dl, SWITCH_MASK
     jmp .save_switch
   .prepare_no_switch:
     mov dl, 0
@@ -1626,77 +1610,6 @@ init_entities:
 
   mov word [di], 0x0      ; Terminator
   pop es
-ret
-
-; =========================================== DRAW ENTITIES =================|80
-; OUT: Entities drawn on the screen
-draw_entities:
-  ; TODO: revrite
-  mov si, _ENTITIES_
-  .next_entity:
-    lodsw
-    test ax, ax
-    jz .done
-
-    .check_bounds:
-      movzx bx, ah
-      sub bx, [_VIEWPORT_Y_]
-      jc .skip_entity
-      cmp bx, VIEWPORT_HEIGHT
-      jge .skip_entity
-
-      movzx cx, al
-      sub cx, [_VIEWPORT_X_]
-      jc .skip_entity
-      cmp cx, VIEWPORT_WIDTH
-      jge .skip_entity
-
-    .calculate_position:
-      shl bx, 4
-      shl cx, 4
-      imul bx, SCREEN_WIDTH
-      add bx, cx               ; AX = Y * 16 * 320 + X * 16
-      mov di, bx               ; Move result to DI
-
-    .draw_on_screen:
-      lodsb                ; Load tile ID
-      call draw_sprite
-
-    .check_if_cart:
-      lodsb                ; Load META data
-      test al, META_CART
-      jz .next_entity
-
-      and al, META_RESOURCE_TYPE_MASK
-      shr al, META_RESOURCE_TYPE_SHIFT
-      cmp al, META_RESOURCE_BLUE
-      jnz .draw_blue_cart
-      cmp al, META_RESOURCE_YELLOW
-      jnz .draw_yellow_cart
-      cmp al, META_RESOURCE_RED
-      jnz .draw_red_cart
-      jmp .next_entity
-
-      .draw_yellow_cart:
-        mov al, TILE_ORE_YELLOW
-        call draw_sprite
-        jmp .next_entity
-
-      .draw_blue_cart:
-        mov al, TILE_ORE_BLUE
-        call draw_sprite
-        jmp .next_entity
-
-      .draw_red_cart:
-        mov al, TILE_ORE_RED
-        call draw_sprite
-        jmp .next_entity
-
-    jmp .next_entity
-    .skip_entity:
-      add si, 2
-      jmp .next_entity
-  .done:
 ret
 
 draw_cursor:
@@ -1902,21 +1815,16 @@ ret
 
 ; =========================================== TEXT DATA =====================|80
 
-WelcomeText db 'P1X ASSEMBLY ENGINE V12.03', 0x0
+WelcomeText db 'P1X ASSEMBLY ENGINE V12.05', 0x0
 PressEnterText db 'PRESS ENTER', 0x0
-QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in for more games...', 0x0D, 0x0A, 0x0
+QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more games...', 0x0D, 0x0A, 0x0
 FakeNumberText db '0000', 0x0
-UIExploreModeText db 'F2: Explore Mode', 0x0
-UIBuildModeText db 'F2: Build Mode', 0x0
-UIEditModeText db 'F2: Edit Mode', 0x0
-UIRemoveModeText db 'F2: Remove Mode', 0x0
-UIScoreText db 'Score:', 0x0
 
 MainMenuText:
   db 'ENTER: Play',0x0
-  db 'F2: Save',0x0
-  db 'F6: Load',0x0
-  db 'F1: Help',0x0
+  db 'F1: New map',0x0
+  db 'F2: Tileset',0x0
+  db 'F4: Help',0x0
   db 'ESC: Quit',0x0
   db 0x00
 
