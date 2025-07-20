@@ -37,7 +37,6 @@ org 0x0100
 ; =========================================== MEMORY LAYOUT =================|80
 
 GAME_STACK_POINTER          equ 0xFFFE    ; Stack pointer for game code
-SEGMENT_GAME_CODE           equ 0x1000    ; Game code (up to ~144KB available)
 SEGMENT_SPRITES             equ 0x5000    ; 80 tiles = 20K (0x5000 bytes)
 SEGMENT_TERRAIN_BACKGROUND  equ 0x6000    ; First map layer (16KB)
 SEGMENT_TERRAIN_FOREGROUND  equ 0x6400    ; Second map layer (16KB)
@@ -369,14 +368,14 @@ NOTE_E6     equ 0x037A  ; 1318.51 Hz
 ; =========================================== INITIALIZATION ================|80
 
 start:
-  mov ax, 0x13          ; Init 320x200, 256 colors mode
-  int 0x10              ; Video BIOS interrupt
+  mov ax, 0x13                          ; Init 320x200, 256 colors mode
+  int 0x10                              ; Video BIOS interrupt
 
-  push SEGMENT_VGA           ; VGA memory segment
-  pop es                ; Set ES to VGA memory segment
-  xor di, di            ; Set DI to 0
+  push SEGMENT_VGA                      ; VGA memory segment
+  pop es                                ; Set ES to VGA memory segment
+  xor di, di                            ; Set DI to 0
 
-  push SEGMENT_GAME_CODE
+  push cs                               ; GAME CODE SEGMENT
   pop ss
   mov sp, GAME_STACK_POINTER
 
@@ -636,11 +635,6 @@ game_logic:
     ; to be optimize later
     ; for now redrawn everything
 
-    ; mov ax, [_CURSOR_Y_]
-    ; mov bx, [_CURSOR_X_]
-    ; call redraw_terrain_tile
-    ; call draw_entities
-    ; call draw_cursor
     ; jmp .done
 
   .redraw_terrain:
@@ -1053,7 +1047,7 @@ get_random:
   push si
   push di
 
-  push SEGMENT_GAME_CODE
+  push cs                               ; GAME CODE SEGMENT
   pop es
 
   mov si, _RNG_
@@ -1201,7 +1195,7 @@ generate_map:
   push SEGMENT_TERRAIN_BACKGROUND
   pop es
 
-  push SEGMENT_GAME_CODE
+  push cs                               ; GAME CODE SEGMENT
   pop ds
 
   xor di, di
@@ -1217,15 +1211,15 @@ generate_map:
       je .skip_cell
       cmp cx, MAP_SIZE                  ; Check if first row
       je .skip_cell
-      movzx bx, [es:di-1]                  ; Get left tile
+      movzx bx, [es:di-1]               ; Get left tile
       test al, 0x1                      ; If odd value skip checking top
       jz .skip_top
-      movzx bx, [es:di-MAP_SIZE]           ; Get top tile
+      movzx bx, [es:di-MAP_SIZE]        ; Get top tile
       .skip_top:
       shl bx, 2                         ; Mul by 4 to fit rules table
       add bx, ax                        ; Get random rule for the tile ID
-      mov al, [ds:si+bx]                   ; Get the tile ID from rules table
-      mov [es:di], al                      ; Save terrain tile
+      mov al, [ds:si+bx]                ; Get the tile ID from rules table
+      mov [es:di], al                   ; Save terrain tile
       .skip_cell:
       inc di                            ; Next map tile cell
       dec dx                            ; Next column (couner is top-down)
@@ -1266,9 +1260,9 @@ draw_terrain:
   push es
   push ds
 
-  mov si, [_VIEWPORT_Y_]  ; Y coordinate
-  shl si, 7               ; Y * 128
-  add si, [_VIEWPORT_X_]  ; Y * 128 + X
+  mov si, [_VIEWPORT_Y_]                ; Y coordinate
+  shl si, 7                             ; Y * 128
+  add si, [_VIEWPORT_X_]                ; Y * 128 + X
 
   push SEGMENT_TERRAIN_BACKGROUND
   pop es
@@ -1364,22 +1358,7 @@ draw_terrain:
   pop es
 ret
 
-; =========================================== DRAW TERRAIN TILE ============|80
-; IN: AX/BX - Y/X
-; OUT: Tile drawn on the screen
-redraw_terrain_tile:
-  push si
-  shl ax, 8
-  add ax, bx
-  mov si, _MAP_
-  add si, ax
-  lodsb
-  mov bl, al
-  and al, BACKGROUND_SPRITE_MASK ; clear metadata
-  call draw_tile
-  pop si
-ret
-
+; =================================== RECALCULATE RAILS =====================|80
 ; di: pos
 ; es background
 ; ds foreground
@@ -1406,7 +1385,7 @@ recalculate_rails:
 
   .get_correct_rail_sprite:
     push ds
-    push SEGMENT_GAME_CODE
+    push cs                             ; GAME CODE SEGMENT
     pop ds
     mov bx, RailroadsList
     xlatb                               ;  DS:[BX + AL]
@@ -1493,7 +1472,7 @@ ret
 ; OUT: Tiles decompressed to _TILES_
 decompress_tiles:
   push es
-  push SEGMENT_GAME_CODE
+  push cs                               ; GAME CODE SEGMENT
   pop es
   mov si, Tiles
   .decompress_next:
