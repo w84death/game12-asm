@@ -164,8 +164,8 @@ TILE_BUILDING_EXTRACT           equ 0x21
 TILE_BUILDING_SILOS             equ 0x22
 TILE_BUILDING_POWER             equ 0x23
 
-TILE_PIPE_1                     equ 0x24
-TILE_PIPE_2                     equ 0x25
+TILE_FRAME_0                    equ 0x24
+TILE_BUILDING_UNNAMED           equ 0x25
 
 TILE_CART_VERTICAL              equ 0x26
 TILE_CART_HORIZONTAL            equ 0x27
@@ -207,6 +207,15 @@ TILE_LOGO_2                     equ 0x43
 TILE_LOGO_3                     equ 0x44
 TILE_LOGO_4                     equ 0x45
 TILE_LOGO_5                     equ 0x46
+
+TILE_FRAME_1                    equ 0x47
+TILE_FRAME_2                    equ 0x48
+TILE_FRAME_3                    equ 0x49
+TILE_FRAME_4                    equ 0x4A
+TILE_FRAME_5                    equ 0x4B
+TILE_FRAME_6                    equ 0x4C
+TILE_FRAME_7                    equ 0x4D
+TILE_FRAME_8                    equ 0x4E
 
 ; SEGMENT_TERRAIN_BACKGROUND
 ; 0 0 0 0 0000
@@ -286,7 +295,7 @@ MODE_HELP_PAGE2                 equ 0x03
 MODE_GAMEPLAY                   equ 0x00
 
 UI_STATS_WINDOW_POS             equ 0x1502
-UI_STATS_GFX_LINE               equ 320*172
+UI_STATS_GFX_LINE               equ 320*175
 UI_STATS_TXT_LINE               equ 0x16
 
 DEFAULT_ECONOMY_TRACKS          equ 0x64
@@ -297,9 +306,9 @@ SCREEN_WIDTH                    equ 320
 SCREEN_HEIGHT                   equ 200
 MAP_SIZE                        equ 128     ; Map size in cells DO NOT CHANGE
 VIEWPORT_WIDTH                  equ 20      ; Size in tiles 20 = 320 pixels
-VIEWPORT_HEIGHT                 equ 12      ; by 10 = 192 pixels
+VIEWPORT_HEIGHT                 equ 11      ; by 10 = 176 pixels
 VIEWPORT_GRID_SIZE              equ 16      ; Individual cell size DO NOT CHANGE
-SPRITE_SIZE                     equ 16      ; Sprite size 16x16
+SPRITE_SIZE                     equ 16      ; Sprite size 16x16 DO NOT CHANGE
 
 ; =========================================== COLORS / DB16 =================|80
 
@@ -503,6 +512,7 @@ exit:
 game_logic:
   .move_cursor_up:
     mov ax, [_VIEWPORT_Y_]      ; viewport top position
+    inc ax                      ; one tile before
     cmp word [_CURSOR_Y_], ax   ; check if cursor at the top edge
     je .move_viewport_up        ; try move the viewport up
     dec word [_CURSOR_Y_]       ; or just move the cursor up
@@ -510,7 +520,7 @@ game_logic:
 
   .move_cursor_down:
     mov ax, [_VIEWPORT_Y_]      ; viewport top position
-    add ax, VIEWPORT_HEIGHT-1   ; add screen height to get viewport bottom
+    add ax, VIEWPORT_HEIGHT-2   ; add screen height to get viewport bottom
     cmp word [_CURSOR_Y_], ax   ; check if cursro at the bottom
     jae .move_viewport_down     ; try to move viewport down
     inc word [_CURSOR_Y_]       ; or just move the cursor down
@@ -518,6 +528,7 @@ game_logic:
 
   .move_cursor_left:
     mov ax, [_VIEWPORT_X_]      ; viewport left position
+    inc ax                      ; one tile before
     cmp word [_CURSOR_X_], ax   ; check if cursor at the left edge
     je .move_viewport_left      ; try to move viewport left
     dec word [_CURSOR_X_]       ; or just move the cursor left
@@ -525,7 +536,7 @@ game_logic:
 
   .move_cursor_right:
     mov ax, [_VIEWPORT_X_]      ; viewport left position
-    add ax, VIEWPORT_WIDTH-1    ; add screen width to get viewport right
+    add ax, VIEWPORT_WIDTH-2    ; add screen width to get viewport right
     cmp word [_CURSOR_X_], ax   ; check if cursor at the right edge
     jae .move_viewport_right    ; try to move viewport right
     inc word [_CURSOR_X_]       ; or just move the cursor right
@@ -640,6 +651,7 @@ game_logic:
   .redraw_terrain:
     call draw_terrain
     call draw_cursor
+    call draw_frame
     call draw_ui
     jmp .done
 
@@ -775,6 +787,7 @@ init_menu:
   call clear_screen
 
   call draw_terrain
+  call draw_frame
 
   mov ax, 0x040C
   mov bx, 0x0207
@@ -853,6 +866,7 @@ init_game:
   call draw_terrain
   ;call draw_entities
   call draw_cursor
+  call draw_frame
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
   mov byte [_SCENE_MODE_], MODE_GAMEPLAY
@@ -1478,7 +1492,6 @@ decompress_tiles:
   .decompress_next:
     cmp byte [es:si], 0xFF
     jz .done
-
     call decompress_sprite
   jmp .decompress_next
   .done:
@@ -1670,11 +1683,59 @@ ret
 
 ; =========================================== DRAW UI =======================|80
 
-draw_ui:
+draw_frame:
+  xor di, di                            ; start at top-left corner
 
-  mov ax, UI_STATS_WINDOW_POS
-  mov bx, 0x0212
-  call draw_window
+  mov al, TILE_FRAME_1                  ; left-top corner
+  call draw_sprite
+
+  add di, SPRITE_SIZE
+  mov al, TILE_FRAME_2                  ; top frame
+  mov cx, 18
+  .top_loop:
+    call draw_sprite
+    add di, SPRITE_SIZE
+  loop .top_loop
+
+  mov al, TILE_FRAME_3                  ; right-top corner
+  call draw_sprite
+
+  add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
+  mov cx, 9
+  .vertical_loop:
+    mov al, TILE_FRAME_4                  ; left frame
+    call draw_sprite
+    add di, 19*SPRITE_SIZE
+    mov al, TILE_FRAME_5                  ; right frame
+    call draw_sprite
+    add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
+  loop .vertical_loop
+
+  mov al, TILE_FRAME_6                  ; left-bottom corner
+  call draw_sprite
+
+  add di, SPRITE_SIZE
+  mov al, TILE_FRAME_7                  ; bottom frame
+  mov cx, 18
+  .bottom_loop:
+    call draw_sprite
+    add di, SPRITE_SIZE
+  loop .bottom_loop
+
+  mov al, TILE_FRAME_8                  ; right-bottom corner
+  call draw_sprite
+
+  add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
+  mov cx, 40
+  .bottom_fill_loop:
+    mov al, TILE_FRAME_0                  ; fill
+    call draw_sprite
+    add di, SPRITE_SIZE
+  loop .bottom_fill_loop
+
+ret
+
+draw_ui:
 
   mov si, [_CURSOR_X_]  ; Blue resource count
   mov dh, UI_STATS_TXT_LINE
@@ -1688,7 +1749,7 @@ draw_ui:
   mov bl, COLOR_WHITE
   call draw_number
 
-  mov di, UI_STATS_GFX_LINE+76   ; Resource blue icon
+  mov di, UI_STATS_GFX_LINE+90   ; Resource blue icon
   mov al, TILE_ORE_BLUE
   call draw_sprite
 
@@ -1698,7 +1759,7 @@ draw_ui:
   mov bl, COLOR_WHITE
   call draw_number
 
-   mov di, UI_STATS_GFX_LINE+140
+   mov di, UI_STATS_GFX_LINE+154
    mov al, TILE_ORE_YELLOW
    call draw_sprite
 
@@ -1708,7 +1769,7 @@ draw_ui:
    mov bl, COLOR_WHITE
    call draw_number
 
-   mov di, UI_STATS_GFX_LINE+204
+   mov di, UI_STATS_GFX_LINE+218
    mov al, TILE_ORE_RED
    call draw_sprite
 
