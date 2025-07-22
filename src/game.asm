@@ -893,23 +893,45 @@ init_debug_view:
   mov al, COLOR_BLACK
   call clear_screen
 
-  mov di, 320*16+16        ; Position on screen
-  xor ax, ax               ; Sprite ID 0
+  .draw_loaded_sprites:
+  mov di, 320*16+16                     ; Position on screen
+  xor ax, ax                            ; Sprite ID 0
   mov cx, TILES_COUNT
   .spr:
     call draw_sprite
-    inc ax                ; Next prite ID
+    inc ax                              ; Next prite ID
 
     .test_new_line:
     mov bx, ax
     and bx, 0xF
     cmp bx, 0
     jne .skip_new_line
-      add di, 320*SPRITE_SIZE-SPRITE_SIZE*18 + 320*2 ; New line + 2px
+      add di, SCREEN_WIDTH*SPRITE_SIZE-SPRITE_SIZE*18 + 320*2 ; New line + 2px
     .skip_new_line:
 
-    add di, 18        ; Move to next slot + 2px
+    add di, 18                          ; Move to next slot + 2px
   loop .spr
+
+  .draw_color_palette:
+  mov di, SCREEN_WIDTH*160+32           ; Position on screen
+  mov cx, 16                            ; 16 lines
+  .colors_loop:
+    push cx
+    xor ax, ax
+
+    mov cx, 16                          ; 16 colors
+    .line_loop:
+      push cx
+      mov cx, 8
+      rep stosw
+      inc al
+      inc ah
+      pop cx
+    loop .line_loop
+
+    add di, SCREEN_WIDTH-(SPRITE_SIZE*SPRITE_SIZE)  ; wrap to next line
+    pop cx
+  loop .colors_loop
 
   mov byte [_GAME_STATE_], STATE_DEBUG_VIEW
 ret
