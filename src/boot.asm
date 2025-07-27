@@ -6,26 +6,26 @@
 org 0x7C00
 use16
 
-GAME_SIZE_KB          equ 0x10              ; Size of the game in KB
+GAME_SIZE_KB          equ 0x10          ; Size of the game in KB
 SECTORS_TO_LOAD       equ GAME_SIZE_KB*2    ; Sectors to load (512KB chunks)
-GAME_STACK_POINTER    equ 0xFFFE            ; Stack pointer for the game
-GAME_SEGMENT          equ 0x1000            ; Segment where game is loaded
-GAME_OFFSET           equ 0x0100            ; Offset where game is loaded
+GAME_STACK_POINTER    equ 0xFFFE        ; Stack pointer for the game
+GAME_SEGMENT          equ 0x1000        ; Segment where game is loaded
+GAME_OFFSET           equ 0x0100        ; Offset where game is loaded
 
 ; Start of the bootloader ======================================================
 ; This is the entry point of the bootloader.
 ; Expects: None
 ; Returns: None
 boot_start:
-  cli                 ; Disable interrupts
+  cli                                   ; Disable interrupts
   xor ax, ax
   mov ds, ax
   mov es, ax
 
-  mov [floppy_drive_number], dl ; Boot drive number (passed in DL by BIOS)
+  mov [floppy_drive_number], dl         ; Sace boot drive reported by BIOS
 
-	mov ah, 0x00		; Set video mode
-	mov al, 0x00    ; Set to default text mode
+	mov ah, 0x00		                      ; Set video mode
+	mov al, 0x00                          ; Set to default text mode
 	int 0x10
 
 	mov si, welcome_msg
@@ -39,32 +39,29 @@ boot_load_game:
   mov si, loading_msg
   call boot_print_str
 
-  ; Reset disk system first
-  mov ah, 0x00           ; Reset disk system function
-  mov dl, [floppy_drive_number]  ; Drive number
-  int 0x13               ; Reset disk system
+  .reset_disk_system:
+  mov ah, 0x00                          ; Reset disk system function
+  mov dl, [floppy_drive_number]         ; Drive number
+  int 0x13                              ; Reset disk system
   jc boot_disk_reset_error
 
-  ; Set up memory location for loading game
   mov ax, GAME_SEGMENT
   mov es, ax
-  xor bx, GAME_OFFSET             ; Offset where code will be loaded
+  mov bx, GAME_OFFSET                   ; Offset where code will be loaded
 
-  ; Set up disk read parameters
-  mov ah, 0x02           ; BIOS read sectors function
+  .setup_disk_read_parameters:
+  mov ah, 0x02                          ; BIOS read sectors function
   mov al, SECTORS_TO_LOAD
-  mov ch, 0              ; Cylinder 0
-  mov cl, 2              ; Start from sector 2
-  mov dh, 0              ; Head 0
-  mov dl, [floppy_drive_number]           ; Drive 0 (first floppy drive)
+  mov ch, 0                             ; Cylinder 0
+  mov cl, 2                             ; Start from sector 2
+  mov dh, 0                             ; Head 0
+  mov dl, [floppy_drive_number]         ; Drive reported by BIOS (dl register)
 
-  int 0x13               ; BIOS disk interrupt
-  jc boot_game_error   ; Error if carry flag set
+  int 0x13                              ; BIOS disk interrupt
+  jc boot_game_error                    ; Error if carry flag set
 
-  ; Check if we read the correct number of sectors
   cmp al, SECTORS_TO_LOAD
-  jb boot_sector_count_error  ; Error if fewer sectors read than expected
-
+  jb boot_sector_count_error            ; Fewer sectors read than expected
   jmp boot_game_success
 
 ; Disk reset error =============================================================
@@ -101,7 +98,7 @@ boot_game_error:
 boot_error_recovery:
   mov si, floppy_drive_msg
   call boot_print_str
-  pop ax
+  mov al, [floppy_drive_number]
   add ax, '0'
   call boot_print_chr
 
@@ -109,8 +106,8 @@ boot_error_recovery:
   call boot_print_str
 
   xor ax, ax
-  int 0x16               ; Wait for key press
-  jmp boot_load_game   ; Try again
+  int 0x16                              ; Wait for key press
+  jmp boot_load_game                    ; Try again
 ret
 
 ; Kernel loaded successfully ===================================================
@@ -143,8 +140,8 @@ boot_game_success:
 ; Returns: None
 boot_print_chr:
   push ax
-  mov ah, 0x0e    ; BIOS teletype output function
-  int 0x10        ; BIOS teletype output function
+  mov ah, 0x0e                          ; BIOS teletype output function
+  int 0x10                              ; BIOS teletype output function
   pop ax
 ret
 
@@ -153,18 +150,18 @@ ret
 ; Expects: DS:SI = pointer to string
 ; Returns: None
 boot_print_str:
-  mov ah, 0x0e        ; BIOS teletype output function
+  mov ah, 0x0e                          ; BIOS teletype output function
   .next_char:
-    lodsb             ; Load next character from SI into AL
-    or al, al         ; Check for null terminator
+    lodsb                               ; Load next character from SI into AL
+    or al, al                           ; Check for null terminator
     jz .terminated
-    int 0x10          ; BIOS video interrupt
+    int 0x10                            ; BIOS video interrupt
   jmp near .next_char
   .terminated:
 ret
 
 ; Print statements =============================================================
-welcome_msg db          'P1X Bootloader Version 0.2',0x0A,0x0D,0x0
+welcome_msg db          'P1X Bootloader Version 0.3',0x0A,0x0D,0x0
 loading_msg db          'Loading game code... ',0x0A,0x0D,0x0
 disk_read_error_msg db  '<!> Disk read error.',0x0A,0x0D,0x0
 reset_err_msg db        '<!> Disk reset error.',0x0A,0x0D,0x0
@@ -176,6 +173,6 @@ floppy_drive_msg db     'Floppy drive number: ',0x0
 floppy_drive_number db  0x00
 
 ; Bootloader signature =========================================================
-times 507 - ($ - $$) db 0   ; Pad to 510 bytes
-db "P1X"                    ; Use HEX viewer to see P1X at the end of binary
-dw 0xAA55                   ; Boot signature
+times 507 - ($ - $$) db 0               ; Pad to 510 bytes
+db "P1X"                                ; P1X signature
+dw 0xAA55                               ; Boot signature

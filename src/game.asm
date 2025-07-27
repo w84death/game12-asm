@@ -249,6 +249,7 @@ FOREROUND_SPRITE_CLIP           equ 0xE0
 CART_DRAW_MASK                  equ 0x20
 CART_DRAW_SHIFT                 equ 0x5
 CURSOR_TYPE_MASK                equ 0xC0
+CURSOR_TYPE_CLIP                equ 0x3F
 CURSOR_TYPE_SHIFT               equ 0x6
 
 ; SEGMENT_META_DATA
@@ -1445,15 +1446,18 @@ recalculate_rails:
     jmp .prepare_no_switch
 
   .prepare_switch_horizontal:
-    mov dl, SWITCH_MASK      ; 0 for left switch ID + initialization
+    mov dl, SWITCH_MASK                 ; 0 for left switch ID + initialization
+    mov ax, CURSOR_MODE_SWITCH
     jmp .save_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
     shl dl, SWITCH_TYPE_SHIFT
     add dl, SWITCH_MASK
+    mov ax, CURSOR_MODE_SWITCH
     jmp .save_switch
   .prepare_no_switch:
     mov dl, 0
+    mov ax, CURSOR_MODE_PAN
 
   .save_switch:
     push es
@@ -1463,6 +1467,9 @@ recalculate_rails:
     add byte [es:di], dl
     pop es
 
+    and byte [ds:di], CURSOR_TYPE_CLIP  ; clear cursor
+    shl al, CURSOR_TYPE_SHIFT
+    add byte [ds:di], al
 ret
 
 
@@ -1637,8 +1644,17 @@ draw_cursor:
   add bx, ax              ; Y * 16 * 320 + X * 16
   mov di, bx              ; Move result to DI
 
-  ; TODO: check cursor type
-   mov al, TILE_CURSOR_PAN
+  mov al, TILE_CURSOR_PAN
+  push ds
+  push SEGMENT_TERRAIN_FOREGROUND
+  pop ds
+
+  mov al, [ds:di]
+  and al, CURSOR_TYPE_MASK
+  shr al, CURSOR_TYPE_SHIFT
+  add al, TILE_CURSOR_PAN
+  pop ds
+
   call draw_sprite
 ret
 
