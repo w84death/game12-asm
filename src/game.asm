@@ -1764,13 +1764,19 @@ draw_frame:
   call draw_sprite
 
   add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
-  mov cx, 40
-  .bottom_fill_loop:
-    mov al, TILE_FRAME_0                  ; fill
-    call draw_sprite
-    add di, SPRITE_SIZE
-  loop .bottom_fill_loop
 
+  mov dx, 12
+  .stripes_loop:
+    mov cx, 320/2
+    mov al, COLOR_DEEP_PURPLE
+    mov ah, al
+    rep stosw
+    mov cx, 320/2
+    mov al, COLOR_NAVY_BLUE
+    mov ah, al
+    rep stosw
+  dec dx
+  jnz .stripes_loop
 ret
 
 draw_ui:
