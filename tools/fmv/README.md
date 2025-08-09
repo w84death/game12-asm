@@ -54,12 +54,12 @@ gcc -Wall -O2 fmv2asm.c -o fmv2asm -lpng -lm
 The compression uses Run-Length Encoding with the following structure:
 
 ```
-[color_index:1 byte][run_length:1 byte]...
+[run_length:1 byte][color_index:1 byte]...
 ```
 
-- **color_index**: Palette index (0-15) for the DawnBringer16 palette
 - **run_length**: Number of consecutive pixels (1-255)
-- **End of line marker**: `0xFF, 0x00` marks the end of each scanline (standard mode only)
+- **color_index**: Palette index (0-15) for the DawnBringer16 palette
+- **End of line marker**: `0x00, 0xFF` marks the end of each scanline (standard mode only)
 
 Each scanline is compressed independently, always ending at exactly 320 pixels.
 
@@ -93,21 +93,19 @@ mov si, offset image_data
 xor di, di
 
 decompress_loop:
-    lodsb           ; AL = color index
-    cmp al, 0FFh    ; Check for EOL marker
-    je end_of_line
-    
-    mov ah, al      ; Save color
     lodsb           ; AL = run length
-    movzx cx, al    ; CX = run length
+    or al, al       ; Check for EOL marker (0x00)
+    jz end_of_line
     
-    mov al, ah      ; Restore color
-    rep stosb       ; Write CX pixels
+    movzx cx, al    ; CX = run length
+    lodsb           ; AL = color index
+    
+    rep stosb       ; Write CX pixels of color AL
     
     jmp decompress_loop
     
 end_of_line:
-    lodsb           ; Skip the 0x00
+    lodsb           ; Skip the 0xFF
     ; Continue with next line or exit
 ```
 

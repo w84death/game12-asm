@@ -66,18 +66,18 @@ void compress_scanline(uint8_t *line, CompressedData *cd, int add_eol_marker) {
             if (run_length >= 255) break;
         }
         
-        // Write color index (1 byte)
-        add_byte(cd, current_color);
         // Write run length (1 byte)
         add_byte(cd, run_length);
+        // Write color index (1 byte)
+        add_byte(cd, current_color);
         
         x += run_length;
     }
     
     // Add end-of-line marker if requested
     if (add_eol_marker) {
-        add_byte(cd, 0xFF);
         add_byte(cd, 0x00);
+        add_byte(cd, 0xFF);
     }
 }
 
@@ -192,12 +192,12 @@ void write_asm_output(CompressedData *cd, const char *output_filename, const cha
     
     // Write assembly header
     fprintf(fp, "; Compressed VGA image data\n");
-    fprintf(fp, "; Format: [color_index][run_length] pairs\n");
+    fprintf(fp, "; Format: [run_length][color_index] pairs\n");
     if (skip_odd_lines) {
         fprintf(fp, "; Optimized: Contains only even lines (0, 2, 4...), no EOL markers\n");
         fprintf(fp, "; Assembly code should render each line twice\n");
     } else {
-        fprintf(fp, "; End of line marked with 0xFF, 0x00\n");
+        fprintf(fp, "; End of line marked with 0x00, 0xFF\n");
     }
     fprintf(fp, "; Total size: %zu bytes\n\n", cd->size);
     

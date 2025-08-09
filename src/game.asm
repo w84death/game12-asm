@@ -754,13 +754,11 @@ draw_image:
   xor bx, bx
   .image_loop:
     lodsb
-    push ax
-    lodsb
-
     mov cx, ax
     add dx, ax
     add bx, ax
-    pop ax
+
+    lodsb
     rep stosb
 
     cmp dx, SCREEN_WIDTH
