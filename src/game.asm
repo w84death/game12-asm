@@ -746,35 +746,11 @@ reset_to_default_values:
   mov word [_ECONOMY_SCORE_], 0
 ret
 
-; SI image address
-draw_image:
-  xor di, di
-  xor ax, ax
-  xor dx, dx
-  xor bx, bx
-  .image_loop:
-    lodsb
-    mov cx, ax
-    add dx, ax
-    add bx, ax
 
-    lodsb
-    rep stosb
-
-    cmp dx, SCREEN_WIDTH
-    jnz .continue
-    add di, 320
-    xor dx, dx
-    .continue:
-
-    cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2)
-    jnz .image_loop
-    .done:
-ret
 
 init_title_screen:
   mov si, p1x_logo_img
-  call draw_image
+  call draw_rle_image
 
   mov bx, INTRO_JINGLE
   call play_sfx
@@ -795,11 +771,11 @@ live_title_screen:
 ret
 
 init_menu:
-  mov al, COLOR_NAVY_BLUE
+  mov al, COLOR_BLACK
   call clear_screen
 
-  call draw_terrain
-  call draw_frame
+  mov si, title_screen_image
+  call draw_rle_image
 
   mov ax, 0x040C
   mov bx, 0x0207
@@ -1146,6 +1122,34 @@ draw_gradient:
     xchg al, ah             ; Swap colors (left/right pixel)
     dec dl                  ; Decrease number of bars to draw
     jg .draw_gradient       ; Loop until all bars are drawn
+ret
+
+; =========================================== DRAW RLE IMAGE ================|80
+; IN:
+; SI - Image data address
+draw_rle_image:
+  xor di, di
+  xor ax, ax
+  xor dx, dx
+  xor bx, bx
+  .image_loop:
+    lodsb
+    mov cx, ax
+    add dx, ax
+    add bx, ax
+
+    lodsb
+    rep stosb
+
+    cmp dx, SCREEN_WIDTH
+    jnz .continue
+    add di, 320
+    xor dx, dx
+    .continue:
+
+    cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2)
+    jnz .image_loop
+    .done:
 ret
 
 ; =========================================== DRAW WINDOW ===================|80
