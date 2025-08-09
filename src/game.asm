@@ -38,7 +38,7 @@ org 0x0100
 ; =========================================== MEMORY LAYOUT =================|80
 
 GAME_STACK_POINTER          equ 0xFFFE    ; Stack pointer for game code
-SEGMENT_SPRITES             equ 0x5400    ; 80 tiles = 20K (moved for 16KB game code space)
+SEGMENT_SPRITES             equ 0x5400    ; 96 tiles (6KB)
 SEGMENT_TERRAIN_BACKGROUND  equ 0x6400    ; First map layer (16KB)
 SEGMENT_TERRAIN_FOREGROUND  equ 0x6800    ; Second map layer (16KB)
 SEGMENT_META_DATA           equ 0x6C00    ; Third map layer (16KB)
@@ -48,7 +48,7 @@ SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
 
 ; =========================================== MEMORY ALLOCATION =============|80
 
-_BASE_                    equ 0x3000          ; Memory base address
+_BASE_                    equ 0x4000          ; Memory base address
 _GAME_TICK_               equ _BASE_ + 0x00   ; 4 bytes
 _GAME_STATE_              equ _BASE_ + 0x04   ; 1 byte
 _RNG_                     equ _BASE_ + 0x05   ; 2 bytes
@@ -120,7 +120,7 @@ KB_0        equ 0x0B
 
 ; =========================================== TILES NAMES ===================|80
 
-TILES_COUNT                     equ 0x50    ; 80 tiles
+TILES_COUNT                     equ 0x56    ; 86 tiles
 
 TILE_MUD_1                      equ 0x00
 TILE_MUD_2                      equ 0x01
@@ -133,90 +133,96 @@ TILE_TREES_2                    equ 0x07
 TILE_MOUNTAINS_1                equ 0x08
 TILE_MOUNTAINS_2                equ 0x09
 
-TILE_FOUNDATION_OFF             equ 0x0A
-TILE_FOUNDATION_ON              equ 0x0B
+TILE_FOUNDATION                 equ 0x0A
+TILE_STATION                    equ 0x0B
+TILE_STATION_EXTEND             equ 0x0C
 
-TILE_FOREGROUND_SHIFT           equ 0x0C
+TILE_FOREGROUND_SHIFT           equ 0x0D ; pointer to first foreground tiles
+TILE_RES_YELLOW_1               equ 0x0D
+TILE_RES_YELLOW_2               equ 0x0E
+TILE_RES_BLUE_1                 equ 0x0F
+TILE_RES_BLUE_2                 equ 0x10
+TILE_RES_RED_1                  equ 0x11
+TILE_RES_RED_2                  equ 0x12
 
-TILE_RES_YELLOW_1               equ 0x0C
-TILE_RES_YELLOW_2               equ 0x0D
-TILE_RES_BLUE_1                 equ 0x0E
-TILE_RES_BLUE_2                 equ 0x0F
-TILE_RES_RED_1                  equ 0x10
-TILE_RES_RED_2                  equ 0x11
+TILE_RAILS_1                    equ 0x13
+TILE_RAILS_2                    equ 0x14
+TILE_RAILS_3                    equ 0x15
+TILE_RAILS_4                    equ 0x16
+TILE_RAILS_5                    equ 0x17
+TILE_RAILS_6                    equ 0x18
+TILE_RAILS_7                    equ 0x19
+TILE_RAILS_8                    equ 0x1A
+TILE_RAILS_9                    equ 0x1B
+TILE_RAILS_10                   equ 0x1C
+TILE_RAILS_11                   equ 0x1D
 
-TILE_RAILS_1                    equ 0x12
-TILE_RAILS_2                    equ 0x13
-TILE_RAILS_3                    equ 0x14
-TILE_RAILS_4                    equ 0x15
-TILE_RAILS_5                    equ 0x16
-TILE_RAILS_6                    equ 0x17
-TILE_RAILS_7                    equ 0x18
-TILE_RAILS_8                    equ 0x19
-TILE_RAILS_9                    equ 0x1A
-TILE_RAILS_10                   equ 0x1B
-TILE_RAILS_11                   equ 0x1C
-
-TILE_BUILDING_LANDER            equ 0x1D
-TILE_BUILDING_PODS              equ 0x1E
-TILE_BUILDING_FACTORY           equ 0x1F
-TILE_BUILDING_RADAR             equ 0x20
+TILE_ROCKET_BOTTOM              equ 0x1E
+TILE_ROCKET_TOP                 equ 0x1F
+TILE_BUILDING_FACTORY           equ 0x20
 TILE_BUILDING_EXTRACT           equ 0x21
 TILE_BUILDING_SILOS             equ 0x22
-TILE_BUILDING_POWER             equ 0x23
+TILE_BUILDING_LAB               equ 0x23
+TILE_BUILDING_RADAR             equ 0x24
+TILE_BUILDING_PODS              equ 0x25
+TILE_BUILDING_POWER             equ 0x26
 
-TILE_FRAME_0                    equ 0x24
-TILE_BUILDING_UNNAMED           equ 0x25
+TILE_DEFENSE_1                  equ 0x27
+TILE_DEFENSE_2                  equ 0x28
+TILE_DEFENSE_3                  equ 0x29
 
-TILE_CART_VERTICAL              equ 0x26
-TILE_CART_HORIZONTAL            equ 0x27
+TILE_ENEMY_1                    equ 0x2A
+TILE_ENEMY_2                    equ 0x2B
+TILE_ENEMY_3                    equ 0x2C
 
-TILE_SWITCH_LEFT                equ 0x28
-TILE_SWITCH_DOWN                equ 0x29
-TILE_SWITCH_RIGHT               equ 0x2A
-TILE_SWITCH_UP                  equ 0x2B
+TILE_CART_VERTICAL              equ 0x2D
+TILE_CART_HORIZONTAL            equ 0x2E
+TILE_SWITCH_LEFT                equ 0x2F
+TILE_SWITCH_DOWN                equ 0x30
+TILE_SWITCH_RIGHT               equ 0x31
+TILE_SWITCH_UP                  equ 0x32
 
-TILE_ORE_BLUE                   equ 0x2C
-TILE_ORE_YELLOW                 equ 0x2D
-TILE_ORE_RED                    equ 0x2E
+TILE_ORE_BLUE                   equ 0x33
+TILE_ORE_YELLOW                 equ 0x34
+TILE_ORE_RED                    equ 0x35
 
-TILE_EXTRACT_BLUE               equ 0x2F
-TILE_EXTRACT_YELLOW             equ 0x30
-TILE_EXTRACT_RED                equ 0x31
+TILE_EXTRACT_BLUE               equ 0x36
+TILE_EXTRACT_YELLOW             equ 0x37
+TILE_EXTRACT_RED                equ 0x38
 
-TILE_SILO_BLUE                  equ 0x32
-TILE_SILO_YELLOW                equ 0x33
-TILE_SILO_RED                   equ 0x34
+TILE_SILO_BLUE                  equ 0x39
+TILE_SILO_YELLOW                equ 0x3A
+TILE_SILO_RED                   equ 0x3B
 
-TILE_CURSOR_PAN                 equ 0x35
-TILE_CURSOR_BUILD               equ 0x36
-TILE_CURSOR_EDIT                equ 0x37
-TILE_CURSOR_REMOVE              equ 0x38
+TILE_CURSOR_PAN                 equ 0x3C
+TILE_CURSOR_BUILD               equ 0x3D
+TILE_CURSOR_EDIT                equ 0x3E
+TILE_TARGET                     equ 0x3F
 
-TILE_WINDOW_1                   equ 0x39
-TILE_WINDOW_2                   equ 0x3A
-TILE_WINDOW_3                   equ 0x3B
-TILE_WINDOW_4                   equ 0x3C
-TILE_WINDOW_5                   equ 0x3D
-TILE_WINDOW_6                   equ 0x3E
-TILE_WINDOW_7                   equ 0x3F
-TILE_WINDOW_8                   equ 0x40
-TILE_WINDOW_9                   equ 0x41
+TILE_WINDOW_1                   equ 0x40
+TILE_WINDOW_2                   equ 0x41
+TILE_WINDOW_3                   equ 0x42
+TILE_WINDOW_4                   equ 0x43
+TILE_WINDOW_5                   equ 0x44
+TILE_WINDOW_6                   equ 0x45
+TILE_WINDOW_7                   equ 0x46
+TILE_WINDOW_8                   equ 0x47
+TILE_WINDOW_9                   equ 0x48
 
-TILE_LOGO_1                     equ 0x42
-TILE_LOGO_2                     equ 0x43
-TILE_LOGO_3                     equ 0x44
-TILE_LOGO_4                     equ 0x45
-TILE_LOGO_5                     equ 0x46
+TILE_LOGO_1                     equ 0x49
+TILE_LOGO_2                     equ 0x4A
+TILE_LOGO_3                     equ 0x4B
+TILE_LOGO_4                     equ 0x4C
+TILE_LOGO_5                     equ 0x4D
 
-TILE_FRAME_1                    equ 0x47
-TILE_FRAME_2                    equ 0x48
-TILE_FRAME_3                    equ 0x49
-TILE_FRAME_4                    equ 0x4A
-TILE_FRAME_5                    equ 0x4B
-TILE_FRAME_6                    equ 0x4C
-TILE_FRAME_7                    equ 0x4D
-TILE_FRAME_8                    equ 0x4E
+TILE_FRAME_1                    equ 0x4E
+TILE_FRAME_2                    equ 0x4F
+TILE_FRAME_3                    equ 0x50
+TILE_FRAME_4                    equ 0x51
+TILE_FRAME_5                    equ 0x52
+TILE_FRAME_6                    equ 0x53
+TILE_FRAME_7                    equ 0x54
+TILE_FRAME_8                    equ 0x55
 
 ; SEGMENT_TERRAIN_BACKGROUND
 ; 0 0 0 0 0000
@@ -300,7 +306,6 @@ UI_STATS_WINDOW_POS             equ 0x1502
 UI_STATS_GFX_LINE               equ 320*175
 UI_STATS_TXT_LINE               equ 0x16
 
-DEFAULT_ECONOMY_TRACKS          equ 0x64
 
 ; =========================================== MISC SETTINGS =================|80
 
@@ -1128,6 +1133,15 @@ ret
 ; IN:
 ; SI - Image data address
 draw_rle_image:
+  push es
+  push ds
+
+  push cs                               ; Code segment
+  pop ds
+
+  push SEGMENT_VGA
+  pop es
+
   xor di, di
   xor bx, bx
   xor dx, dx
@@ -1149,6 +1163,9 @@ draw_rle_image:
     cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2) ; interlaced
     jl .image_loop
     .done:
+
+    pop ds
+    pop es
 ret
 
 ; =========================================== DRAW WINDOW ===================|80
