@@ -746,62 +746,41 @@ reset_to_default_values:
   mov word [_ECONOMY_SCORE_], 0
 ret
 
-init_title_screen_old:
-  mov si, start       ; Points to start of this code, wil be used as RNG
-  mov cx, 40*25
-  .random_numbers:
-    lodsb             ; load values from source code
-    and ax, 0x7       ; 0-7 values
-    add al, 0x30      ; move to ASCII numbers position
-    mov ah, 0x0e      ; BIOS write character
-    mov bh, 0         ; set page number
-    mov bl, COLOR_DARK_GRAY
-    int 0x10          ; draw character
-  loop .random_numbers
-
-  mov si, WelcomeText
-  mov dx, 0x140B
-  mov bl, COLOR_WHITE
-  call draw_text
-
-  mov bx, INTRO_JINGLE
-  call play_sfx
-
-
-  mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
-ret
-
-; SI
+; SI image address
 draw_image:
-xor di, di
-xor ax, ax
-xor dx, dx
-xor bx, bx
-.image_loop:
-  lodsb
-  push ax
-  lodsb
-
-  mov cx, ax
-  add dx, ax
-  add bx, ax
-  pop ax
-  rep stosb
-
-  cmp dx, SCREEN_WIDTH
-  jnz .continue
-  add di, 320
+  xor di, di
+  xor ax, ax
   xor dx, dx
-  .continue:
+  xor bx, bx
+  .image_loop:
+    lodsb
+    push ax
+    lodsb
 
-  cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2)
-  jnz .image_loop
-  .done:
+    mov cx, ax
+    add dx, ax
+    add bx, ax
+    pop ax
+    rep stosb
+
+    cmp dx, SCREEN_WIDTH
+    jnz .continue
+    add di, 320
+    xor dx, dx
+    .continue:
+
+    cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2)
+    jnz .image_loop
+    .done:
 ret
 
 init_title_screen:
   mov si, p1x_logo_img
   call draw_image
+
+  mov bx, INTRO_JINGLE
+  call play_sfx
+
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 
 ret
