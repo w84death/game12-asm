@@ -1,3 +1,5 @@
+; TODO: add NOISE note for... noise sound
+
 SFX_COLLECT:
   dw NOTE_C5
   dw NOTE_E5
@@ -14,7 +16,6 @@ SFX_ERROR:
   dw NOTE_F3
   dw NOTE_E3
   dw 0x0
-
 
 INTRO_JINGLE:
   dw NOTE_C5
@@ -40,14 +41,25 @@ INTRO_JINGLE:
   dw 0x00
 
 GAME_JINGLE:
+TUNE:
+  dw NOTE_E3
+  dw NOTE_F3
+  dw NOTE_E3
   dw NOTE_D3
+  dw NOTE_G3
+  dw NOTE_REST
+  dw NOTE_E3
+  dw NOTE_F3
   dw NOTE_D3
-  dw NOTE_A3
-  dw NOTE_A3
-  dw NOTE_G3
   dw NOTE_G3
   dw NOTE_A3
-  dw NOTE_A3
+  dw NOTE_REST
+  dw NOTE_E3
+  dw NOTE_F3
+  dw NOTE_G3
+  dw NOTE_F3
+  dw NOTE_E3
+  dw NOTE_D3
   dw 0x00
 
 MENU_JINGLE:

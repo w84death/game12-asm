@@ -872,6 +872,7 @@ init_game:
   mov byte [_GAME_STATE_], STATE_GAME
   mov byte [_SCENE_MODE_], MODE_GAMEPLAY
   mov bx, GAME_JINGLE
+
   call play_sfx
 ret
 
