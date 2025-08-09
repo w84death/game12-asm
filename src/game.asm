@@ -757,7 +757,6 @@ init_title_screen:
   call play_sfx
 
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
-
 ret
 
 live_title_screen:
