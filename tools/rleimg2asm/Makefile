@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -Wall -O2
 LDFLAGS = -lpng -lm
 
-TARGET = fmv2asm
-SOURCES = fmv2asm.c
+TARGET = rleimg2asm
+SOURCES = rleimg2asm.c
 OBJECTS = $(SOURCES:.c=.o)
 
 all: $(TARGET)

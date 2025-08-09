@@ -749,7 +749,7 @@ ret
 
 
 init_title_screen:
-  mov si, p1x_logo_img
+  mov si, p1x_logo_image
   call draw_rle_image
 
   mov bx, INTRO_JINGLE
@@ -774,8 +774,9 @@ init_menu:
   mov al, COLOR_BLACK
   call clear_screen
 
-  mov si, title_screen_image
+  mov si, title_image
   call draw_rle_image
+
 
   mov ax, 0x040C
   mov bx, 0x0207
@@ -803,7 +804,6 @@ init_menu:
     call draw_text
     add dh, 0x2
   jmp .menu_entry
-
   .done:
 
   mov si, MainMenuCopyText
@@ -813,6 +813,7 @@ init_menu:
 
   mov byte [_GAME_STATE_], STATE_MENU
   mov byte [_SCENE_MODE_], MODE_MAIN_MENU
+
   mov bx, MENU_JINGLE
   call play_sfx
 ret
@@ -1129,26 +1130,25 @@ ret
 ; SI - Image data address
 draw_rle_image:
   xor di, di
-  xor ax, ax
-  xor dx, dx
   xor bx, bx
+  xor dx, dx
   .image_loop:
     lodsb
     mov cx, ax
-    add dx, ax
     add bx, ax
+    add dx, ax
 
     lodsb
     rep stosb
 
     cmp dx, SCREEN_WIDTH
-    jnz .continue
-    add di, 320
+    jl .continue
+    add di, SCREEN_WIDTH
     xor dx, dx
     .continue:
 
-    cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2)
-    jnz .image_loop
+    cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2) ; interlaced
+    jl .image_loop
     .done:
 ret
 
@@ -1967,7 +1967,9 @@ db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
 
 include 'sfx.asm'
 include 'tiles.asm'
-include 'images.asm'
+include 'img_p1x.asm'
+include 'img_title.asm'
+
 
 ; =========================================== THE END =======================|80
 ; Thanks for reading the source code!
