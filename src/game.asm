@@ -746,7 +746,7 @@ reset_to_default_values:
   mov word [_ECONOMY_SCORE_], 0
 ret
 
-init_title_screen:
+init_title_screen_old:
   mov si, start       ; Points to start of this code, wil be used as RNG
   mov cx, 40*25
   .random_numbers:
@@ -771,16 +771,50 @@ init_title_screen:
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 ret
 
+; SI
+draw_image:
+xor di, di
+xor ax, ax
+xor dx, dx
+xor bx, bx
+.image_loop:
+  lodsb
+  push ax
+  lodsb
+
+  mov cx, ax
+  add dx, ax
+  add bx, ax
+  pop ax
+  rep stosb
+
+  cmp dx, SCREEN_WIDTH
+  jnz .continue
+  add di, 320
+  xor dx, dx
+  .continue:
+
+  cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2)
+  jnz .image_loop
+  .done:
+ret
+
+init_title_screen:
+  mov si, p1x_logo_img
+  call draw_image
+  mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
+
+ret
+
 live_title_screen:
   mov si, PressEnterText
-  mov dx, 0x1516
+  mov dx, 0x150F
   mov bl, COLOR_WHITE
   test word [_GAME_TICK_], 0x4
   je .blink
     mov bl, COLOR_BLACK
   .blink:
   call draw_text
-
 ret
 
 init_menu:
@@ -1952,6 +1986,7 @@ db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
 
 include 'sfx.asm'
 include 'tiles.asm'
+include 'images.asm'
 
 ; =========================================== THE END =======================|80
 ; Thanks for reading the source code!

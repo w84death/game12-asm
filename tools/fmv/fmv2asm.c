@@ -52,7 +52,7 @@ void add_byte(CompressedData *cd, uint8_t byte) {
 }
 
 // Compress a scanline using RLE
-void compress_scanline(uint8_t *line, CompressedData *cd) {
+void compress_scanline(uint8_t *line, CompressedData *cd, int add_eol_marker) {
     int x = 0;
     
     while (x < WIDTH) {
@@ -74,10 +74,11 @@ void compress_scanline(uint8_t *line, CompressedData *cd) {
         x += run_length;
     }
     
-    // Add end-of-line marker (color 0xFF with length 0 to indicate EOL)
-    // This helps the assembly code know when a line ends
-    add_byte(cd, 0xFF);
-    add_byte(cd, 0x00);
+    // Add end-of-line marker if requested
+    if (add_eol_marker) {
+        add_byte(cd, 0xFF);
+        add_byte(cd, 0x00);
+    }
 }
 
 // Load PNG and convert to indexed color
@@ -182,7 +183,7 @@ uint8_t* load_png(const char *filename) {
 }
 
 // Write compressed data as assembly data
-void write_asm_output(CompressedData *cd, const char *output_filename, const char *label_name) {
+void write_asm_output(CompressedData *cd, const char *output_filename, const char *label_name, int skip_odd_lines) {
     FILE *fp = fopen(output_filename, "w");
     if (!fp) {
         fprintf(stderr, "Error: Cannot create output file %s\n", output_filename);
@@ -192,7 +193,12 @@ void write_asm_output(CompressedData *cd, const char *output_filename, const cha
     // Write assembly header
     fprintf(fp, "; Compressed VGA image data\n");
     fprintf(fp, "; Format: [color_index][run_length] pairs\n");
-    fprintf(fp, "; End of line marked with 0xFF, 0x00\n");
+    if (skip_odd_lines) {
+        fprintf(fp, "; Optimized: Contains only even lines (0, 2, 4...), no EOL markers\n");
+        fprintf(fp, "; Assembly code should render each line twice\n");
+    } else {
+        fprintf(fp, "; End of line marked with 0xFF, 0x00\n");
+    }
     fprintf(fp, "; Total size: %zu bytes\n\n", cd->size);
     
     fprintf(fp, "%s:\n", label_name);
@@ -232,10 +238,12 @@ void print_usage(const char *program_name) {
     printf("Options:\n");
     printf("  -asm <label>  Output as assembly file with specified label (default: image_data)\n");
     printf("  -bin          Output as raw binary file (default)\n");
+    printf("  -opt          Optimized mode: skip odd lines and EOL markers (for double-line rendering)\n");
     printf("  -stats        Show compression statistics\n");
     printf("\nExample:\n");
     printf("  %s input.png output.asm -asm my_image\n", program_name);
     printf("  %s input.png output.bin -bin\n", program_name);
+    printf("  %s input.png output.asm -asm my_image -opt  (optimized for double-line rendering)\n", program_name);
 }
 
 int main(int argc, char *argv[]) {
@@ -248,6 +256,7 @@ int main(int argc, char *argv[]) {
     const char *output_file = argv[2];
     int output_asm = 0;
     int show_stats = 0;
+    int optimized_mode = 0;
     char *label_name = "image_data";
     
     // Parse command line arguments
@@ -259,6 +268,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (strcmp(argv[i], "-bin") == 0) {
             output_asm = 0;
+        } else if (strcmp(argv[i], "-opt") == 0) {
+            optimized_mode = 1;
         } else if (strcmp(argv[i], "-stats") == 0) {
             show_stats = 1;
         }
@@ -272,18 +283,26 @@ int main(int argc, char *argv[]) {
     }
     
     // Compress the image
-    printf("Compressing image...\n");
+    printf("Compressing image%s...\n", optimized_mode ? " (optimized mode)" : "");
     CompressedData compressed;
     init_compressed_data(&compressed);
     
-    for (int y = 0; y < HEIGHT; y++) {
-        compress_scanline(&indexed_image[y * WIDTH], &compressed);
+    if (optimized_mode) {
+        // Skip odd lines, no EOL markers
+        for (int y = 0; y < HEIGHT; y += 2) {
+            compress_scanline(&indexed_image[y * WIDTH], &compressed, 0);
+        }
+    } else {
+        // All lines with EOL markers
+        for (int y = 0; y < HEIGHT; y++) {
+            compress_scanline(&indexed_image[y * WIDTH], &compressed, 1);
+        }
     }
     
     // Output the compressed data
     if (output_asm) {
         printf("Writing assembly output: %s\n", output_file);
-        write_asm_output(&compressed, output_file, label_name);
+        write_asm_output(&compressed, output_file, label_name, optimized_mode);
     } else {
         printf("Writing binary output: %s\n", output_file);
         write_bin_output(&compressed, output_file);
@@ -292,12 +311,22 @@ int main(int argc, char *argv[]) {
     // Show statistics if requested
     if (show_stats) {
         size_t uncompressed_size = WIDTH * HEIGHT;
-        float compression_ratio = (float)uncompressed_size / compressed.size;
-        printf("\nCompression Statistics:\n");
-        printf("  Original size: %zu bytes\n", uncompressed_size);
-        printf("  Compressed size: %zu bytes\n", compressed.size);
-        printf("  Compression ratio: %.2f:1 (%.1f%%)\n", 
-               compression_ratio, (1.0 - 1.0/compression_ratio) * 100);
+        if (optimized_mode) {
+            printf("\nCompression Statistics (Optimized Mode):\n");
+            printf("  Original size: %zu bytes\n", uncompressed_size);
+            printf("  Compressed size: %zu bytes (even lines only)\n", compressed.size);
+            printf("  Effective compression ratio: %.2f:1 (%.1f%%)\n", 
+                   (float)uncompressed_size / compressed.size, 
+                   (1.0 - (float)compressed.size/uncompressed_size) * 100);
+            printf("  Note: Actual display requires doubling each line\n");
+        } else {
+            float compression_ratio = (float)uncompressed_size / compressed.size;
+            printf("\nCompression Statistics:\n");
+            printf("  Original size: %zu bytes\n", uncompressed_size);
+            printf("  Compressed size: %zu bytes\n", compressed.size);
+            printf("  Compression ratio: %.2f:1 (%.1f%%)\n", 
+                   compression_ratio, (1.0 - 1.0/compression_ratio) * 100);
+        }
     }
     
     // Clean up

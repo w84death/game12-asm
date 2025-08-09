@@ -35,6 +35,9 @@ gcc -Wall -O2 fmv2asm.c -o fmv2asm -lpng -lm
 # Convert to binary file
 ./fmv2asm input.png output.bin -bin
 
+# Optimized mode (skip odd lines, no EOL markers)
+./fmv2asm input.png output.asm -asm image_data -opt
+
 # Show compression statistics
 ./fmv2asm input.png output.bin -bin -stats
 ```
@@ -43,6 +46,7 @@ gcc -Wall -O2 fmv2asm.c -o fmv2asm -lpng -lm
 
 - `-asm <label>` - Output as assembly source file with specified label name
 - `-bin` - Output as raw binary file (default)
+- `-opt` - Optimized mode: skip odd lines and EOL markers (for double-line rendering)
 - `-stats` - Display compression statistics
 
 ## Compression Format
@@ -55,9 +59,18 @@ The compression uses Run-Length Encoding with the following structure:
 
 - **color_index**: Palette index (0-15) for the DawnBringer16 palette
 - **run_length**: Number of consecutive pixels (1-255)
-- **End of line marker**: `0xFF, 0x00` marks the end of each scanline
+- **End of line marker**: `0xFF, 0x00` marks the end of each scanline (standard mode only)
 
 Each scanline is compressed independently, always ending at exactly 320 pixels.
+
+### Optimized Mode (`-opt`)
+
+When using the `-opt` flag:
+- Only even lines (0, 2, 4, ..., 198) are encoded
+- No EOL markers are added
+- Output is approximately 50% smaller
+- Assembly code should render each line twice to reconstruct full image
+- Ideal for animations or when memory is critical
 
 ## Assembly Integration
 
@@ -130,15 +143,15 @@ The tool uses the DawnBringer16 palette, a carefully crafted 16-color palette id
 ## Compression Performance
 
 Typical compression ratios:
-- Images with large solid areas: 3:1 to 10:1
-- Detailed pixel art: 1.5:1 to 3:1
+- Standard mode with large solid areas: 3:1 to 10:1
+- Standard mode with detailed pixel art: 1.5:1 to 3:1
+- Optimized mode adds ~2x additional compression (only stores half the lines)
 - Uncompressed size: 64,000 bytes (320×200)
 
 ## Example Files
 
 - `fmv2asm.c` - Main converter source code
 - `palette.h` - DawnBringer16 palette definition
-- `example_display.asm` - Complete assembly routines for displaying compressed images
 - `Makefile` - Build configuration
 
 ## Tips for Best Results
@@ -147,6 +160,8 @@ Typical compression ratios:
 2. **Optimize for horizontal runs**: The compression works best with horizontal bands of color
 3. **Consider dithering**: For photographic images, apply dithering before conversion
 4. **Test compression**: Use `-stats` to check compression efficiency
+5. **Use optimized mode**: For animations or low-memory situations, use `-opt` flag
+6. **Vertical detail**: Optimized mode works best when adjacent horizontal lines are similar
 
 ## Troubleshooting
 
