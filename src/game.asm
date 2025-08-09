@@ -48,7 +48,7 @@ SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
 
 ; =========================================== MEMORY ALLOCATION =============|80
 
-_BASE_                    equ 0x4000          ; Memory base address
+_BASE_                    equ _END_OF_CODE_ + 0x100
 _GAME_TICK_               equ _BASE_ + 0x00   ; 4 bytes
 _GAME_STATE_              equ _BASE_ + 0x04   ; 1 byte
 _RNG_                     equ _BASE_ + 0x05   ; 2 bytes
@@ -1995,3 +1995,6 @@ include 'img_title.asm'
 
 Logo:
 db "P1X"    ; Use HEX viewer to see P1X at the end of binary
+
+; Label marking the end of all code and data
+_END_OF_CODE_:
