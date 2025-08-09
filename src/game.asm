@@ -26,7 +26,8 @@
 ; Programs used for production:
 ;   - Zed IDE
 ;   - Pro Motion NG
-;   - custom toolset for tileset conversion
+;   - custom tool for tileset conversion
+;   - custom tool for RLE image compression
 ;
 ; ==============================================================================
 ; Latest revision: 06/2025
@@ -37,12 +38,12 @@ org 0x0100
 ; =========================================== MEMORY LAYOUT =================|80
 
 GAME_STACK_POINTER          equ 0xFFFE    ; Stack pointer for game code
-SEGMENT_SPRITES             equ 0x5000    ; 80 tiles = 20K (0x5000 bytes)
-SEGMENT_TERRAIN_BACKGROUND  equ 0x6000    ; First map layer (16KB)
-SEGMENT_TERRAIN_FOREGROUND  equ 0x6400    ; Second map layer (16KB)
-SEGMENT_META_DATA           equ 0x6800    ; Third map layer (16KB)
-SEGMENT_MAP_ENTITIES        equ 0x6C00    ; Fourth map layer (16KB)
-SEGMENT_ENTITIES            equ 0x7000    ; Entities data
+SEGMENT_SPRITES             equ 0x5400    ; 80 tiles = 20K (moved for 16KB game code space)
+SEGMENT_TERRAIN_BACKGROUND  equ 0x6400    ; First map layer (16KB)
+SEGMENT_TERRAIN_FOREGROUND  equ 0x6800    ; Second map layer (16KB)
+SEGMENT_META_DATA           equ 0x6C00    ; Third map layer (16KB)
+SEGMENT_MAP_ENTITIES        equ 0x7000    ; Fourth map layer (16KB)
+SEGMENT_ENTITIES            equ 0x7400    ; Entities data
 SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
 
 ; =========================================== MEMORY ALLOCATION =============|80
@@ -761,7 +762,7 @@ ret
 
 live_title_screen:
   mov si, PressEnterText
-  mov dx, 0x150F
+  mov dx, 0x180F
   mov bl, COLOR_WHITE
   test word [_GAME_TICK_], 0x4
   je .blink
@@ -776,7 +777,6 @@ init_menu:
 
   mov si, title_image
   call draw_rle_image
-
 
   mov ax, 0x040C
   mov bx, 0x0207
@@ -1964,6 +1964,8 @@ db 0xA         ; Mountain
 
 RailroadsList:
 db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
+
+; =========================================== INCLUDES ======================|80
 
 include 'sfx.asm'
 include 'tiles.asm'

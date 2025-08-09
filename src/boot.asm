@@ -6,7 +6,7 @@
 org 0x7C00
 use16
 
-GAME_SIZE_KB          equ 0x20          ; Size of the game in KB
+GAME_SIZE_KB          equ 0x10          ; Size of the game in KB
 SECTORS_TO_LOAD       equ GAME_SIZE_KB*2    ; Sectors to load (512KB chunks)
 GAME_STACK_POINTER    equ 0xFFFE        ; Stack pointer for the game
 GAME_SEGMENT          equ 0x1000        ; Segment where game is loaded
