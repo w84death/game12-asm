@@ -1,4 +1,5 @@
 .vscode
 bx_enh_dbg.ini
-build
+build/img
+*.bin
 *.o
