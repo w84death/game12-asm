@@ -393,6 +393,7 @@ NOTE_E6     equ 0x037A  ; 1318.51 Hz
 start:
   mov ax, 0x13                          ; Init 320x200, 256 colors mode
   int 0x10                              ; Video BIOS interrupt
+  cld                                   ; Clear DF to ensure forward string ops
 
   push SEGMENT_VGA                      ; VGA memory segment
   pop es                                ; Set ES to VGA memory segment
@@ -758,9 +759,10 @@ reset_to_default_values:
   mov word [_ECONOMY_SCORE_], 0
 ret
 
-
-
 init_title_screen:
+  mov al, COLOR_BLACK
+  call clear_screen
+
   mov si, p1x_logo_image
   call draw_rle_image
 

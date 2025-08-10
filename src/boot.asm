@@ -1,5 +1,6 @@
-; P1X Bootlader for a GAME-12
-; It is a simple bootloader that loads the game code from disk and jumps to it.
+; P1X FAT12-compatible Bootloader for GAME-12
+; This bootloader preserves FAT12 BPB for DOS compatibility
+; and loads game code from the first data sectors
 ; Copyright (C) 2025 Krzysztof Krystian Jankowski
 ; This program is free software. See LICENSE for details.
 
@@ -7,55 +8,84 @@ org 0x7C00
 use16
 
 GAME_SIZE_KB          equ 0x10          ; Size of the game in KB
-SECTORS_TO_LOAD       equ GAME_SIZE_KB*2    ; Sectors to load (512KB chunks)
+SECTORS_TO_LOAD       equ GAME_SIZE_KB*2 ; Sectors to load (512 byte chunks)
 GAME_STACK_POINTER    equ 0xFFFE        ; Stack pointer for the game
 GAME_SEGMENT          equ 0x1000        ; Segment where game is loaded
 GAME_OFFSET           equ 0x0100        ; Offset where game is loaded
+DATA_START_SECTOR     equ 33            ; First data sector in FAT12 (after boot + FATs + root dir)
+
+; Jump over BPB ================================================================
+jmp short boot_start
+nop
+
+; FAT12 BIOS Parameter Block (BPB) ============================================
+; This must be preserved for DOS compatibility
+OEMLabel        db "P1X     "           ; 8 bytes
+BytesPerSector  dw 512
+SectorsPerCluster db 1
+ReservedSectors dw 1
+NumberOfFATs    db 2
+RootDirEntries  dw 224
+TotalSectors    dw 2880
+MediaDescriptor db 0xF0                 ; 3.5" floppy
+SectorsPerFAT   dw 9
+SectorsPerTrack dw 18
+NumberOfHeads   dw 2
+HiddenSectors   dd 0
+LargeSectors    dd 0
+DriveNumber     db 0
+Reserved        db 0
+BootSignature   db 0x29
+VolumeSerial    dd 0x12345678
+VolumeLabel     db "GAME-12    "        ; 11 bytes
+FileSystem      db "FAT12   "           ; 8 bytes
 
 ; Start of the bootloader ======================================================
-; This is the entry point of the bootloader.
-; Expects: None
-; Returns: None
 boot_start:
   cli                                   ; Disable interrupts
   xor ax, ax
   mov ds, ax
   mov es, ax
+  mov ss, ax
+  mov sp, 0x7C00                        ; Stack grows down from bootloader
 
-  mov [floppy_drive_number], dl         ; Sace boot drive reported by BIOS
+  mov [DriveNumber], dl                 ; Save boot drive reported by BIOS
 
-	mov ah, 0x00		                      ; Set video mode
-	mov al, 0x00                          ; Set to default text mode
-	int 0x10
+  mov ah, 0x00                          ; Set video mode
+  mov al, 0x03                          ; 80x25 color text mode
+  int 0x10
 
-	mov si, welcome_msg
+  mov si, welcome_msg
   call boot_print_str
 
-; Load game ==================================================================
-; This function loads the game from disk into memory.
-; Expects: None
-; Returns: None
+; Load game from data area =====================================================
 boot_load_game:
   mov si, loading_msg
   call boot_print_str
 
-  .reset_disk_system:
+  ; Reset disk system
+  .reset_disk:
   mov ah, 0x00                          ; Reset disk system function
-  mov dl, [floppy_drive_number]         ; Drive number
+  mov dl, [DriveNumber]                 ; Drive number
   int 0x13                              ; Reset disk system
   jc boot_disk_reset_error
 
+  ; Set up destination for game code
   mov ax, GAME_SEGMENT
   mov es, ax
-  mov bx, GAME_OFFSET                   ; Offset where code will be loaded
+  mov bx, GAME_OFFSET                   ; ES:BX = destination
 
-  .setup_disk_read_parameters:
+  ; Calculate CHS from LBA sector 33 (first data sector)
+  ; For standard 1.44MB floppy: 18 sectors/track, 2 heads, 80 cylinders
+  ; LBA = (C * Heads * SectorsPerTrack) + (H * SectorsPerTrack) + (S - 1)
+  ; Sector 33: C=0, H=1, S=16 (sectors are 1-based)
+
   mov ah, 0x02                          ; BIOS read sectors function
-  mov al, SECTORS_TO_LOAD
-  mov ch, 0                             ; Cylinder 0
-  mov cl, 2                             ; Start from sector 2
-  mov dh, 0                             ; Head 0
-  mov dl, [floppy_drive_number]         ; Drive reported by BIOS (dl register)
+  mov al, SECTORS_TO_LOAD               ; Number of sectors to read
+  mov ch, 0                             ; Cylinder 0 (low 8 bits)
+  mov cl, 16                            ; Sector 16 (sectors are 1-based)
+  mov dh, 1                             ; Head 1
+  mov dl, [DriveNumber]                 ; Drive number
 
   int 0x13                              ; BIOS disk interrupt
   jc boot_game_error                    ; Error if carry flag set
@@ -65,114 +95,85 @@ boot_load_game:
   jmp boot_game_success
 
 ; Disk reset error =============================================================
-; This function handles disk reset errors.
-; Expects: None
-; Returns: None
 boot_disk_reset_error:
   mov si, reset_err_msg
   call boot_print_str
   jmp boot_error_recovery
 
 ; Sector count error ===========================================================
-; This function handles sector count errors.
-; Expects: None
-; Returns: None
 boot_sector_count_error:
   mov si, count_err_msg
   call boot_print_str
   jmp boot_error_recovery
 
 ; Disk error ===================================================================
-; This function handles disk read errors.
-; Expects: None
-; Returns: None
 boot_game_error:
-  mov si, disk_read_error_msg
+  mov si, disk_err_msg
   call boot_print_str
   jmp boot_error_recovery
 
 ; Error recovery ===============================================================
-; Common handler for disk errors
-; Expects: None
-; Returns: None
 boot_error_recovery:
-  mov si, floppy_drive_msg
-  call boot_print_str
-  mov al, [floppy_drive_number]
-  add ax, '0'
-  call boot_print_chr
-
-  mov si, again_msg
+  mov si, retry_msg
   call boot_print_str
 
   xor ax, ax
   int 0x16                              ; Wait for key press
   jmp boot_load_game                    ; Try again
-ret
 
-; Kernel loaded successfully ===================================================
-; This function is called after the game is loaded successfully.
-; Expects: None
-; Returns: None
+; Game loaded successfully =====================================================
 boot_game_success:
   mov si, done_msg
   call boot_print_str
 
-  ; Give visual indicator we're about to jump to game
-  mov si, game_jump_msg
+  mov si, jump_msg
   call boot_print_str
 
   ; Pass drive number to game in DL register
-  mov dl, [floppy_drive_number]
+  mov dl, [DriveNumber]
 
-  ; Set up stack before jumping to game
+  ; Set up segments and stack for game
   mov ax, GAME_SEGMENT
   mov ds, ax
   mov es, ax
   mov ss, ax
   mov sp, GAME_STACK_POINTER
 
+  ; Jump to game
   jmp GAME_SEGMENT:GAME_OFFSET
 
 ; Print character ==============================================================
-; This function prints a character to the screen.
-; Expects: AL = character to print
-; Returns: None
 boot_print_chr:
   push ax
-  mov ah, 0x0e                          ; BIOS teletype output function
-  int 0x10                              ; BIOS teletype output function
+  mov ah, 0x0E                          ; BIOS teletype output
+  int 0x10
   pop ax
-ret
+  ret
 
 ; Print string =================================================================
-; This function prints a string to the screen.
-; Expects: DS:SI = pointer to string
-; Returns: None
 boot_print_str:
-  mov ah, 0x0e                          ; BIOS teletype output function
+  push ax
+  mov ah, 0x0E                          ; BIOS teletype output
   .next_char:
-    lodsb                               ; Load next character from SI into AL
+    lodsb                               ; Load next character
     or al, al                           ; Check for null terminator
-    jz .terminated
-    int 0x10                            ; BIOS video interrupt
-  jmp near .next_char
-  .terminated:
-ret
+    jz .done
+    int 0x10
+    jmp .next_char
+  .done:
+  pop ax
+  ret
 
-; Print statements =============================================================
-welcome_msg db          'P1X Bootloader Version 0.3',0x0A,0x0D,0x0
-loading_msg db          'Loading game code... ',0x0A,0x0D,0x0
-disk_read_error_msg db  '<!> Disk read error.',0x0A,0x0D,0x0
-reset_err_msg db        '<!> Disk reset error.',0x0A,0x0D,0x0
-count_err_msg db        '<!> Disk sector count error.',0x0A,0x0D,0x0
-done_msg db             '\o/ Success.',0x0A,0x0D,0x0
-again_msg db        0x0A,0x0D,'<*> Press any key to try again.', 0x0A, 0x0D, 0x0
-game_jump_msg db        'Booting game code...',0x0A,0x0D,0x0
-floppy_drive_msg db     'Floppy drive number: ',0x0
-floppy_drive_number db  0x00
+; Messages =====================================================================
+welcome_msg     db 'P1X FAT12 Bootloader v1.0', 0x0D, 0x0A, 0
+loading_msg     db 'Loading GAME-12...', 0x0D, 0x0A, 0
+disk_err_msg    db 'Disk read error!', 0x0D, 0x0A, 0
+reset_err_msg   db 'Disk reset error!', 0x0D, 0x0A, 0
+count_err_msg   db 'Sector count error!', 0x0D, 0x0A, 0
+retry_msg       db 'Press any key to retry...', 0x0D, 0x0A, 0
+done_msg        db 'Game loaded.', 0x0D, 0x0A, 0
+jump_msg        db 'Starting...', 0x0D, 0x0A, 0
 
-; Bootloader signature =========================================================
-times 507 - ($ - $$) db 0               ; Pad to 510 bytes
-db "P1X"                                ; P1X signature
+; Boot signature ===============================================================
+times 510 - ($ - $$) db 0              ; Pad to 510 bytes
 dw 0xAA55                               ; Boot signature

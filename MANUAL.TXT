@@ -1,3 +1,75 @@
-Manual for the Cortex Labs game.
+================================================================================
+                              GAME-12 USER MANUAL
+================================================================================
 
-TBD
+SYSTEM REQUIREMENTS
+-------------------
+- IBM PC/XT or compatible
+- 8086/8088 processor or higher
+- 64KB RAM minimum
+- CGA/EGA/VGA graphics adapter
+- 1.44MB 3.5" floppy drive
+
+INSTALLATION
+------------
+This floppy disk is bootable and can also run under MS-DOS.
+
+To boot directly:
+1. Insert the GAME-12 floppy disk
+2. Restart your computer
+3. The game will load automatically
+
+To run under DOS:
+1. Insert the floppy disk
+2. Type: A:\GAME.COM
+3. Press Enter
+
+GAME CONTROLS
+-------------
+Arrow Keys - Move player
+Space Bar  - Action/Fire
+ESC        - Exit game
+P          - Pause
+R          - Restart level
+
+GAMEPLAY
+--------
+Navigate through challenging levels, avoid obstacles, and reach the goal.
+Collect power-ups to enhance your abilities.
+Each level increases in difficulty.
+
+SCORING
+-------
+Points are awarded for:
+- Completing levels
+- Collecting items
+- Time bonuses
+- Perfect runs (no damage)
+
+TROUBLESHOOTING
+---------------
+If the game fails to load:
+- Ensure the floppy disk is properly inserted
+- Try cleaning the disk drive heads
+- Check BIOS boot order settings
+- Verify the disk is not write-protected
+
+TECHNICAL NOTES
+---------------
+- Game runs in real mode (16-bit)
+- Direct hardware access for maximum performance
+- Compatible with CGA/EGA/VGA graphics modes
+- Sound through PC speaker
+
+CREDITS
+-------
+GAME-12 (C) 2025
+Created by Krzysztof Krystian Jankowski
+P1X Labs
+
+Website: https://github.com/w84death/game12-asm
+License: See LICENSE file for details
+
+================================================================================
+                            THANK YOU FOR PLAYING!
+================================================================================
