@@ -29,6 +29,9 @@ FLOPPY_IMG = $(IMG_DIR)/floppy.img
 JSDOS_ARCHIVE = jsdos/game12.jsdos
 MANUAL_TXT = MANUAL.TXT
 
+# Source files for statistics
+ASM_SOURCES = src/boot.asm src/game.asm src/img_p1x.asm src/img_title.asm src/sfx.asm src/tiles.asm
+
 # Default target
 all: $(FLOPPY_IMG)
 
@@ -62,17 +65,9 @@ $(FLOPPY_IMG): $(BOOTLOADER) $(GAME_COM) | $(IMG_DIR)
 	# Copy GAME.COM first so it occupies the first data sectors
 	$(MCOPY) -i $@ $(GAME_COM) ::GAME.COM
 	# Create and copy manual if it exists, otherwise create a placeholder
-	@if [ -f $(MANUAL_TXT) ]; then \
-		$(MCOPY) -i $@ $(MANUAL_TXT) ::MANUAL.TXT; \
-	else \
-		echo "GAME-12 Manual" > /tmp/manual.txt; \
-		echo "==============" >> /tmp/manual.txt; \
-		echo "" >> /tmp/manual.txt; \
-		echo "A retro game for x86 bare metal." >> /tmp/manual.txt; \
-		echo "Visit: https://github.com/w84death/game12-asm" >> /tmp/manual.txt; \
-		$(MCOPY) -i $@ /tmp/manual.txt ::MANUAL.TXT; \
-		$(RM) /tmp/manual.txt; \
-	fi
+	$(MCOPY) -i $@ $(MANUAL_TXT) ::MANUAL.TXT; \
+	$(MCOPY) -i $@ /tmp/manual.txt ::MANUAL.TXT; \
+	$(RM) /tmp/manual.txt; \
 	# List directory contents for verification
 	@echo "Floppy contents:"
 	@$(MDIR) -i $@ ::
@@ -97,6 +92,55 @@ burn: $(FLOPPY_IMG)
 	sudo $(DD) if=$(FLOPPY_IMG) of=$(USB_FLOPPY) bs=512 conv=notrunc,sync,fsync oflag=direct status=progress
 	@echo "Successfully burned to $(USB_FLOPPY)"
 
+# Display project statistics
+stats: $(BOOTLOADER) $(GAME_COM)
+	@echo "================================================"
+	@echo "              GAME-12 PROJECT STATISTICS"
+	@echo "================================================"
+	@echo ""
+	@echo "BINARY SIZES:"
+	@echo "  Boot sector:  $$(stat -c%s $(BOOTLOADER) 2>/dev/null || stat -f%z $(BOOTLOADER) 2>/dev/null) bytes"
+	@echo "  Game COM:     $$(stat -c%s $(GAME_COM) 2>/dev/null || stat -f%z $(GAME_COM) 2>/dev/null) bytes"
+	@if [ -f $(FLOPPY_IMG) ]; then \
+		echo "  Floppy image: $$(stat -c%s $(FLOPPY_IMG) 2>/dev/null || stat -f%z $(FLOPPY_IMG) 2>/dev/null) bytes"; \
+	fi
+	@echo ""
+	@echo "SOURCE CODE STATISTICS:"
+	@for file in $(ASM_SOURCES); do \
+		if [ -f $$file ]; then \
+			total=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | wc -l); \
+			code_with_comment=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | grep -v '^\s*[a-zA-Z_][a-zA-Z0-9_]*:\s*$$' | grep ';' | wc -l); \
+			if [ $$total -gt 0 ]; then \
+				percent=$$((code_with_comment * 100 / total)); \
+			else \
+				percent=0; \
+			fi; \
+			echo "  $$file:"; \
+			echo "    Total LOC (non-empty, non-comment-only): $$total"; \
+			echo "    Code lines with comments: $$code_with_comment ($$percent%)"; \
+		fi; \
+	done
+	@echo ""
+	@echo "TOTAL PROJECT STATISTICS:"
+	@total_loc=0; \
+	total_commented=0; \
+	for file in $(ASM_SOURCES); do \
+		if [ -f $$file ]; then \
+			loc=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | wc -l); \
+			commented=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | grep -v '^\s*[a-zA-Z_][a-zA-Z0-9_]*:\s*$$' | grep ';' | wc -l); \
+			total_loc=$$((total_loc + loc)); \
+			total_commented=$$((total_commented + commented)); \
+		fi; \
+	done; \
+	if [ $$total_loc -gt 0 ]; then \
+		percent=$$((total_commented * 100 / total_loc)); \
+	else \
+		percent=0; \
+	fi; \
+	echo "  Total lines of code: $$total_loc"; \
+	echo "  Total commented lines: $$total_commented ($$percent%)"
+	@echo "================================================"
+
 # Clean build artifacts
 clean:
 	$(RMDIR) $(BUILD_DIR)
@@ -109,10 +153,11 @@ help:
 	@echo "  bochs - Run in Bochs debugger"
 	@echo "  jsdos - Build jsdos archive"
 	@echo "  burn  - Burn to physical floppy"
+	@echo "  stats - Display project statistics"
 	@echo "  clean - Remove build artifacts"
 	@echo ""
 	@echo "The floppy image is DOS-compatible and contains:"
 	@echo "  GAME.COM   - The game executable"
 	@echo "  MANUAL.TXT - Game manual"
 
-.PHONY: all com bochs jsdos burn clean help
+.PHONY: all com bochs jsdos burn stats clean help
