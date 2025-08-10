@@ -252,12 +252,14 @@ INFRASTRUCTURE_SHIFT            equ 0x7
 ; '- cursor type (4)
 ;
 FORGROUND_SPRITE_MASK           equ 0x1F
-FOREROUND_SPRITE_CLIP           equ 0xE0
+FOREGROUND_SPRITE_CLIP           equ 0xE0
 CART_DRAW_MASK                  equ 0x20
-CART_DRAW_SHIFT                 equ 0x5
+CART_DRAW_SHIFT                 equ 0x05
 CURSOR_TYPE_MASK                equ 0xC0
 CURSOR_TYPE_CLIP                equ 0x3F
-CURSOR_TYPE_SHIFT               equ 0x6
+CURSOR_TYPE_SHIFT               equ 0x06
+CURSOR_TYPE_ROL                 equ 0x02
+
 
 ; SEGMENT_META_DATA
 ; 0 00 00 00 0
@@ -283,6 +285,11 @@ CART_LEFT                       equ 0x02
 CART_RIGHT                      equ 0x03
 
 TERRAIN_RULES_MASK              equ 0x03
+
+CURSOR_ICON_PAN                 equ 0x00
+CURSOR_ICON_ADD                 equ 0x01
+CURSOR_ICON_EDIT                equ 0x02
+CURSOR_ICON_SELECTED            equ 0x03
 
 CURSOR_MODE_PAN                 equ 0x00
 CURSOR_MODE_PLACE_RAIL          equ 0x01
@@ -849,6 +856,7 @@ ret
 
 new_game:
   call generate_map
+  call build_initial_base
   call reset_to_default_values
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
@@ -1323,6 +1331,47 @@ generate_map:
   pop es
 ret
 
+build_initial_base:
+  push es
+  push ds
+
+  push SEGMENT_TERRAIN_BACKGROUND
+  pop es
+
+  push SEGMENT_TERRAIN_FOREGROUND
+  pop ds
+
+  mov di, MAP_SIZE*MAP_SIZE/2 + MAP_SIZE/2
+
+  mov ax, TILE_FOUNDATION
+  mov byte [es:di+1], al
+  mov byte [es:di-1], al
+  mov byte [es:di+MAP_SIZE], al
+  mov byte [es:di-MAP_SIZE], al
+  add ax, INFRASTRUCTURE_MASK
+  mov byte [es:di], al
+  mov byte [es:di-MAP_SIZE], al
+
+  mov ax, CURSOR_ICON_ADD
+  ror ax, CURSOR_TYPE_ROL
+  mov byte [ds:di+1], al
+  mov byte [ds:di-1], al
+  mov byte [ds:di+MAP_SIZE], al
+  mov byte [ds:di-MAP_SIZE], al
+
+  mov ax, CURSOR_ICON_EDIT
+  ror ax, CURSOR_TYPE_ROL
+  push ax
+  add ax, TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
+  mov byte [ds:di], al
+  pop ax
+  add ax, TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
+  mov byte [ds:di-MAP_SIZE], al
+
+  pop ds
+  pop es
+ret
+
 ; =========================================== DRAW TERRAIN ==================|80
 ; OUT: Terrain drawn on the screen
 draw_terrain:
@@ -1433,6 +1482,9 @@ ret
 ; ds foreground
 recalculate_rails:
   xor ax, ax
+  test byte [es:di], RAIL_MASK
+  jz .done
+
   .test_up:
     test byte [es:di-MAP_SIZE], RAIL_MASK
     jz .test_right
@@ -1463,7 +1515,7 @@ recalculate_rails:
     sub al, TILE_FOREGROUND_SHIFT
 
   .save_rail_sprite:
-    and byte [ds:di], FOREROUND_SPRITE_CLIP
+    and byte [ds:di], FOREGROUND_SPRITE_CLIP
     add byte [ds:di], al
 
   .calculate_correct_switch:
@@ -1479,17 +1531,17 @@ recalculate_rails:
 
   .prepare_switch_horizontal:
     mov dl, SWITCH_MASK                 ; 0 for left switch ID + initialization
-    mov ax, CURSOR_MODE_SWITCH
+    mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
     shl dl, SWITCH_TYPE_SHIFT
     add dl, SWITCH_MASK
-    mov ax, CURSOR_MODE_SWITCH
+    mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
   .prepare_no_switch:
     mov dl, 0
-    mov ax, CURSOR_MODE_PAN
+    mov ax, CURSOR_ICON_ADD
 
   .save_switch:
     push es
@@ -1500,8 +1552,9 @@ recalculate_rails:
     pop es
 
     and byte [ds:di], CURSOR_TYPE_CLIP  ; clear cursor
-    shl al, CURSOR_TYPE_SHIFT
+    ror al, CURSOR_TYPE_ROL
     add byte [ds:di], al
+  .done:
 ret
 
 
@@ -1676,15 +1729,15 @@ draw_cursor:
   add bx, ax              ; Y * 16 * 320 + X * 16
   mov di, bx              ; Move result to DI
 
-  mov al, TILE_CURSOR_PAN
   push ds
   push SEGMENT_TERRAIN_FOREGROUND
   pop ds
 
   mov al, [ds:di]
   and al, CURSOR_TYPE_MASK
-  shr al, CURSOR_TYPE_SHIFT
+  rol al, CURSOR_TYPE_ROL
   add al, TILE_CURSOR_PAN
+
   pop ds
 
   call draw_sprite
