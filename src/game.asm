@@ -1170,13 +1170,14 @@ draw_rle_image:
 ret
 
 ; =========================================== DRAW WINDOW ===================|80
-; Window is drown over 8x8 grid in sprites size (16px each).
+; Window is drown over 8x8 grid in sprites size (16px each). Uses 9 tiles for
+; drawing the window.
 ; IN:
-; AX - Position of top/left corner; high:Y, low:X
-; BX - Size of window; high: height, low: width
+;   AX - Position of top/left corner; high:Y, low:X
+;   BX - Size of window; high: height, low: width
 draw_window:
 
-  .calculate_window_position
+  .calculate_window_position:
   push bx                               ; Save the size
   xor di, di
   xor bx, bx
@@ -1188,24 +1189,29 @@ draw_window:
   add bx, ax                            ; Add X to coords
   add di, bx                            ; Move to destination index
 
+  .draw_widow:
   pop bx                                ; Restore size
 
+  .top_left_corner:
   mov ax, TILE_WINDOW_1                 ; Set first sprite (top/left corner)
   call draw_sprite
   add di, SPRITE_SIZE                   ; Move index by sprite size
 
-  inc ax                                ; Set next sprite (top)
+  .top_border:
+  inc ax                                ; Set next sprite (top border)
   movzx cx, bl                          ; Set width
   sub cx, 2                             ; Minus corners
-  .draw_top_line:                       ; Draw the sprites
+  .draw_top_sprite:             ; Draw the sprites
     call draw_sprite
     add di, SPRITE_SIZE                 ; Move index by sprite size
-  loop .draw_top_line
+  loop .draw_top_sprite
 
+  .top_right_corner:
   inc ax                                ; Set next sprite (top/right corner)
   call draw_sprite
   add di, SPRITE_SIZE                   ; Move index by sprite size
 
+  .top_middle:
   movzx dx, bl                          ; Save the window width
   shl dx, 0x4                           ; Multiply by sprite size (16)
 
@@ -1214,55 +1220,71 @@ draw_window:
   jle .skip_middle                      ; Skip middle drawing if true
   sub cx, 0x2                           ; Reduce height by top and bottom part
 
-  .draw_middle_line:
-    push cx
+  .draw_middle_row:
+    push cx                             ; Save height (rows)
 
-    add di, SCREEN_WIDTH*16
-    sub di, dx
+    add di, SCREEN_WIDTH*SPRITE_SIZE    ; Move to the next line below
+    sub di, dx                          ; Back to left side of window
 
-    mov ax, TILE_WINDOW_4
+    .left_border:
+    mov ax, TILE_WINDOW_4               ; Set sprite (left border)
     call draw_sprite
-    add di, 0x10
-    inc ax
+    add di, SPRITE_SIZE                 ; Move index by sprite size
 
-    movzx cx, bl
-    sub cx, 2
-    .draw_line_2n:
+    .middle:
+    inc ax                              ; Set next sprite (inside of window)
+    movzx cx, bl                        ; Set width
+    sub cx, 2                           ; Minus left/right sprites
+    .draw_middle_sprite:
       call draw_sprite
-      add di, 0x10
-    loop .draw_line_2n
+      add di, SPRITE_SIZE               ;  Move index by sprite size
+    loop .draw_middle_sprite
 
-    inc ax
+    .middle_right:
+    inc ax                              ; Set next sprite (right border)
     call draw_sprite
-    add di, 0x10
+    add di, SPRITE_SIZE                 ; Move index by sprite size
 
-    pop cx
-  loop .draw_middle_line
+    pop cx                              ; Restor ros counter
+  loop .draw_middle_row
 
   .skip_middle:
 
-  add di, SCREEN_WIDTH*16
-  sub di, dx
+  .draw_bottom:
+  add di, SCREEN_WIDTH*SPRITE_SIZE      ; Move to the next line below
+  sub di, dx                            ; Back to left side of window
 
-  mov ax, TILE_WINDOW_7
-
+  .bottom_left_corner:
+  mov ax, TILE_WINDOW_7                 ; Set sprite (bottom left corner)
   call draw_sprite
-  add di, 0x10
+  add di, SPRITE_SIZE                   ; Move index by sprite size
 
-  inc ax
-  movzx cx, bl
-  sub cx, 2
-  .draw_line_3:
+  .bottom_middle:
+  inc ax                                ; Set next sprite (bottom border)
+  movzx cx, bl                          ; Set width
+  sub cx, 2                             ; Minus left/right sprites
+  .draw_bottom_sprite:
     call draw_sprite
-    add di, 0x10
-  loop .draw_line_3
+    add di, SPRITE_SIZE                 ; Move index by sprite size
+  loop .draw_bottom_sprite
 
-  inc ax
+  .bottom_right:
+  inc ax                                ; Set next sprite (bottom right corner)
   call draw_sprite
 ret
 
 
 ; =========================================== GENERATE MAP ==================|80
+; Generates the procedural map using simple rules (TerrainRules)
+; Rules defines what type of tiles can be generated next to each other
+; Fore each tile type 4 corresponding types are defined.
+; For 10 tiles, 10 entries are defined (each holding 4 bytes)
+; Algorithm selects for each cell up or left tile next to it and checks in the
+; defined array what can be placed. Selects randomly new tile. Moves to next.
+; First tile in a colum is selected randomely as there is nothing on the left.
+; Same for the first top row of tiles.
+; Lastly it goes thru newely generated map and sets metadata (traversal cells)
+; and clears other data layers for safety (if generated on populated memory)
 generate_map:
   push es
   push ds
@@ -1281,7 +1303,7 @@ generate_map:
     .next_col:
       call get_random                   ; AX is random value
       and ax, TERRAIN_RULES_MASK        ; Crop to 0-3
-      mov [es:di], al                      ; Save terrain tile
+      mov [es:di], al                   ; Save terrain tile
       cmp dx, MAP_SIZE                  ; Check if first col
       je .skip_cell
       cmp cx, MAP_SIZE                  ; Check if first row
@@ -1305,30 +1327,36 @@ generate_map:
     xor si, si
     xor di, di
     mov cx, MAP_SIZE*MAP_SIZE
-    .meta_next_cell:
-      cmp byte [es:si], TILE_TREES_1
-      jge .skip
+    .background_cell:
+      cmp byte [es:si], TILE_TREES_1    ; Last traversal sprite id
+      jge .skip_traversal               ; If greater, skip
       add byte [es:di], TERRAIN_TRAVERSAL_MASK
-      .skip:
+      .skip_traversal:
       inc si
       inc di
-    loop .meta_next_cell
+    loop .background_cell
 
-  .clear_foreground_metadata:
+  .clear_rest_metadata:
     push SEGMENT_TERRAIN_FOREGROUND
     pop ds
 
+    push SEGMENT_ENTITIES
+    pop es
+
     xor di, di
     mov cx, MAP_SIZE*MAP_SIZE
-    .meta_next_cell2:
-      mov byte [ds:di], 0x0
+    .map_cell:
+      mov byte [ds:di], 0x0             ; Clear foreground data
+      mov byte [es:di], 0x0             ; Clear entities data
       inc di
-    loop .meta_next_cell2
+    loop .map_cell
 
   pop ds
   pop es
 ret
 
+; =========================================== BUILD INITIAL BASE FOUNDATIONS |80
+; Sets up initial base foundations, rocket
 build_initial_base:
   push es
   push ds
@@ -1339,8 +1367,10 @@ build_initial_base:
   push SEGMENT_TERRAIN_FOREGROUND
   pop ds
 
-  mov di, MAP_SIZE*MAP_SIZE/2 + MAP_SIZE/2
+  .set_center_position:
+  mov di, MAP_SIZE*MAP_SIZE/2 + MAP_SIZE/2  ; Center of the map
 
+  .build_base:
   mov ax, TILE_FOUNDATION
   mov byte [es:di+1], al
   mov byte [es:di-1], al
@@ -1351,14 +1381,14 @@ build_initial_base:
   mov byte [es:di-MAP_SIZE], al
 
   mov ax, CURSOR_ICON_ADD
-  ror ax, CURSOR_TYPE_ROL
+  ror al, CURSOR_TYPE_ROL
   mov byte [ds:di+1], al
   mov byte [ds:di-1], al
   mov byte [ds:di+MAP_SIZE], al
   mov byte [ds:di-MAP_SIZE], al
 
   mov ax, CURSOR_ICON_EDIT
-  ror ax, CURSOR_TYPE_ROL
+  ror al, CURSOR_TYPE_ROL
   push ax
   add ax, TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
   mov byte [ds:di], al
@@ -1408,7 +1438,6 @@ draw_terrain:
         and al, FORGROUND_SPRITE_MASK
         add al, TILE_FOREGROUND_SHIFT
         call draw_sprite
-
 
         mov dl, [es:si]                 ; SEGMENT_TERRAIN_BACKGROUND
         .draw_rails_stuff:
