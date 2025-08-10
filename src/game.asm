@@ -1,6 +1,6 @@
 ; ==============================================================================
-; GAME12: 2D Game Engine for x86 processors
-; CODENAME: Mycelium Overlords
+; Cortex Labs: 2D Game Engine for x86 processors
+; CODENAME: GAME12
 ;
 ; Fast rendering of big maps with full screen viewport.
 ; Backend for strategic/simulation games. Based on GAME11 ideas.

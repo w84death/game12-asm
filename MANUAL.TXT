@@ -1,13 +1,13 @@
 ================================================================================
-                              GAME-12 USER MANUAL
+                            CORTEX LABS USER MANUAL
 ================================================================================
 
 SYSTEM REQUIREMENTS
 -------------------
 - IBM PC/XT or compatible
-- 8086/8088 processor or higher
+- 486 processor or higher
 - 64KB RAM minimum
-- CGA/EGA/VGA graphics adapter
+- VGA graphics adapter
 - 1.44MB 3.5" floppy drive
 
 INSTALLATION
@@ -26,40 +26,15 @@ To run under DOS:
 
 GAME CONTROLS
 -------------
-Arrow Keys - Move player
-Space Bar  - Action/Fire
-ESC        - Exit game
-P          - Pause
-R          - Restart level
+Arrow Keys - Move cursor
+Space Bar  - Action
+ESC        - Back to main menu
+TAB        - Minimap
 
 GAMEPLAY
 --------
-Navigate through challenging levels, avoid obstacles, and reach the goal.
-Collect power-ups to enhance your abilities.
-Each level increases in difficulty.
 
-SCORING
--------
-Points are awarded for:
-- Completing levels
-- Collecting items
-- Time bonuses
-- Perfect runs (no damage)
-
-TROUBLESHOOTING
----------------
-If the game fails to load:
-- Ensure the floppy disk is properly inserted
-- Try cleaning the disk drive heads
-- Check BIOS boot order settings
-- Verify the disk is not write-protected
-
-TECHNICAL NOTES
----------------
-- Game runs in real mode (16-bit)
-- Direct hardware access for maximum performance
-- Compatible with CGA/EGA/VGA graphics modes
-- Sound through PC speaker
+TBD
 
 CREDITS
 -------
