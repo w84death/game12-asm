@@ -412,39 +412,39 @@ main_loop:
 
 ; =========================================== GAME STATES ===================|80
 
-  movzx bx, byte [_GAME_STATE_]    ; Load state into BX
-  shl bx, 1                        ; Multiply by 2 (word size)
-  call word [StateJumpTable + bx]   ; Jump to handle
+  movzx bx, byte [_GAME_STATE_]         ; Load state into BX
+  shl bx, 1                             ; Multiply by 2 (word size)
+  call word [StateJumpTable + bx]       ; Jump to handle
 
 game_state_satisfied:
 
 ; =========================================== KEYBOARD INPUT ================|80
 
 check_keyboard:
-  mov ah, 01h         ; BIOS keyboard status function
-  int 16h             ; Call BIOS interrupt
+  mov ah, 01h                           ; BIOS keyboard status function
+  int 16h                               ; Call BIOS interrupt
   jz .keyboard_done
 
-  mov ah, 00h         ; BIOS keyboard read function
-  int 16h             ; Call BIOS interrupt
+  mov ah, 00h                           ; BIOS keyboard read function
+  int 16h                               ; Call BIOS interrupt
 
   ; ========================================= STATE TRANSITIONS ============|80
   mov si, StateTransitionTable
   mov cx, StateTransitionTableEnd-StateTransitionTable
   .check_transitions:
     mov bl, [_GAME_STATE_]
-    cmp bl, [si]        ; Check current state
+    cmp bl, [si]                        ; Check current state
     jne .next_entry
 
-    cmp ah, [si+1]      ; Check key press
+    cmp ah, [si+1]                      ; Check key press
     jne .next_entry
 
-    mov bl, [si+2]      ; Get new state
+    mov bl, [si+2]                      ; Get new state
     mov [_GAME_STATE_], bl
     jmp .transitions_done
 
   .next_entry:
-    add si, 3           ; Move to next entry
+    add si, 3                           ; Move to next entry
     loop .check_transitions
 
 .transitions_done:
@@ -455,17 +455,17 @@ check_keyboard:
   mov cx, InputTableEnd-InputTable
   .check_input:
     mov bl, [_GAME_STATE_]
-    cmp bl, [si]        ; Check current state
+    cmp bl, [si]                        ; Check current state
     jne .next_input
 
     cmp byte [si+1], MODE_GAMEPLAY
     je .check_keypress
     mov bl, [_SCENE_MODE_]
-    cmp bl, [si+1]      ; Check current mode
+    cmp bl, [si+1]                      ; Check current mode
     jne .next_input
 
     .check_keypress:
-    cmp ah, [si+2]      ; Check key press
+    cmp ah, [si+2]                      ; Check key press
     jne .next_input
 
     mov bx, [si+3]
@@ -473,7 +473,7 @@ check_keyboard:
     jmp .keyboard_done
 
   .next_input:
-    add si, 5           ; Move to next entry
+    add si, 5                           ; Move to next entry
   loop .check_input
 
 .keyboard_done:
@@ -481,25 +481,21 @@ check_keyboard:
 ; =========================================== GAME TICK =====================|80
 
 .cpu_delay:
-  xor ax, ax            ; Function 00h: Read system timer counter
-  int 0x1a              ; Returns tick count in CX:DX
-  mov bx, dx            ; Store low word of tick count
-  mov si, cx            ; Store high word of tick count
+  xor ax, ax                            ; 00h: Read system timer counter
+  int 0x1a                              ; Returns tick count in CX:DX
+  mov bx, dx                            ; Store low word of tick count
+  mov si, cx                            ; Store high word of tick count
   .wait_loop:
     xor ax, ax
     int 0x1a
-    cmp cx, si          ; Compare high word
+    cmp cx, si                          ; Compare high word
     jne .tick_changed
-    cmp dx, bx          ; Compare low word
-    je .wait_loop       ; If both are the same, keep waiting
+    cmp dx, bx                          ; Compare low word
+    je .wait_loop                       ; If both are the same, keep waiting
   .tick_changed:
 
 .update_system_tick:
-  cmp dword [_GAME_TICK_], 0xF0000000
-  jb .skip_tick_reset
-    mov dword [_GAME_TICK_], 0
-  .skip_tick_reset:
-  inc dword [_GAME_TICK_]
+  inc dword [_GAME_TICK_]               ; overflow naturally
 
 call update_audio
 
@@ -511,77 +507,81 @@ jmp main_loop
 
 exit:
   call stop_sound
-  mov ax, 0x0003       ; Set video mode to 80x25 text mode
-  int 0x10             ; Call BIOS interrupt
-  mov si, QuitText     ; Draw message after exit
-  xor dx, dx           ; At 0/0 position
+  mov ax, 0x0003                        ; Set video mode to 80x25 text mode
+  int 0x10                              ; Call BIOS interrupt
+  mov si, QuitText                      ; Draw message after exit
+  xor dx, dx                            ; At 0/0 position
   call draw_text
 
-  mov ax, 0x4c00      ; Exit to DOS
-  int 0x21            ; Call DOS
-  ret                 ; Return to DOS
+  mov ax, 0x4c00                        ; Exit to DOS
+  int 0x21                              ; Call DOS
+ret                                     ; Return to DOS
 
-
+; =========================================== GAME LOGIC ====================|80
 
 game_logic:
+
+
+; =========================================== VIEWPORT MOVE =================|80
+
   .move_cursor_up:
-    mov ax, [_VIEWPORT_Y_]      ; viewport top position
-    inc ax                      ; one tile before
-    cmp word [_CURSOR_Y_], ax   ; check if cursor at the top edge
-    je .move_viewport_up        ; try move the viewport up
-    dec word [_CURSOR_Y_]       ; or just move the cursor up
+    mov ax, [_VIEWPORT_Y_]              ; viewport top position
+    inc ax                              ; one tile before
+    cmp word [_CURSOR_Y_], ax           ; check if cursor at the top edge
+    je .move_viewport_up                ; try move the viewport up
+    dec word [_CURSOR_Y_]               ; or just move the cursor up
   jmp .redraw_tile
 
   .move_cursor_down:
-    mov ax, [_VIEWPORT_Y_]      ; viewport top position
-    add ax, VIEWPORT_HEIGHT-2   ; add screen height to get viewport bottom
-    cmp word [_CURSOR_Y_], ax   ; check if cursro at the bottom
-    jae .move_viewport_down     ; try to move viewport down
-    inc word [_CURSOR_Y_]       ; or just move the cursor down
+    mov ax, [_VIEWPORT_Y_]              ; viewport top position
+    add ax, VIEWPORT_HEIGHT-2           ; get viewport bottom
+    cmp word [_CURSOR_Y_], ax           ; check if cursro at the bottom
+    jae .move_viewport_down             ; try to move viewport down
+    inc word [_CURSOR_Y_]               ; or just move the cursor down
   jmp .redraw_tile
 
   .move_cursor_left:
-    mov ax, [_VIEWPORT_X_]      ; viewport left position
-    inc ax                      ; one tile before
-    cmp word [_CURSOR_X_], ax   ; check if cursor at the left edge
-    je .move_viewport_left      ; try to move viewport left
-    dec word [_CURSOR_X_]       ; or just move the cursor left
+    mov ax, [_VIEWPORT_X_]              ; viewport left position
+    inc ax                              ; one tile before
+    cmp word [_CURSOR_X_], ax           ; check if cursor at the left edge
+    je .move_viewport_left              ; try to move viewport left
+    dec word [_CURSOR_X_]               ; or just move the cursor left
   jmp .redraw_tile
 
   .move_cursor_right:
-    mov ax, [_VIEWPORT_X_]      ; viewport left position
-    add ax, VIEWPORT_WIDTH-2    ; add screen width to get viewport right
-    cmp word [_CURSOR_X_], ax   ; check if cursor at the right edge
-    jae .move_viewport_right    ; try to move viewport right
-    inc word [_CURSOR_X_]       ; or just move the cursor right
+    mov ax, [_VIEWPORT_X_]              ; viewport left position
+    add ax, VIEWPORT_WIDTH-2            ; get viewport right
+    cmp word [_CURSOR_X_], ax           ; check if cursor at the right edge
+    jae .move_viewport_right            ; try to move viewport right
+    inc word [_CURSOR_X_]               ; or just move the cursor right
   jmp .redraw_tile
 
   .move_viewport_up:
-    cmp word [_VIEWPORT_Y_], 0  ; check if viewport at the top edge of map
-    je .done                    ; do nothing if on edge
-    dec word [_VIEWPORT_Y_]     ; move viewport up
-    dec word [_CURSOR_Y_]       ; move cursor up
+    cmp word [_VIEWPORT_Y_], 0          ; check if viewport at the top edge
+    je .done                            ; do nothing if on edge
+    dec word [_VIEWPORT_Y_]             ; move viewport up
+    dec word [_CURSOR_Y_]               ; move cursor up
   jmp .redraw_terrain
 
   .move_viewport_down:
     cmp word [_VIEWPORT_Y_], MAP_SIZE-VIEWPORT_HEIGHT ; check if viewport at the bottom edge of map
-    jae .done                 ; do nothing if on edge
-    inc word [_VIEWPORT_Y_]   ; move viewport down
-    inc word [_CURSOR_Y_]     ; move cursor down
+    jae .done                           ; do nothing if on edge
+    inc word [_VIEWPORT_Y_]             ; move viewport down
+    inc word [_CURSOR_Y_]               ; move cursor down
   jmp .redraw_terrain
 
   .move_viewport_left:
-    cmp word [_VIEWPORT_X_], 0  ; check if viewport at the left edge of map
-    je .done                    ; do nothing if on edge
-    dec word [_VIEWPORT_X_]     ; move viewport left
-    dec word [_CURSOR_X_]       ; move cursor left
+    cmp word [_VIEWPORT_X_], 0          ; check if viewport at the left edge of map
+    je .done                            ; do nothing if on edge
+    dec word [_VIEWPORT_X_]             ; move viewport left
+    dec word [_CURSOR_X_]               ; move cursor left
   jmp .redraw_terrain
 
   .move_viewport_right:
     cmp word [_VIEWPORT_X_], MAP_SIZE-VIEWPORT_WIDTH ; check if viewport at the right edge of map
-    jae .done                 ; do nothing if on edge
-    inc word [_VIEWPORT_X_]   ; move viewport right
-    inc word [_CURSOR_X_]     ; move cursor right
+    jae .done                           ; do nothing if on edge
+    inc word [_VIEWPORT_X_]             ; move viewport right
+    inc word [_CURSOR_X_]               ; move cursor right
   jmp .redraw_terrain
 
   .switch_change:
@@ -625,7 +625,7 @@ game_logic:
     pop ds
 
     .place_rail:
-      and al, 0x1           ; TILE_MUD_1 or TILE_MUD_2
+      and al, 0x1                       ; TILE_MUD_1 or TILE_MUD_2
       mov byte [es:di], al
       add byte [es:di], RAIL_MASK
       add byte [ds:di], TILE_RAILS_1-TILE_FOREGROUND_SHIFT
@@ -659,7 +659,6 @@ game_logic:
   .redraw_tile:
     ; to be optimize later
     ; for now redrawn everything
-
     ; jmp .done
 
   .redraw_terrain:
@@ -699,35 +698,35 @@ StateJumpTable:
   dw live_help
 
 StateTransitionTable:
-  db STATE_TITLE_SCREEN, KB_ESC,   STATE_QUIT
-  db STATE_TITLE_SCREEN, KB_ENTER, STATE_MENU_INIT
+  db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
+  db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
 
-  db STATE_MENU,         KB_ESC,   STATE_QUIT
-  db STATE_MENU,         KB_ENTER, STATE_GAME_INIT
-  db STATE_MENU,         KB_F1,    STATE_GAME_NEW
-  db STATE_MENU,         KB_F2,    STATE_DEBUG_VIEW_INIT
-  db STATE_MENU,         KB_F3,    STATE_DEBUG_VIEW_INIT
-  db STATE_MENU,         KB_F4,    STATE_HELP_INIT
+  db STATE_MENU,          KB_ESC,   STATE_QUIT
+  db STATE_MENU,          KB_ENTER, STATE_GAME_INIT
+  db STATE_MENU,          KB_F1,    STATE_GAME_NEW
+  db STATE_MENU,          KB_F2,    STATE_DEBUG_VIEW_INIT
+  db STATE_MENU,          KB_F3,    STATE_DEBUG_VIEW_INIT
+  db STATE_MENU,          KB_F4,    STATE_HELP_INIT
 
-  db STATE_HELP,        KB_ESC,   STATE_MENU_INIT
+  db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
 
-  db STATE_GAME,         KB_ESC,   STATE_MENU_INIT
-  db STATE_GAME,         KB_TAB,   STATE_MAP_VIEW_INIT
-  db STATE_MAP_VIEW,     KB_ESC,   STATE_MENU_INIT
-  db STATE_MAP_VIEW,     KB_TAB,   STATE_GAME_INIT
-  db STATE_DEBUG_VIEW,   KB_ESC,   STATE_MENU_INIT
+  db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
+  db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT
+  db STATE_MAP_VIEW,      KB_ESC,   STATE_MENU_INIT
+  db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
+  db STATE_DEBUG_VIEW,    KB_ESC,   STATE_MENU_INIT
 StateTransitionTableEnd:
 
 InputTable:
-  db STATE_GAME,        MODE_GAMEPLAY,  KB_UP
+  db STATE_GAME,          MODE_GAMEPLAY,  KB_UP
   dw game_logic.move_cursor_up
-  db STATE_GAME,        MODE_GAMEPLAY,  KB_DOWN
+  db STATE_GAME,          MODE_GAMEPLAY,  KB_DOWN
   dw game_logic.move_cursor_down
-  db STATE_GAME,        MODE_GAMEPLAY,  KB_LEFT
+  db STATE_GAME,          MODE_GAMEPLAY,  KB_LEFT
   dw game_logic.move_cursor_left
-  db STATE_GAME,        MODE_GAMEPLAY,  KB_RIGHT
+  db STATE_GAME,          MODE_GAMEPLAY,  KB_RIGHT
   dw game_logic.move_cursor_right
-  db STATE_GAME,        MODE_GAMEPLAY,  KB_SPACE
+  db STATE_GAME,          MODE_GAMEPLAY,  KB_SPACE
   dw game_logic.build_action
 InputTableEnd:
 
@@ -745,7 +744,7 @@ init_engine:
 ret
 
 reset_to_default_values:
-  mov byte [_GAME_TICK_], 0x0
+  mov word [_GAME_TICK_], 0x0
   mov word [_RNG_], 0x42
 
   mov word [_VIEWPORT_X_], MAP_SIZE/2-VIEWPORT_WIDTH/2
@@ -973,35 +972,35 @@ ret
 ; IN: Palette data in RGB format
 ; OUT: VGA palette initialized
 initialize_custom_palette:
-  mov si, CustomPalette      ; Palette data pointer
-  mov dx, 03C8h        ; DAC Write Port (start at index 0)
-  xor al, al           ; Start with color index 0
-  out dx, al           ; Send color index to DAC Write Port
-  mov dx, 03C9h        ; DAC Data Port
-  mov cx, 16*3         ; 16 colors × 3 bytes (R, G, B)
-  rep outsb            ; Send all RGB values
+  mov si, CustomPalette                 ; Palette data pointer
+  mov dx, 03C8h                         ; DAC Write Port (start at index 0)
+  xor al, al                            ; Start with color index 0
+  out dx, al                            ; Send color index to DAC Write Port
+  mov dx, 03C9h                         ; DAC Data Port
+  mov cx, 16*3                          ; 16 colors × 3 bytes (R, G, B)
+  rep outsb                             ; Send all RGB values
 ret
 
 CustomPalette:
 ; DawnBringer 16 color palette
 ; https://github.com/geoffb/dawnbringer-palettes
 ; Converted from 8-bit to 6-bit for VGA
-db  0,  0,  0    ; #000000 - Black
-db 17,  8, 13    ; #442434 - Deep purple
-db 12, 13, 27    ; #30346D - Navy blue
-db 19, 18, 19    ; #4E4A4E - Dark gray
-db 33, 19, 12    ; #854C30 - Brown
-db 13, 25,  9    ; #346524 - Dark green
-db 52, 17, 18    ; #D04648 - Red
-db 29, 28, 24    ; #757161 - Light gray
-db 22, 31, 51    ; #597DCE - Blue
-db 52, 31, 11    ; #D27D2C - Orange
-db 33, 37, 40    ; #8595A1 - Steel blue
-db 27, 42, 11    ; #6DAA2C - Green
-db 52, 42, 38    ; #D2AA99 - Pink/Beige
-db 27, 48, 50    ; #6DC2CA - Cyan
-db 54, 53, 23    ; #DAD45E - Yellow
-db 55, 59, 53    ; #DEEED6 - White
+db  0,  0,  0                           ; #000000 - Black
+db 17,  8, 13                           ; #442434 - Deep purple
+db 12, 13, 27                           ; #30346D - Navy blue
+db 19, 18, 19                           ; #4E4A4E - Dark gray
+db 33, 19, 12                           ; #854C30 - Brown
+db 13, 25,  9                           ; #346524 - Dark green
+db 52, 17, 18                           ; #D04648 - Red
+db 29, 28, 24                           ; #757161 - Light gray
+db 22, 31, 51                           ; #597DCE - Blue
+db 52, 31, 11                           ; #D27D2C - Orange
+db 33, 37, 40                           ; #8595A1 - Steel blue
+db 27, 42, 11                           ; #6DAA2C - Green
+db 52, 42, 38                           ; #D2AA99 - Pink/Beige
+db 27, 48, 50                           ; #6DC2CA - Cyan
+db 54, 53, 23                           ; #DAD45E - Yellow
+db 55, 59, 53                           ; #DEEED6 - White
 
 ; =========================================== DRAW TEXT =====================|80
 ; IN:
@@ -1010,70 +1009,66 @@ db 55, 59, 53    ; #DEEED6 - White
 ;  DH - Y position
 ;  BX - Color
 draw_text:
-  mov ah, 0x02   ; Set cursor
-  xor bh, bh     ; Page 0
+  mov ah, 0x02                          ; Set cursor
+  xor bh, bh                            ; Page 0
   int 0x10
 
   .next_char:
-    lodsb          ; Load next character from SI into AL
-    test al, al    ; Check for string terminator
-    jz .done       ; If terminator, we're done
+    lodsb                               ; Load next character from SI into AL
+    test al, al                         ; Check for string terminator
+    jz .done                            ; If terminator, we're done
 
-    mov ah, 0x0E   ; Teletype output
-    mov bh, 0      ; Page 0
-    int 0x10       ; BIOS video interrupt
+    mov ah, 0x0E                        ; Teletype output
+    mov bh, 0                           ; Page 0
+    int 0x10                            ; BIOS video interrupt
 
-    jmp .next_char ; Process next character
+    jmp .next_char                      ; Process next character
 
   .done:
 ret
 
 ; =========================================== DRAW NUMBER ===================|80
 ; IN:
-;  SI - Value to display (decimal)
-;  DL - X position
-;  DH - Y position
-;  BX - Color
+;   SI - Value to display (decimal)
+;   DL - X position
+;   DH - Y position
+;   BX - Color
+;   CX - digits length
 draw_number:
-  mov ah, 0x02   ; Set cursor
-  xor bh, bh     ; Page 0
+  mov ah, 0x02                          ; Set cursor
+  xor bh, bh                            ; Page 0
   int 0x10
 
-  mov cx, 10000  ; Divisor starting with 10000 (for 5 digits)
-  mov ax, si     ; Copy the number to AX for division
+  ;mov cx, 10000                         ; Divisor for 5 digits
+  mov ax, si                            ; Copy the number to AX for division
 
   .next_digit:
-    xor dx, dx     ; Clear DX for division
-    div cx         ; Divide AX by CX, quotient in AX, remainder in DX
+    xor dx, dx                          ; Clear DX for division
+    div cx                              ; Divide, remainder in DX
+    add al, '0'                         ; Convert to ASCII
 
-    ; Convert digit to ASCII
-    add al, '0'    ; Convert to ASCII
+    mov ah, 0x0E                        ; Teletype output
+    push dx                             ; Save remainder
+    push cx                             ; Save divisor
+    mov bh, 0                           ; Page 0
+    int 0x10                            ; BIOS video interrupt
+    pop cx                              ; Restore divisor
+    pop dx                              ; Restore remainder
 
-    ; Print the character
-    mov ah, 0x0E   ; Teletype output
-    push dx        ; Save remainder
-    push cx        ; Save divisor
-    mov bh, 0      ; Page 0
-    int 0x10       ; BIOS video interrupt
-    pop cx         ; Restore divisor
-    pop dx         ; Restore remainder
 
-    ; Move remainder to AX for next iteration
-    mov ax, dx
+    mov ax, dx                          ; Save remainder to AX
 
-    ; Update divisor
-    push ax        ; Save current remainder
-    mov ax, cx     ; Get current divisor in AX
-    xor dx, dx     ; Clear DX for division
+    push ax                             ; Save current remainder
+    mov ax, cx                          ; Get current divisor in AX
+    xor dx, dx                          ; Clear DX for division
     push bx
-    mov bx, 10     ; Divide by 10
-    div bx         ; AX = AX/10
+    mov bx, 10                          ; Divide by 10
+    div bx                              ; AX = AX/10
     pop bx
-    mov cx, ax     ; Set new divisor
-    pop ax         ; Restore current remainder
+    mov cx, ax                          ; Set new divisor
+    pop ax                              ; Restore current remainder
 
-    ; Check if we're done
-    cmp cx, 0      ; If divisor is 0, we're done
+    cmp cx, 0                           ; If divisor is 0, we're done
     jne .next_digit
 
 ret
@@ -1105,41 +1100,40 @@ get_random:
 ret
 
 ; =========================================== CLEAR SCREEN ==================|80
-; IN: AL - Color
-; OUT: VGA memory cleared (fullscreen)
+; IN:
+;   AL - Color
 clear_screen:
   mov ah, al
-  mov cx, SCREEN_WIDTH*SCREEN_HEIGHT/2    ; Number of pixels
-  xor di, di           ; Start at 0
-  rep stosw            ; Write to the VGA memory
+  mov cx, SCREEN_WIDTH*SCREEN_HEIGHT/2  ; Number of pixels
+  xor di, di                            ; Start at 0
+  rep stosw                             ; Write to the VGA memory
 ret
 
 ; =========================================== DRAW GRADIENT =================|80
 ; IN:
-; DI - Position
-; AL - Color
-; OUT: VGA memory filled with gradient
+;   DI - Position
+;   AL - Color
 draw_gradient:
   mov ah, al
-  mov dl, 0xD                ; Number of bars to draw
+  mov dl, 0xD                           ; Number of bars to draw
   .draw_gradient:
-    mov cx, SCREEN_WIDTH*4           ; Number of pixels high for each bar
-    rep stosw               ; Write to the VGA memory
-    cmp dl, 0x8             ; Check if we are in the middle
-    jl .down                ; If not, decrease
-    inc al                  ; Increase color in right pixel
+    mov cx, SCREEN_WIDTH*4              ; Number of pixels high for each bar
+    rep stosw                           ; Write to the VGA memory
+    cmp dl, 0x8                         ; Check if we are in the middle
+    jl .down                            ; If not, decrease
+    inc al                              ; Increase color in right pixel
     jmp .up
     .down:
-    dec al                  ; Decrease color in left pixel
+    dec al                              ; Decrease color in left pixel
     .up:
-    xchg al, ah             ; Swap colors (left/right pixel)
-    dec dl                  ; Decrease number of bars to draw
-    jg .draw_gradient       ; Loop until all bars are drawn
+    xchg al, ah                         ; Swap colors (left/right pixel)
+    dec dl                              ; Decrease number of bars to draw
+    jg .draw_gradient                   ; Loop until all bars are drawn
 ret
 
 ; =========================================== DRAW RLE IMAGE ================|80
 ; IN:
-; SI - Image data address
+;   SI - Image data address
 draw_rle_image:
   push es
   push ds
@@ -1154,69 +1148,73 @@ draw_rle_image:
   xor bx, bx
   xor dx, dx
   .image_loop:
-    lodsb
-    mov cx, ax
-    add bx, ax
-    add dx, ax
+    lodsb                               ; Load number of pixels to repeat
+    mov cx, ax                          ; Save to CX
+    add bx, ax                          ; Add to overall pixels counter
+    add dx, ax                          ; Add to line pixel counter
 
-    lodsb
-    rep stosb
+    lodsb                               ; Load pixel color
+    rep stosb                           ; Push pixels (CX times)
 
-    cmp dx, SCREEN_WIDTH
-    jl .continue
-    add di, SCREEN_WIDTH
-    xor dx, dx
+    cmp dx, SCREEN_WIDTH                ; Check if we fill full line
+    jl .continue                        ; Continue if not
+    add di, SCREEN_WIDTH                ; Jump interlaced line
+    xor dx, dx                          ; Zero line counter
     .continue:
 
-    cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2) ; interlaced
-    jl .image_loop
-    .done:
+    cmp bx, SCREEN_WIDTH*(SCREEN_HEIGHT/2)  ; Check if full image drown
+    jl .image_loop                      ; Continu if not
 
     pop ds
     pop es
 ret
 
 ; =========================================== DRAW WINDOW ===================|80
+; Window is drown over 8x8 grid in sprites size (16px each).
 ; IN:
-; AX - Position
-; BX - size
+; AX - Position of top/left corner; high:Y, low:X
+; BX - Size of window; high: height, low: width
 draw_window:
 
-  push bx
+  .calculate_window_position
+  push bx                               ; Save the size
   xor di, di
   xor bx, bx
-  mov bl, ah        ; Y coordinate
-  shl bx, 0x3
-  imul bx, SCREEN_WIDTH
-  and ax, 0x00FF
-  shl ax, 0x3
-  add bx, ax        ; Y * 64 + X
-  add di, bx
+  mov bl, ah                            ; Y coord from high bits
+  shl bx, 0x3                           ; Y * 8 (grid size)
+  imul bx, SCREEN_WIDTH                 ; Multiply by vertical lines
+  and ax, 0x00FF                        ; X, remove high bits, keep low bits
+  shl ax, 0x3                           ; X * 8 (grid size)
+  add bx, ax                            ; Add X to coords
+  add di, bx                            ; Move to destination index
 
-  pop bx
+  pop bx                                ; Restore size
 
-  mov ax, TILE_WINDOW_1
+  mov ax, TILE_WINDOW_1                 ; Set first sprite (top/left corner)
   call draw_sprite
-  add di, 0x10
-  inc ax
-  movzx cx, bl
-  sub cx, 2
-  .draw_line_1:
+  add di, SPRITE_SIZE                   ; Move index by sprite size
+
+  inc ax                                ; Set next sprite (top)
+  movzx cx, bl                          ; Set width
+  sub cx, 2                             ; Minus corners
+  .draw_top_line:                       ; Draw the sprites
     call draw_sprite
-    add di, 0x10
-  loop .draw_line_1
-  inc ax
+    add di, SPRITE_SIZE                 ; Move index by sprite size
+  loop .draw_top_line
+
+  inc ax                                ; Set next sprite (top/right corner)
   call draw_sprite
-  add di, 0x10
+  add di, SPRITE_SIZE                   ; Move index by sprite size
 
-  movzx dx, bl
-  shl dx, 0x4
+  movzx dx, bl                          ; Save the window width
+  shl dx, 0x4                           ; Multiply by sprite size (16)
 
-  movzx cx, bh
-  cmp cx, 0x2
-  jle .skip_middle
-  sub cx, 0x2
-  .next_line:
+  movzx cx, bh                          ; Get the height
+  cmp cx, 0x2                           ; Check if less than 2
+  jle .skip_middle                      ; Skip middle drawing if true
+  sub cx, 0x2                           ; Reduce height by top and bottom part
+
+  .draw_middle_line:
     push cx
 
     add di, SCREEN_WIDTH*16
@@ -1239,7 +1237,7 @@ draw_window:
     add di, 0x10
 
     pop cx
-  loop .next_line
+  loop .draw_middle_line
 
   .skip_middle:
 
@@ -1719,6 +1717,10 @@ init_entities:
 ret
 
 draw_cursor:
+  mov si, [_CURSOR_Y_]    ; Absolute Y map coordinate
+  shl si, 7               ; Y * 128 (optimized shl for *128)
+  add si, [_CURSOR_X_]    ; + absolute X map coordinate
+
   mov bx, [_CURSOR_Y_]    ; Y coordinate
   sub bx, [_VIEWPORT_Y_]  ; Y - Viewport Y
   shl bx, 4               ; Y * 16
@@ -1733,7 +1735,7 @@ draw_cursor:
   push SEGMENT_TERRAIN_FOREGROUND
   pop ds
 
-  mov al, [ds:di]
+  mov al, [ds:si]
   and al, CURSOR_TYPE_MASK
   rol al, CURSOR_TYPE_ROL
   add al, TILE_CURSOR_PAN
@@ -1870,12 +1872,14 @@ draw_ui:
   mov dh, UI_STATS_TXT_LINE
   mov dl, 0x04
   mov bl, COLOR_WHITE
+  mov cx, 100
   call draw_number
 
   mov si, [_CURSOR_Y_]  ; Blue resource count
   mov dh, UI_STATS_TXT_LINE+1
   mov dl, 0x04
   mov bl, COLOR_WHITE
+  mov cx, 100
   call draw_number
 
   mov di, UI_STATS_GFX_LINE+90   ; Resource blue icon
@@ -1886,6 +1890,7 @@ draw_ui:
   mov dh, UI_STATS_TXT_LINE
   mov dl, 0x0D
   mov bl, COLOR_WHITE
+  mov cx, 10000
   call draw_number
 
    mov di, UI_STATS_GFX_LINE+154
@@ -1896,6 +1901,7 @@ draw_ui:
    mov dh, UI_STATS_TXT_LINE
    mov dl, 0x15
    mov bl, COLOR_WHITE
+   mov cx, 10000
    call draw_number
 
    mov di, UI_STATS_GFX_LINE+218
@@ -1906,6 +1912,7 @@ draw_ui:
    mov dh, UI_STATS_TXT_LINE
    mov dl, 0x1D
    mov bl, COLOR_WHITE
+   mov cx, 10000
    call draw_number
 
 ret
