@@ -3,7 +3,7 @@
 
 # Tools
 ASM = fasm
-BOCHS = bochs -q -debugger -f .bochsrc
+BOCHS = bochs -q -f .bochsrc
 DD = dd
 MKDIR = mkdir -p
 RM = rm -f

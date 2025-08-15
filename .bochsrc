@@ -1,5 +1,5 @@
-romimage: file=/usr/local/share/bochs/BIOS-bochs-legacy
-vgaromimage: file=/usr/local/share/bochs/VGABIOS-lgpl-latest.bin
+romimage: file=/usr/share/bochs/BIOS-bochs-legacy
+vgaromimage: file=/usr/share/bochs/VGABIOS-lgpl-latest
 display_library: x, options="gui_debug"
 
 cpu: model=pentium, count=1

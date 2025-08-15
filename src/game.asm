@@ -59,7 +59,7 @@ _CURSOR_Y_                equ _BASE_ + 0x0D   ; 2 bytes
 _SCENE_MODE_              equ _BASE_ + 0x0F   ; 1 byte
 _EMPTY_                   equ _BASE_ + 0x10   ; 2 bytes
 _ECONOMY_BLUE_RES_        equ _BASE_ + 0x12   ; 2 bytes
-_ECONOMY_YELLOW_RES_      equ _BASE_ + 0x14   ; 2 bytes
+_ECONOMY_YELLOW_RES_      equ _BASE_ + 0x14   ; 2 bytesg
 _ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
 _SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
@@ -252,7 +252,7 @@ INFRASTRUCTURE_SHIFT            equ 0x7
 ; '- cursor type (4)
 ;
 FORGROUND_SPRITE_MASK           equ 0x1F
-FOREGROUND_SPRITE_CLIP           equ 0xE0
+FOREGROUND_SPRITE_CLIP          equ 0xE0
 CART_DRAW_MASK                  equ 0x20
 CART_DRAW_SHIFT                 equ 0x05
 CURSOR_TYPE_MASK                equ 0xC0
@@ -614,16 +614,38 @@ game_logic:
     mov bx, SFX_BUILD
     call play_sfx
 
-    mov di, [_CURSOR_Y_]                ; calculate map position
+    mov di, [_CURSOR_Y_]                ; Calculate map position
     shl di, 7   ; Y * 128
     add di, [_CURSOR_X_]
 
-    mov al, [_GAME_TICK_]
+    mov al, [_GAME_TICK_]               ; For quick random number
 
     push SEGMENT_TERRAIN_BACKGROUND
     pop es
     push SEGMENT_TERRAIN_FOREGROUND
     pop ds
+
+    .decide_on_action:
+        mov al, [es:di]
+        xor bx, bx
+        mov bl, al
+        and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
+        cmp bl, 0
+        jnz .is_infrastructure
+        .is_terrain:
+            ;test al, TERRAIN_TRAVERSAL_MASK
+            ;jz .no_action
+XXX
+            mov bl, [ds:di]
+            and bl, CURSOR_TYPE_MASK
+            rol bl, CURSOR_TYPE_ROL
+            cmp bl, CURSOR_ICON_ADD
+            jz .place_rail
+
+
+        .is_infrastructure:
+
+        jmp .no_action
 
     .place_rail:
       and al, 0x1                       ; TILE_MUD_1 or TILE_MUD_2
@@ -634,19 +656,20 @@ game_logic:
       call recalculate_rails
       dec di
       call recalculate_rails
-      add di, 2
+      add dupdate_cursor
       call recalculate_rails
-      sub di, MAP_SIZE+1
+      sub di, MAP_SIupdate_cursor
       call recalculate_rails
-      add di, MAP_SIZE*2
+      add di, MAP_SIupdate_cursor
       call recalculate_rails
-    .skip_place_rail:
+      jmp .no_acupdate_cursor
 
-    .toggle_switch:
+    .toggle_swiupdate_cursor
     .place_station:
     .place_foundation:
     .place_building:
 
+    .no_action:
     pop ds
     pop es
   jmp .redraw_tile
@@ -704,14 +727,49 @@ StateTransitionTable:
 
   db STATE_MENU,          KB_ESC,   STATE_QUIT
   db STATE_MENU,          KB_ENTER, STATE_GAME_INIT
+  jmp .done
+
+  .update_cursor:
+  mov ax, CURSOR_ICON_ADD
+  ror al, CURSOR_TYPE_ROL
+  mov byte [ds:di+1], al
+  mov byte [ds:di-1], al
   db STATE_MENU,          KB_F1,    STATE_GAME_NEW
   db STATE_MENU,          KB_F2,    STATE_DEBUG_VIEW_INIT
+  jmp .done
+
+  .update_cursor:
+  mov ax, CURSOR_ICON_ADD
+  ror al, CURSOR_TYPE_ROL
+  mov byte [ds:di+1], al
+  mov byte [ds:di-1], al
   db STATE_MENU,          KB_F3,    STATE_DEBUG_VIEW_INIT
   db STATE_MENU,          KB_F4,    STATE_HELP_INIT
+  jmp .done
+
+  .update_cursor:
+  mov ax, CURSOR_ICON_ADD
+  ror al, CURSOR_TYPE_ROL
+  mov byte [ds:di+1], al
+  mov byte [ds:di-1], al
 
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
+  jmp .done
+
+  .update_cursor:
+  mov ax, CURSOR_ICON_ADD
+  ror al, CURSOR_TYPE_ROL
+  mov byte [ds:di+1], al
+  mov byte [ds:di-1], al
 
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
+  jmp .done
+
+  .update_cursor:
+  mov ax, CURSOR_ICON_ADD
+  ror al, CURSOR_TYPE_ROL
+  mov byte [ds:di+1], al
+  mov byte [ds:di-1], al
   db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT
   db STATE_MAP_VIEW,      KB_ESC,   STATE_MENU_INIT
   db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
@@ -733,16 +791,19 @@ InputTableEnd:
 
 
 
-; ======================================= PROCEDURES FOR GAME STATES ========|80
+; ======================================= PROCEDURES FOR GAME STATES ===C====|80
 
 init_engine:
   call reset_to_default_values
   call init_audio_system
   call decompress_tiles
-  call generate_map
+  call generate_map             ; For quick random number
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN_INIT
 
 ret
+
+.decide_on_action:
+
 
 reset_to_default_values:
   mov word [_GAME_TICK_], 0x0
@@ -1398,6 +1459,19 @@ build_initial_base:
   add ax, TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
   mov byte [ds:di-MAP_SIZE], al
 
+  .place_initial_railstation:
+  add di, MAP_SIZE*2
+  mov ax, TILE_STATION
+  ;add ax, INFRASTRUCTURE_MASK
+  add ax, RAIL_MASK
+  mov byte [es:di], al
+  mov ax, TILE_RAILS_1
+  mov byte [ds:di], al
+  mov ax, CURSOR_ICON_ADD
+  ror al, CURSOR_TYPE_ROL
+  mov byte [ds:di+1], al
+  mov byte [ds:di-1], al
+
   pop ds
   pop es
 ret
@@ -1512,7 +1586,7 @@ ret
 recalculate_rails:
   xor ax, ax
   test byte [es:di], RAIL_MASK
-  jz .done
+  jz .update_cursor
 
   .test_up:
     test byte [es:di-MAP_SIZE], RAIL_MASK
@@ -1583,6 +1657,10 @@ recalculate_rails:
     and byte [ds:di], CURSOR_TYPE_CLIP  ; clear cursor
     ror al, CURSOR_TYPE_ROL
     add byte [ds:di], al
+    jmp .done
+
+    .update_cursor:
+
   .done:
 ret
 
