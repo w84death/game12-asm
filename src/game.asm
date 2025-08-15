@@ -635,7 +635,7 @@ game_logic:
         .is_terrain:
             ;test al, TERRAIN_TRAVERSAL_MASK
             ;jz .no_action
-XXX
+
             mov bl, [ds:di]
             and bl, CURSOR_TYPE_MASK
             rol bl, CURSOR_TYPE_ROL
@@ -656,15 +656,15 @@ XXX
       call recalculate_rails
       dec di
       call recalculate_rails
-      add dupdate_cursor
+      add di, 2
       call recalculate_rails
-      sub di, MAP_SIupdate_cursor
+      sub di, MAP_SIZE+1
       call recalculate_rails
-      add di, MAP_SIupdate_cursor
+      add di, MAP_SIZE*2
       call recalculate_rails
-      jmp .no_acupdate_cursor
+      jmp .no_action
 
-    .toggle_swiupdate_cursor
+    .toggle_switch:
     .place_station:
     .place_foundation:
     .place_building:
@@ -727,49 +727,12 @@ StateTransitionTable:
 
   db STATE_MENU,          KB_ESC,   STATE_QUIT
   db STATE_MENU,          KB_ENTER, STATE_GAME_INIT
-  jmp .done
-
-  .update_cursor:
-  mov ax, CURSOR_ICON_ADD
-  ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+1], al
-  mov byte [ds:di-1], al
   db STATE_MENU,          KB_F1,    STATE_GAME_NEW
   db STATE_MENU,          KB_F2,    STATE_DEBUG_VIEW_INIT
-  jmp .done
-
-  .update_cursor:
-  mov ax, CURSOR_ICON_ADD
-  ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+1], al
-  mov byte [ds:di-1], al
   db STATE_MENU,          KB_F3,    STATE_DEBUG_VIEW_INIT
   db STATE_MENU,          KB_F4,    STATE_HELP_INIT
-  jmp .done
-
-  .update_cursor:
-  mov ax, CURSOR_ICON_ADD
-  ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+1], al
-  mov byte [ds:di-1], al
-
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
-  jmp .done
-
-  .update_cursor:
-  mov ax, CURSOR_ICON_ADD
-  ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+1], al
-  mov byte [ds:di-1], al
-
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
-  jmp .done
-
-  .update_cursor:
-  mov ax, CURSOR_ICON_ADD
-  ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+1], al
-  mov byte [ds:di-1], al
   db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT
   db STATE_MAP_VIEW,      KB_ESC,   STATE_MENU_INIT
   db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
@@ -1659,8 +1622,17 @@ recalculate_rails:
     add byte [ds:di], al
     jmp .done
 
-    .update_cursor:
+  .update_cursor:
+    mov byte al, [es:di]
+    test al, TERRAIN_TRAVERSAL_MASK
+    jz .done
+    and al, TERRAIN_SECOND_LAYER_DRAW_CLIP
+    cmp al, 0x0
+    jnz .done
 
+    mov ax, CURSOR_ICON_ADD
+    ror al, CURSOR_TYPE_ROL
+    mov byte [ds:di], al
   .done:
 ret
 
