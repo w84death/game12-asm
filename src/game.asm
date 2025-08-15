@@ -1,5 +1,5 @@
 ; ==============================================================================
-; Cortex Labs: 2D Game Engine for x86 processors
+; Cortex Labs: 2D Strategic game for x86 processors (and MS-DOS)
 ; CODENAME: GAME12
 ;
 ; Fast rendering of big maps with full screen viewport.
@@ -20,7 +20,7 @@
 ;
 ; Theoretical minimum requirements:
 ; * CPU: 386 SX, 16Mhz
-; * Graphics: EGA Enchanced (8x16)
+; * Graphics: VGA
 ; * RAM: 512KB
 ;
 ; Programs used for production:
@@ -30,7 +30,7 @@
 ;   - custom tool for RLE image compression
 ;
 ; ==============================================================================
-; Latest revision: 06/2025
+; Latest revision: 08/2025
 ; ==============================================================================
 
 org 0x0100
