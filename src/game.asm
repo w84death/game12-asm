@@ -1428,15 +1428,19 @@ build_initial_base:
   mov ax, TILE_STATION
   add ax, RAIL_MASK
   mov byte [es:di], al
+  mov ax, TILE_MUD_GRASS_1
+  add al, TERRAIN_TRAVERSAL_MASK
+  mov byte [es:di-1], al
+  mov byte [es:di+1], al
   mov al, [es:di+MAP_SIZE]
   and al, TERRAIN_TRAVERSAL_CLIP
   mov byte [es:di+MAP_SIZE], al
-  mov ax, TILE_RAILS_1
+  mov ax, TILE_RAILS_1-TILE_FOREGROUND_SHIFT
   mov byte [ds:di], al
   mov ax, CURSOR_ICON_ADD
   ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+1], al
   mov byte [ds:di-1], al
+  mov byte [ds:di+1], al
 
   pop ds
   pop es
