@@ -236,6 +236,7 @@ TILE_FRAME_8                    equ 0x55
 BACKGROUND_SPRITE_MASK          equ 0xF
 TERRAIN_TRAVERSAL_MASK          equ 0x10
 TERRAIN_TRAVERSAL_SHIFT         equ 0x4
+TERRAIN_TRAVERSAL_CLIP          equ 0xEF
 TERRAIN_SECOND_LAYER_DRAW_CLIP  equ 0xE0
 RAIL_MASK                       equ 0x20
 RAIL_SHIFT                      equ 0x5
@@ -1425,9 +1426,11 @@ build_initial_base:
   .place_initial_railstation:
   add di, MAP_SIZE*2
   mov ax, TILE_STATION
-  ;add ax, INFRASTRUCTURE_MASK
   add ax, RAIL_MASK
   mov byte [es:di], al
+  mov al, [es:di+MAP_SIZE]
+  and al, TERRAIN_TRAVERSAL_CLIP
+  mov byte [es:di+MAP_SIZE], al
   mov ax, TILE_RAILS_1
   mov byte [ds:di], al
   mov ax, CURSOR_ICON_ADD
@@ -1629,6 +1632,7 @@ recalculate_rails:
     and al, TERRAIN_SECOND_LAYER_DRAW_CLIP
     cmp al, 0x0
     jnz .done
+
 
     mov ax, CURSOR_ICON_ADD
     ror al, CURSOR_TYPE_ROL
