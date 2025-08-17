@@ -197,7 +197,7 @@ TILE_SILO_RED                   equ 0x3B
 TILE_CURSOR_PAN                 equ 0x3C
 TILE_CURSOR_BUILD               equ 0x3D
 TILE_CURSOR_EDIT                equ 0x3E
-TILE_TARGET                     equ 0x3F
+TILE_CURSOR_BUILDING            equ 0x3F
 
 TILE_WINDOW_1                   equ 0x40
 TILE_WINDOW_2                   equ 0x41
