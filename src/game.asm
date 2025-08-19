@@ -288,9 +288,9 @@ CART_RIGHT                      equ 0x03
 TERRAIN_RULES_MASK              equ 0x03
 
 CURSOR_ICON_PAN                 equ 0x00
-CURSOR_ICON_ADD                 equ 0x01
+CURSOR_ICON_PLACE_RAIL          equ 0x01
 CURSOR_ICON_EDIT                equ 0x02
-CURSOR_ICON_SELECTED            equ 0x03
+CURSOR_ICON_PLACE_BUILDING      equ 0x03
 
 CURSOR_MODE_PAN                 equ 0x00
 CURSOR_MODE_PLACE_RAIL          equ 0x01
@@ -634,27 +634,32 @@ game_logic:
         cmp bl, 0
         jnz .is_infrastructure
         .is_terrain:
+            ; is it a foundation?
             ;test al, TERRAIN_TRAVERSAL_MASK
             ;jz .no_action
 
             mov bl, [ds:di]
             and bl, CURSOR_TYPE_MASK
             rol bl, CURSOR_TYPE_ROL
-            cmp bl, CURSOR_ICON_ADD
+            cmp bl, CURSOR_ICON_PLACE_RAIL
             jz .place_rail
 
 
         .is_infrastructure:
+        ; is it a switch?
+        ; is it a rail? -> station
+
 
         jmp .no_action
 
     .place_rail:
       and al, 0x1                       ; TILE_MUD_1 or TILE_MUD_2
+      add al, RAIL_MASK
       mov byte [es:di], al
-      add byte [es:di], RAIL_MASK
-      add byte [ds:di], TILE_RAILS_1-TILE_FOREGROUND_SHIFT
+      mov byte [ds:di], TILE_RAILS_1-TILE_FOREGROUND_SHIFT
 
       call recalculate_rails
+
       dec di
       call recalculate_rails
       add di, 2
@@ -1407,7 +1412,7 @@ build_initial_base:
   mov byte [es:di], al
   mov byte [es:di-MAP_SIZE], al
 
-  mov ax, CURSOR_ICON_ADD
+  mov ax, CURSOR_ICON_PLACE_BUILDING
   ror al, CURSOR_TYPE_ROL
   mov byte [ds:di+1], al
   mov byte [ds:di-1], al
@@ -1435,9 +1440,13 @@ build_initial_base:
   mov al, [es:di+MAP_SIZE]
   and al, TERRAIN_TRAVERSAL_CLIP
   mov byte [es:di+MAP_SIZE], al
+  mov ax, CURSOR_ICON_PLACE_BUILDING
+  ror al, CURSOR_TYPE_ROL
+  mov byte [ds:di+MAP_SIZE], al
   mov ax, TILE_RAILS_1-TILE_FOREGROUND_SHIFT
   mov byte [ds:di], al
-  mov ax, CURSOR_ICON_ADD
+
+  mov ax, CURSOR_ICON_PLACE_RAIL
   ror al, CURSOR_TYPE_ROL
   mov byte [ds:di-1], al
   mov byte [ds:di+1], al
@@ -1614,7 +1623,7 @@ recalculate_rails:
     jmp .save_switch
   .prepare_no_switch:
     mov dl, 0
-    mov ax, CURSOR_ICON_ADD
+    mov ax, CURSOR_ICON_PLACE_RAIL
 
   .save_switch:
     push es
@@ -1638,7 +1647,7 @@ recalculate_rails:
     jnz .done
 
 
-    mov ax, CURSOR_ICON_ADD
+    mov ax, CURSOR_ICON_PLACE_RAIL
     ror al, CURSOR_TYPE_ROL
     mov byte [ds:di], al
   .done:
