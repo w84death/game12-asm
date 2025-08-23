@@ -428,7 +428,9 @@ check_keyboard:
   jz .keyboard_done
 
   mov ah, 00h                           ; BIOS keyboard read function
-  int 16h                               ; Call BIOS interrupt
+  int 16h
+
+; Call BIOS interrupt
 
   ; ========================================= STATE TRANSITIONS ============|80
   mov si, StateTransitionTable
@@ -617,9 +619,7 @@ game_logic:
 
     mov di, [_CURSOR_Y_]                ; Calculate map position
     shl di, 7   ; Y * 128
-    add di, [_CURSOR_X_]
-
-    mov al, [_GAME_TICK_]               ; For quick random number
+    add di, [_CURSOR_X_]               ; For quick random number
 
     push SEGMENT_TERRAIN_BACKGROUND
     pop es
@@ -634,18 +634,17 @@ game_logic:
         cmp bl, 0
         jnz .is_infrastructure
         .is_terrain:
-            ; is it a foundation?
-            ;test al, TERRAIN_TRAVERSAL_MASK
-            ;jz .no_action
+          mov bl, [ds:di]
+          and bl, CURSOR_TYPE_MASK
+          rol bl, CURSOR_TYPE_ROL
+          cmp bl, CURSOR_ICON_PLACE_BUILDING
+          jz .place_building
 
-            mov bl, [ds:di]
-            and bl, CURSOR_TYPE_MASK
-            rol bl, CURSOR_TYPE_ROL
-            cmp bl, CURSOR_ICON_PLACE_RAIL
-            jz .place_rail
-
+          cmp bl, CURSOR_ICON_PLACE_RAIL
+          jz .place_rail
 
         .is_infrastructure:
+
         ; is it a switch?
         ; is it a rail? -> station
 
@@ -653,6 +652,7 @@ game_logic:
         jmp .no_action
 
     .place_rail:
+      mov al, [_GAME_TICK_]
       and al, 0x1                       ; TILE_MUD_1 or TILE_MUD_2
       add al, RAIL_MASK
       mov byte [es:di], al
@@ -674,6 +674,18 @@ game_logic:
     .place_station:
     .place_foundation:
     .place_building:
+      mov al, [es:di]
+      or al, INFRASTRUCTURE_MASK
+      mov byte [es:di], al
+
+      mov al, CURSOR_ICON_EDIT
+      ror al, CURSOR_TYPE_ROL
+      mov bx, [_GAME_TICK_]
+      and bx, 0x3
+      sub bx, TILE_FOREGROUND_SHIFT
+      add al, bl
+      mov byte [ds:di], al
+      jmp .no_action
 
     .no_action:
     pop ds

@@ -108,11 +108,3 @@ Placing rafineries is very costly. Build them in strategic place to and bring or
 
 1 0001
 3 0011
-
-
-## placing infrastructure
-
-F2 the tool
-1 - placing rails
-2 - placing station under rails
-3 - placing fudation (near station)

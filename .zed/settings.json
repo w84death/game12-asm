@@ -23,7 +23,7 @@
 
   "theme": {
     "mode": "system",
-    "light": "Modus Vivendi Tritanopia",
+    "light": "Base16 Atelier Cave Light",
     "dark": "Base16 summercamp"
   },
   "soft_wrap": "preferred_line_length",

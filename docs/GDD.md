@@ -42,21 +42,18 @@ Players would need to balance the efficiency of long-distance routes against sho
   - build in the factory
   - runs forward as long as possible
   - when on T-junction takes turn based on switch
-  - each has a battery to run, stops if run out of power
-  - recharges at charging station (half battery using one, full when using two)
   - takes cargo at extractor
   - delivers cargo at collector
   - moves faster when empty, slower when cargo loaded
 - station
   - build on a straight rails
-  - spawns two fundaments (up/down or left/right ancient tile)
-- fundaments
-  - charging station / solar panels
-    - re-charges pods that stops on that station
-    - one solar power charges half of pod battery
-    - can be combined to charge full
+  - spawns two station extends (up/down or left/right ancient tile)
+- station extends fundaments
   - extractor
     - extract resources 2 tiles away (5x5 grid)
+- foundaments
+  - collector
+  - silos
   - factory
     - spawning/maintanance for pods
     - each factory supports X number of pods at once
@@ -80,12 +77,12 @@ Goal of the game, fill up collector to send rocket to the earth.
 
 ### Interaction modes
 Use cursor to move over map. Press spacebar, if cursor is:
-- near rail trakcs -> expand tracks
-- on the tracks -> build station (if horizontal/vertical)
-- on the foudation -> selec building to build
+- near rail tracks -> expand tracks
+- on the (straight) tracks -> build station
+- on the station extension (near station) -> select building to build
 - on building -> settings
 - on switch -> flip switch
-
+- on foundation (base) -> select building to build
 TAB - toggle mini map view
 ESC - back to menu
 
@@ -160,57 +157,55 @@ Metadata 2b:
 
 ## Terrain rendering
 - render background sprite
-- render forground sprite(s):
-  - check type
-  - rail station
-  - rail
-  - rail switch
-  - resource
-  - building
 
-## Rail System
-
-Calculate once
-set sprites as needed
-
-when expanding:
-  - recaclulate type:
-    - for all near 8 tiles
-  - update sprites
-  - check if switch needed
-    - put proper switch
-    - set switch bit to initialized
-    - if not needed set switch bit to 0
-
+TBC
 
 ## UI
 
 if ARROWS
   - moves cursor
-  - if cursor 2-4 tiles to the edge
+    - redraw old and new position
+  - if cursor 2 tiles to the edge
     - shift view
     - update cursor position
+    - redrawn full screen
 
 if hit SPACEBAR
   - on empty terrain
     - if tile is next to rails
       - build rail
       - recalculate rails at this spot (9 tiles)
+      - set cursors around to rail building
     - if on the rail
       - if not conjunction or crossing
         - build station
           - and spawn fundaments
             - up/down or left/right (if possible)
             - set non-movable bit
+            - set cursor to build building
       - if switch
         - swap switch
     - if on fundament
       - [popup window] to choose type of infrastructure
       - spawn building
+      - set cursor to configuration
     - if on infrastructure
       - [popup window] show building information
     - if on resource
       - [popup window] show resource information
 
-if hit TAB
-  - [popup window] show map
+
+## Rail System
+
+## Buildings
+
+### Radar
+Simple option: When clicked shows mini map of the whole map. Only one is needed.
+Nice to have option: shows only map range around the radar. Forces player to spawn radars on rail system to see whole map. Clicking on any of the radars reveals whole system connected, covering the visible map by all radars. Radars placed strategicaly will eventualy shows whole map.
+
+### Colector
+
+
+
+### Silos
+Keeps the raw resouce from colectors.
