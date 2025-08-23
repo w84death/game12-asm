@@ -70,6 +70,7 @@ _ENTITIES_                equ 0x0000  ; Entities 128*128*1b= 0x4000
 
 ; =========================================== GAME STATES ===================|80
 
+; Check StateJumpTable for functions IDs (n-th in a table)
 STATE_INIT_ENGINE       equ 0
 STATE_QUIT              equ 1
 STATE_TITLE_SCREEN_INIT equ 2
@@ -85,9 +86,8 @@ STATE_DEBUG_VIEW_INIT   equ 11
 STATE_DEBUG_VIEW        equ 12
 STATE_HELP_INIT         equ 13
 STATE_HELP              equ 14
-STATE_GENERATE_MAP      equ 15
-STATE_WINDOW_INIT       equ 16
-STATE_WINDOW            equ 17
+STATE_WINDOW_INIT       equ 15
+STATE_WINDOW            equ 16
 
 ; =========================================== KEYBOARD CODES ================|80
 
@@ -650,9 +650,9 @@ game_logic:
           mov bl, [ds:di]
           and bl, CURSOR_TYPE_MASK
           rol bl, CURSOR_TYPE_ROL
+
           cmp bl, CURSOR_ICON_PLACE_BUILDING
           jz .place_building
-
           cmp bl, CURSOR_ICON_PLACE_RAIL
           jz .place_rail
 
@@ -687,8 +687,10 @@ game_logic:
     .place_station:
     .place_foundation:
     .place_building:
-      call show_menu_base_buildings
-      jmp .no_action
+      pop ds
+      pop es
+      mov byte [_GAME_STATE_], STATE_WINDOW_INIT
+      jmp .done
 
     .no_action:
     pop ds
@@ -718,6 +720,13 @@ ret
 
 
 window_logic:
+  .draw_window:
+    ; check scene mode
+    mov ax, 0x040C
+    mov bx, 0x0207
+    call draw_window
+    jmp .done
+
   .selection_up:
   jmp .done
 
@@ -732,11 +741,6 @@ window_logic:
 
 ret
 
-
-show_menu_base_buildings:
-
-
-ret
 
 menu_base_buildings_execute:
   mov al, [es:di]
@@ -757,6 +761,7 @@ ret
 
 ; =========================================== LOGIC FOR GAME STATES =========|80
 
+; This table needs to corespond to the STATE_ variables IDs
 StateJumpTable:
   dw init_engine
   dw exit
@@ -816,6 +821,7 @@ InputTable:
   db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_DOWN
   dw window_logic.selection_down
   db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_ENTER
+  mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
   dw window_logic.selection_enter
 InputTableEnd:
 
@@ -831,9 +837,6 @@ init_engine:
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN_INIT
 
 ret
-
-.decide_on_action:
-
 
 reset_to_default_values:
   mov word [_GAME_TICK_], 0x0
@@ -1036,10 +1039,9 @@ ret
 
 
 init_window:
-  ; check scene mode
-  mov ax, 0x040C
-  mov bx, 0x0207
-  call draw_window
+  call window_logic.draw_window
+  mov byte [_GAME_STATE_], STATE_WINDOW
+  mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
 ret
 
 live_window:
@@ -1702,14 +1704,14 @@ recalculate_rails:
     mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
   .prepare_station:
-    mov dl, 0
+    mov dl, 0                           ; No switch
     mov ax, CURSOR_ICON_PLACE_BUILDING
-    test byte [es:di], INFRASTRUCTURE_MASK
+    test byte [es:di], INFRASTRUCTURE_MASK  ; Check if its a station
     jz  .save_switch
     mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
   .prepare_no_switch:
-    mov dl, 0
+    mov dl, 0                           ; No switch, or last rail (no station)
     mov ax, CURSOR_ICON_PAN
 
   .save_switch:
