@@ -746,6 +746,20 @@ window_logic:
       mov dx, 0x060E
       mov bl, COLOR_WHITE
       call draw_text
+
+      mov si, WindowCloseWindowText
+      mov dx, 0x080E
+      mov bl, COLOR_YELLOW
+      call draw_text
+
+      mov si, WindowStationSelectionArrayText
+      add dh, 0x2
+      .station_array:
+        cmp byte [si], 0x00
+        jz .done
+        call draw_text
+        add dh, 0x2
+      jmp .station_array
       jmp .done
 
     .base_buildings:
@@ -757,19 +771,47 @@ window_logic:
       mov dx, 0x040C
       mov bl, COLOR_WHITE
       call draw_text
+
+      mov si, WindowCloseWindowText
+      mov dx, 0x060C
+      mov bl, COLOR_YELLOW
+      call draw_text
+
+      mov si, WindowBaseSelectionArrayText
+      add dh, 0x2
+      .base_array:
+        cmp byte [si], 0x00
+        jz .done
+        call draw_text
+        add dh, 0x2
+      jmp .base_array
+
       jmp .done
 
     .remote_buildings:
-      mov ax, 0x040C
-      mov bx, 0x0207
+      mov ax, 0x040A
+      mov bx, 0x080A
       call draw_window
 
       mov si, WindowRemoteBuildingsText
-      mov dx, 0x040F
+      mov dx, 0x040C
       mov bl, COLOR_WHITE
       call draw_text
 
-      jmp .done
+      mov si, WindowCloseWindowText
+      mov dx, 0x060C
+      mov bl, COLOR_YELLOW
+      call draw_text
+
+      mov si, WindowBaseSelectionArrayText
+      add dh, 0x2
+      .remote_array:
+        cmp byte [si], 0x00
+        jz .done
+        call draw_text
+        add dh, 0x2
+      jmp .remote_array
+    jmp .done
 
   .selection_up:
   jmp .done
@@ -2253,13 +2295,25 @@ WindowBaseBuildingsText db ' Base buildings ',0x0
 WindowStationText db ' Station ',0x0
 WindowRemoteBuildingsText db ' Remote buildings ',0x0
 
+WindowCloseWindowText db 'Close window',0x0
+WindowBuildText db 'Build: ',0x0
+
 WindowBaseSelectionArrayText:
-  db '[Close window]',0x0
   db 'Expand foundation',0x0
   db 'Silos',0x0
   db 'Factory',0x0
+  db 'Radar',0x0
   db 'Laboratory',0x0
   db 'Pod Station',0x0
+  db 0x00
+
+WindowRemoteSelectionArrayText:
+  db 'Extractor',0x0
+  db 'Radar',0x0
+  db 0x00
+
+WindowStationSelectionArrayText:
+  db 'Station',0x0
   db 0x00
 ; =========================================== TERRAIN GEN RULES =============|80
 
