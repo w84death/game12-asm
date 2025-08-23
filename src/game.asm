@@ -675,8 +675,9 @@ game_logic:
     jmp .no_action
 
     .place_building:
+      mov al, [es:di]
       test al, RAIL_MASK
-      jz .station
+      jnz .station
 
       .base_building:
         mov bx, SCENE_MODE_BASE_BUILDINGS
@@ -742,18 +743,18 @@ window_logic:
       call draw_window
 
       mov si, WindowStationText
-      mov dx, 0x050F
+      mov dx, 0x060E
       mov bl, COLOR_WHITE
       call draw_text
       jmp .done
 
     .base_buildings:
-      mov ax, 0x040C
-      mov bx, 0x0807
+      mov ax, 0x040A
+      mov bx, 0x080A
       call draw_window
 
       mov si, WindowBaseBuildingsText
-      mov dx, 0x040F
+      mov dx, 0x040C
       mov bl, COLOR_WHITE
       call draw_text
       jmp .done
@@ -2248,9 +2249,9 @@ HelpArrayText:
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
 
-WindowBaseBuildingsText db 'Base buildings:',0x0
-WindowStationText db 'Station:',0x0
-WindowRemoteBuildingsText db 'Remote buildings:',0x0
+WindowBaseBuildingsText db ' Base buildings ',0x0
+WindowStationText db ' Station ',0x0
+WindowRemoteBuildingsText db ' Remote buildings ',0x0
 
 WindowBaseSelectionArrayText:
   db '[Close window]',0x0
