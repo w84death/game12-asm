@@ -319,9 +319,10 @@ SCENE_MODE_MAIN_MENU            equ 0x00
 SCENE_MODE_HELP_PAGE1           equ 0x02
 SCENE_MODE_HELP_PAGE2           equ 0x03
 
-MODE_GAMEPLAY                   equ 0x00
+SCENE_MODE_GAMEPLAY             equ 0x00
 SCENE_MODE_BASE_BUILDINGS       equ 0x01
 SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
+SCENE_MODE_STATION              equ 0x03
 
 UI_STATS_WINDOW_POS             equ 0x1502
 UI_STATS_GFX_LINE               equ 320*175
@@ -475,7 +476,7 @@ check_keyboard:
     cmp bl, [si]                        ; Check current state
     jne .next_input
 
-    cmp byte [si+1], MODE_GAMEPLAY
+    cmp byte [si+1], SCENE_MODE_GAMEPLAY
     je .check_keypress
     mov bl, [_SCENE_MODE_]
     cmp bl, [si+1]                      ; Check current mode
@@ -671,14 +672,25 @@ game_logic:
       jmp .no_action
 
     .toggle_switch:
-    .place_station:
-    .place_foundation:
+    jmp .no_action
+
     .place_building:
+      test al, RAIL_MASK
+      jz .station
+
+      .base_building:
+        mov bx, SCENE_MODE_BASE_BUILDINGS
+        jmp .pop_window
+
+      .station:
+        mov bx, SCENE_MODE_STATION
+        jmp .pop_window
+
+      .pop_window:
       pop ds
       pop es
       mov byte [_GAME_STATE_], STATE_WINDOW_INIT
-
-      mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
+      mov byte [_SCENE_MODE_], bl
       jmp .done
 
     .no_action:
@@ -709,12 +721,54 @@ ret
 
 
 window_logic:
-  .draw_window:
-    ; check scene mode
-    mov ax, 0x040C
-    mov bx, 0x0207
-    call draw_window
-    jmp .done
+  .create_window:
+
+    cmp byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
+    jz .base_buildings
+    cmp byte [_SCENE_MODE_], SCENE_MODE_REMOTE_BUILDINGS
+    jz .remote_buildings
+    cmp byte [_SCENE_MODE_], SCENE_MODE_STATION
+    jz .station
+
+    .default:
+      mov ax, 0x040C
+      mov bx, 0x0207
+      call draw_window
+      jmp .done
+
+    .station:
+      mov ax, 0x060C
+      mov bx, 0x0407
+      call draw_window
+
+      mov si, WindowStationText
+      mov dx, 0x050F
+      mov bl, COLOR_WHITE
+      call draw_text
+      jmp .done
+
+    .base_buildings:
+      mov ax, 0x040C
+      mov bx, 0x0807
+      call draw_window
+
+      mov si, WindowBaseBuildingsText
+      mov dx, 0x040F
+      mov bl, COLOR_WHITE
+      call draw_text
+      jmp .done
+
+    .remote_buildings:
+      mov ax, 0x040C
+      mov bx, 0x0207
+      call draw_window
+
+      mov si, WindowRemoteBuildingsText
+      mov dx, 0x040F
+      mov bl, COLOR_WHITE
+      call draw_text
+
+      jmp .done
 
   .selection_up:
   jmp .done
@@ -789,15 +843,15 @@ StateTransitionTable:
 StateTransitionTableEnd:
 
 InputTable:
-  db STATE_GAME,          MODE_GAMEPLAY,  KB_UP
+  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_UP
   dw game_logic.move_cursor_up
-  db STATE_GAME,          MODE_GAMEPLAY,  KB_DOWN
+  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_DOWN
   dw game_logic.move_cursor_down
-  db STATE_GAME,          MODE_GAMEPLAY,  KB_LEFT
+  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_LEFT
   dw game_logic.move_cursor_left
-  db STATE_GAME,          MODE_GAMEPLAY,  KB_RIGHT
+  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_RIGHT
   dw game_logic.move_cursor_right
-  db STATE_GAME,          MODE_GAMEPLAY,  KB_SPACE
+  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_SPACE
   dw game_logic.build_action
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_UP
   dw window_logic.selection_up
@@ -810,7 +864,12 @@ InputTable:
   db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_DOWN
   dw window_logic.selection_down
   db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_ENTER
-  mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
+  dw window_logic.selection_enter
+  db STATE_WINDOW,        SCENE_MODE_STATION,    KB_UP
+  dw window_logic.selection_up
+  db STATE_WINDOW,        SCENE_MODE_STATION,    KB_DOWN
+  dw window_logic.selection_down
+  db STATE_WINDOW,        SCENE_MODE_STATION,    KB_ENTER
   dw window_logic.selection_enter
 InputTableEnd:
 
@@ -890,7 +949,7 @@ init_menu:
   mov bx, 0x0607
   call draw_window
 
-  mov si, MainMenuText
+  mov si, MainMenuArrayText
   mov bl, COLOR_YELLOW
   mov dx, 0x0A0D
   .menu_entry:
@@ -921,7 +980,7 @@ init_help:
   mov al, COLOR_DARK_GRAY
   call clear_screen
 
-  mov si, HelpText
+  mov si, HelpArrayText
   mov bl, COLOR_YELLOW
   xor dx, dx
   .help_entry:
@@ -944,7 +1003,7 @@ new_game:
   call reset_to_default_values
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
-  mov byte [_SCENE_MODE_], MODE_GAMEPLAY
+  mov byte [_SCENE_MODE_], SCENE_MODE_GAMEPLAY
 ret
 
 init_game:
@@ -954,7 +1013,7 @@ init_game:
   call draw_frame
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
-  mov byte [_SCENE_MODE_], MODE_GAMEPLAY
+  mov byte [_SCENE_MODE_], SCENE_MODE_GAMEPLAY
   mov bx, GAME_JINGLE
 
   call play_sfx
@@ -1028,10 +1087,8 @@ ret
 
 
 init_window:
-  call window_logic.draw_window
-
+  call window_logic.create_window
   mov byte [_GAME_STATE_], STATE_WINDOW
-  mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
 ret
 
 live_window:
@@ -2170,12 +2227,11 @@ ret
 
 ; =========================================== TEXT DATA =====================|80
 
-WelcomeText db 'P1X ASSEMBLY ENGINE V12.05', 0x0
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more games...', 0x0D, 0x0A, 0x0
 FakeNumberText db '0000', 0x0
 
-MainMenuText:
+MainMenuArrayText:
   db 'ENTER: Play',0x0
   db 'F1: New map',0x0
   db 'F2: Tileset',0x0
@@ -2183,7 +2239,7 @@ MainMenuText:
   db 'ESC: Quit',0x0
   db 0x00
 
-HelpText:
+HelpArrayText:
   db '------== HOW TO PLAY THE GAME ==-----',0x0
   db 'Here will be the final help menu with',0x0
   db 'actual help text. Describing gameplay',0x0
@@ -2192,6 +2248,18 @@ HelpText:
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
 
+WindowBaseBuildingsText db 'Base buildings:',0x0
+WindowStationText db 'Station:',0x0
+WindowRemoteBuildingsText db 'Remote buildings:',0x0
+
+WindowBaseSelectionArrayText:
+  db '[Close window]',0x0
+  db 'Expand foundation',0x0
+  db 'Silos',0x0
+  db 'Factory',0x0
+  db 'Laboratory',0x0
+  db 'Pod Station',0x0
+  db 0x00
 ; =========================================== TERRAIN GEN RULES =============|80
 
 TerrainRules:
