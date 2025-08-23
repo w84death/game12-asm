@@ -640,29 +640,16 @@ game_logic:
     pop ds
 
     .decide_on_action:
-        mov al, [es:di]
-        xor bx, bx
-        mov bl, al
-        and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
-        cmp bl, 0
-        jnz .is_infrastructure
-        .is_terrain:
-          mov bl, [ds:di]
-          and bl, CURSOR_TYPE_MASK
-          rol bl, CURSOR_TYPE_ROL
+      mov bl, [ds:di]
+      and bl, CURSOR_TYPE_MASK
+      rol bl, CURSOR_TYPE_ROL
 
-          cmp bl, CURSOR_ICON_PLACE_BUILDING
-          jz .place_building
-          cmp bl, CURSOR_ICON_PLACE_RAIL
-          jz .place_rail
+      cmp bl, CURSOR_ICON_PLACE_BUILDING
+      jz .place_building
+      cmp bl, CURSOR_ICON_PLACE_RAIL
+      jz .place_rail
 
-        .is_infrastructure:
-
-        ; is it a switch?
-        ; is it a rail? -> station
-
-
-        jmp .no_action
+    jmp .no_action
 
     .place_rail:
       mov al, [_GAME_TICK_]
@@ -690,6 +677,8 @@ game_logic:
       pop ds
       pop es
       mov byte [_GAME_STATE_], STATE_WINDOW_INIT
+
+      mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
       jmp .done
 
     .no_action:
@@ -1040,11 +1029,13 @@ ret
 
 init_window:
   call window_logic.draw_window
+
   mov byte [_GAME_STATE_], STATE_WINDOW
   mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
 ret
 
 live_window:
+
 ret
 
 
