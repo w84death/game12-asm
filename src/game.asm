@@ -160,7 +160,7 @@ TILE_RAILS_11                   equ 0x1D
 TILE_ROCKET_BOTTOM              equ 0x1E
 TILE_ROCKET_TOP                 equ 0x1F
 TILE_BUILDING_FACTORY           equ 0x20
-TILE_BUILDING_EXTRACT           equ 0x21
+TILE_BUILDING_COLECTOR          equ 0x21
 TILE_BUILDING_SILOS             equ 0x22
 TILE_BUILDING_LAB               equ 0x23
 TILE_BUILDING_RADAR             equ 0x24
@@ -680,9 +680,7 @@ game_logic:
 
       mov al, CURSOR_ICON_EDIT
       ror al, CURSOR_TYPE_ROL
-      mov bx, [_GAME_TICK_]
-      and bx, 0x3
-      sub bx, TILE_FOREGROUND_SHIFT
+      mov bx, TILE_BUILDING_PODS-TILE_FOREGROUND_SHIFT
       add al, bl
       mov byte [ds:di], al
       jmp .no_action
@@ -1428,8 +1426,11 @@ build_initial_base:
   ror al, CURSOR_TYPE_ROL
   mov byte [ds:di+1], al
   mov byte [ds:di-1], al
-  mov byte [ds:di+MAP_SIZE], al
   mov byte [ds:di-MAP_SIZE], al
+  mov ax, CURSOR_ICON_EDIT
+  ror al, CURSOR_TYPE_ROL
+  add ax, TILE_BUILDING_PODS-TILE_FOREGROUND_SHIFT
+  mov byte [ds:di+MAP_SIZE], al
 
   mov ax, CURSOR_ICON_EDIT
   ror al, CURSOR_TYPE_ROL
