@@ -86,6 +86,8 @@ STATE_DEBUG_VIEW        equ 12
 STATE_HELP_INIT         equ 13
 STATE_HELP              equ 14
 STATE_GENERATE_MAP      equ 15
+STATE_WINDOW_INIT       equ 16
+STATE_WINDOW            equ 17
 
 ; =========================================== KEYBOARD CODES ================|80
 
@@ -166,6 +168,16 @@ TILE_BUILDING_LAB               equ 0x23
 TILE_BUILDING_RADAR             equ 0x24
 TILE_BUILDING_PODS              equ 0x25
 TILE_BUILDING_POWER             equ 0x26
+
+TILE_ROCKET_BOTTOM_ID           equ TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
+TILE_ROCKET_TOP_ID              equ TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_FACTORY_ID        equ TILE_BUILDING_FACTORY-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_COLECTOR_ID       equ TILE_BUILDING_COLECTOR-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_SILOS_ID          equ TILE_BUILDING_SILOS-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_LAB_ID            equ TILE_BUILDING_LAB-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_RADAR_ID          equ TILE_BUILDING_RADAR-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_PODS_ID           equ TILE_BUILDING_PODS-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_POWER_ID          equ TILE_BUILDING_POWER-TILE_FOREGROUND_SHIFT
 
 TILE_DEFENSE_1                  equ 0x27
 TILE_DEFENSE_2                  equ 0x28
@@ -303,12 +315,13 @@ METADATA_SWITCH_INITIALIZED     equ 0x01
 METADATA_SWITCH_MASK            equ 0x06
 METADATA_SWITCH_SHIFT           equ 0x01
 
-MODE_MAIN_MENU                  equ 0x00
-MODE_SETTINGS_MENU              equ 0x01
-MODE_HELP_PAGE1                 equ 0x02
-MODE_HELP_PAGE2                 equ 0x03
+SCENE_MODE_MAIN_MENU            equ 0x00
+SCENE_MODE_HELP_PAGE1           equ 0x02
+SCENE_MODE_HELP_PAGE2           equ 0x03
 
 MODE_GAMEPLAY                   equ 0x00
+SCENE_MODE_BASE_BUILDINGS       equ 0x01
+SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
 
 UI_STATS_WINDOW_POS             equ 0x1502
 UI_STATS_GFX_LINE               equ 320*175
@@ -674,15 +687,7 @@ game_logic:
     .place_station:
     .place_foundation:
     .place_building:
-      mov al, [es:di]
-      or al, INFRASTRUCTURE_MASK
-      mov byte [es:di], al
-
-      mov al, CURSOR_ICON_EDIT
-      ror al, CURSOR_TYPE_ROL
-      mov bx, TILE_BUILDING_PODS-TILE_FOREGROUND_SHIFT
-      add al, bl
-      mov byte [ds:di], al
+      call show_menu_base_buildings
       jmp .no_action
 
     .no_action:
@@ -712,9 +717,41 @@ game_logic:
 ret
 
 
+window_logic:
+  .selection_up:
+  jmp .done
+
+  .selection_down:
+  jmp .done
+
+  .selection_enter:
+    mov byte [_GAME_STATE_], STATE_GAME_INIT
+  jmp .done
+
+  .done:
+
+ret
 
 
+show_menu_base_buildings:
 
+
+ret
+
+menu_base_buildings_execute:
+  mov al, [es:di]
+  or al, INFRASTRUCTURE_MASK
+  mov byte [es:di], al
+
+  mov al, CURSOR_ICON_EDIT
+  ror al, CURSOR_TYPE_ROL
+  mov bx, TILE_BUILDING_SILOS_ID
+  add al, bl
+  mov byte [ds:di], al
+
+  mov byte [_GAME_STATE_], STATE_WINDOW_INIT
+  mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
+ret
 
 
 
@@ -736,6 +773,8 @@ StateJumpTable:
   dw live_debug_view
   dw init_help
   dw live_help
+  dw init_window
+  dw live_window
 
 StateTransitionTable:
   db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
@@ -749,7 +788,7 @@ StateTransitionTable:
   db STATE_MENU,          KB_F4,    STATE_HELP_INIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
-  db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT
+  db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT ; TODO: remove, initiate via radar building
   db STATE_MAP_VIEW,      KB_ESC,   STATE_MENU_INIT
   db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
   db STATE_DEBUG_VIEW,    KB_ESC,   STATE_MENU_INIT
@@ -766,6 +805,18 @@ InputTable:
   dw game_logic.move_cursor_right
   db STATE_GAME,          MODE_GAMEPLAY,  KB_SPACE
   dw game_logic.build_action
+  db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_UP
+  dw window_logic.selection_up
+  db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_DOWN
+  dw window_logic.selection_down
+  db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_ENTER
+  dw window_logic.selection_enter
+  db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_UP
+  dw window_logic.selection_up
+  db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_DOWN
+  dw window_logic.selection_down
+  db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_ENTER
+  dw window_logic.selection_enter
 InputTableEnd:
 
 
@@ -864,7 +915,7 @@ init_menu:
   call draw_text
 
   mov byte [_GAME_STATE_], STATE_MENU
-  mov byte [_SCENE_MODE_], MODE_MAIN_MENU
+  mov byte [_SCENE_MODE_], SCENE_MODE_MAIN_MENU
 
   mov bx, MENU_JINGLE
   call play_sfx
@@ -889,7 +940,7 @@ init_help:
   jmp .help_entry
   .done:
   mov byte [_GAME_STATE_], STATE_HELP
-  mov byte [_SCENE_MODE_], MODE_HELP_PAGE1
+  mov byte [_SCENE_MODE_], SCENE_MODE_HELP_PAGE1
 ret
 
 live_help:
@@ -984,7 +1035,15 @@ live_debug_view:
 ret
 
 
+init_window:
+  ; check scene mode
+  mov ax, 0x040C
+  mov bx, 0x0207
+  call draw_window
+ret
 
+live_window:
+ret
 
 
 
@@ -1421,31 +1480,37 @@ build_initial_base:
   add ax, INFRASTRUCTURE_MASK
   mov byte [es:di], al
   mov byte [es:di-MAP_SIZE], al
+  mov byte [es:di+MAP_SIZE], al
 
   mov ax, CURSOR_ICON_PLACE_BUILDING
   ror al, CURSOR_TYPE_ROL
   mov byte [ds:di+1], al
   mov byte [ds:di-1], al
   mov byte [ds:di-MAP_SIZE], al
-  mov ax, CURSOR_ICON_EDIT
-  ror al, CURSOR_TYPE_ROL
-  add ax, TILE_BUILDING_PODS-TILE_FOREGROUND_SHIFT
-  mov byte [ds:di+MAP_SIZE], al
 
+  .place_rocket:
   mov ax, CURSOR_ICON_EDIT
   ror al, CURSOR_TYPE_ROL
   push ax
-  add ax, TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
+  add ax, TILE_ROCKET_BOTTOM_ID
   mov byte [ds:di], al
   pop ax
-  add ax, TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
+  add ax, TILE_ROCKET_TOP_ID
   mov byte [ds:di-MAP_SIZE], al
+
+  .place_pod_factory:
+  mov ax, CURSOR_ICON_EDIT
+  ror al, CURSOR_TYPE_ROL
+  add ax, TILE_BUILDING_PODS_ID
+  mov byte [ds:di+MAP_SIZE], al
 
   .place_initial_railstation:
   add di, MAP_SIZE*2
   mov ax, TILE_STATION
   add ax, RAIL_MASK
+  add ax, INFRASTRUCTURE_MASK
   mov byte [es:di], al
+
   mov ax, TILE_MUD_GRASS_1
   add al, TERRAIN_TRAVERSAL_MASK
   mov byte [es:di-1], al
@@ -1453,10 +1518,9 @@ build_initial_base:
   mov al, [es:di+MAP_SIZE]
   and al, TERRAIN_TRAVERSAL_CLIP
   mov byte [es:di+MAP_SIZE], al
-  mov ax, CURSOR_ICON_PLACE_BUILDING
+  mov ax, CURSOR_ICON_EDIT
   ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+MAP_SIZE], al
-  mov ax, TILE_RAILS_1-TILE_FOREGROUND_SHIFT
+  add ax, TILE_RAILS_1-TILE_FOREGROUND_SHIFT
   mov byte [ds:di], al
 
   mov ax, CURSOR_ICON_PLACE_RAIL
@@ -1496,8 +1560,7 @@ draw_terrain:
       mov bl, al
       and al, BACKGROUND_SPRITE_MASK
       call draw_tile
-
-      and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
+   and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
       cmp bl, 0x0
       jz .skip_foreground
       .draw_forground:
@@ -1622,6 +1685,10 @@ recalculate_rails:
     je .prepare_switch_horizontal
     cmp dl, 0x0E
     je .prepare_switch_vertical
+    cmp dl, 0x05
+    je .prepare_station
+    cmp dl, 0x0A
+    je .prepare_station
     jmp .prepare_no_switch
 
   .prepare_switch_horizontal:
@@ -1634,9 +1701,16 @@ recalculate_rails:
     add dl, SWITCH_MASK
     mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
+  .prepare_station:
+    mov dl, 0
+    mov ax, CURSOR_ICON_PLACE_BUILDING
+    test byte [es:di], INFRASTRUCTURE_MASK
+    jz  .save_switch
+    mov ax, CURSOR_ICON_EDIT
+    jmp .save_switch
   .prepare_no_switch:
     mov dl, 0
-    mov ax, CURSOR_ICON_PLACE_RAIL
+    mov ax, CURSOR_ICON_PAN
 
   .save_switch:
     push es
@@ -1655,14 +1729,15 @@ recalculate_rails:
     mov byte al, [es:di]
     test al, TERRAIN_TRAVERSAL_MASK
     jz .done
-    and al, TERRAIN_SECOND_LAYER_DRAW_CLIP
-    cmp al, 0x0
+    mov bl, al
+    and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
+    cmp bl, 0x0
     jnz .done
-
 
     mov ax, CURSOR_ICON_PLACE_RAIL
     ror al, CURSOR_TYPE_ROL
     mov byte [ds:di], al
+
   .done:
 ret
 

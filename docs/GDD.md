@@ -13,28 +13,13 @@ Kepler-486i's harsh environment makes it impossible for human colonization. The 
 
 You are Commander of Expedition Unit 7, employed by Cortex Labs, the pioneering biotechnology corporation that first discovered Neurofung's potential. Cortex Labs has tasked you with establishing and managing an automated extraction facility on the planet's surface. Your mission is to build a self-sustaining robotic base capable of harvesting, processing, and launching regular shipments of Neurofung back to Earth. The future of human evolution depends on your success - but you're not alone. Competing nations and corporations have also deployed their own robotic expeditions, and resources on Kepler-486i are limited. Time is running out before the next solar storm season makes extraction impossible for the next decade.
 
-## Example game play session
-
-In this hypothetical gameplay scenario, your expedition ship would land in the center of the map, automatically deploying silos and empty foundation blocks. As the player, you would begin by surveying the area for nearby resources, prioritizing the blue crystals needed to build complex infrastructure. Any resource would be valuable if close enough to your starting position. Once you locate a suitable resource deposit, you would need to plan the optimal rail route, navigating around obstacles. A key strategic decision would be whether to build a one-way rail line or create a circular connection that allows multiple cargo pods to operate simultaneously without collision.
-
-You would place your first rail segment starting from the silo, which already includes a station. You would continue laying rails toward your chosen resource location. Upon reaching the destination, you would place another station, which automatically spawns two foundation blocks. You would typically place your first extraction facility on the foundation closest to the resource. To complete your first supply line, you would need two additional structures: a pod factory to manufacture cargo pods, and at least one recharging station positioned along the route. You could repurpose the empty foundation near your silo for the pod factory, then build a new station with solar panels to provide power. Each solar panel would recharge half of a pod's battery capacity, so while you could place two for full charging, resource conservation would be crucial in the early game. Once construction is complete, you would spawn your first pod and observe it traveling along the rails.
-
-By this time, the extraction facility should have completed its first harvest cycle, indicated by a color change matching the resource type being extracted. When the pod arrives at the extraction station, it would automatically load the cargo and return to the silo for storage. If you've collected blue crystals, you would soon be able to expand your network with additional pods and rail lines.
-
-While establishing your first supply line would be relatively straightforward, the challenge would escalate significantly as you expand. Managing multiple intersecting rail lines with numerous pods would require careful planning of junction switches. Eventually, some pods would run out of power mid-route, necessitating strategic placement of additional charging stations that could service multiple rail lines efficiently.
-
-Players would need to balance the efficiency of long-distance routes against shorter, high-traffic lines. The ultimate pressure would come from the countdown timer - you must fill your rocket with enough Cerebrospore before the next solar storm arrives, or face mission failure.
-
 ## Elements
 
 - main base / rocket
-  - collectors
+  - silos
     - blue resource / cristals
-      - for building infrastructure
     - yellow resource / gases
-      - fuel for rocket
     - red resource / shrooms like
-      - main resource to send to the planet to win the game
 - rails
   - when T-junction switch is placed
   - switches can be switched by player (left-right or up-down depending on T-junction rotation)
@@ -50,27 +35,28 @@ Players would need to balance the efficiency of long-distance routes against sho
   - spawns two station extends (up/down or left/right ancient tile)
 - station extends fundaments
   - extractor
-    - extract resources 2 tiles away (5x5 grid)
+    - extract resources from near tiles
+  - radar
+  - defense turrets
 - foundaments
-  - collector
   - silos
   - factory
-    - spawning/maintanance for pods
-    - each factory supports X number of pods at once
-    - build using blue resource
+  - laboratory
+  - radar
 
 ## Resources
 
 ### Blue / Cristals
 Located near mountains.
-Main source for building new structures (rails, buildings, pods)
+Main source for building new structures (rails, buildings, pods) and research.
 
 ### Yellow / Gas
 Located on plain terrains.
+Needs to be refined to fuel.
 Source of fuel for the main rocket.
 
 ### Red / Shrooms
-Grow near the forests. Grow over time. It collected all, new will not regrow.
+Grow near the forests. Grow over time. If collected all, new will not regrow.
 Goal of the game, fill up collector to send rocket to the earth.
 
 ## Interface
@@ -79,10 +65,12 @@ Goal of the game, fill up collector to send rocket to the earth.
 Use cursor to move over map. Press spacebar, if cursor is:
 - near rail tracks -> expand tracks
 - on the (straight) tracks -> build station
-- on the station extension (near station) -> select building to build
-- on building -> settings
+- on station near tiles -> build station extension
+- on the station extension -> menu: select building to build
+- on building -> menu: building options, description
 - on switch -> flip switch
-- on foundation (base) -> select building to build
+- on foundation (base) -> menu: select building to build
+
 TAB - toggle mini map view
 ESC - back to menu
 
@@ -199,13 +187,40 @@ if hit SPACEBAR
 
 ## Buildings
 
+## Pods Hangar
+Keeps and spawns pods.
+Each hangar can hold 5 pods. After that you need to build another fresh hangar to get more pods.
+
 ### Radar
 Simple option: When clicked shows mini map of the whole map. Only one is needed.
 Nice to have option: shows only map range around the radar. Forces player to spawn radars on rail system to see whole map. Clicking on any of the radars reveals whole system connected, covering the visible map by all radars. Radars placed strategicaly will eventualy shows whole map.
 
-### Colector
-
-
-
 ### Silos
-Keeps the raw resouce from colectors.
+Colects raw resources delivered by pods.
+Must be build next to the station to work.
+
+## Factory
+Converts raw resources from silos to refined form.
+Uses researched mixtures. At start only direct, 1 to 1, conversion available.
+Level | Mixes
+    0 | red -> red refined, blue -> blue refined, yellow -> yellow refined
+    1 | red + blue -> voilet, yellow + blue -> green
+    2 | red + blue + yellow -> orange
+## Extractor
+Extracts nearby resources.
+Offload them to the pods.
+Must be build next to the station to work.
+
+## Laboratory
+Researches new technologies.
+Uses blue resource to start any research. Research takes time to finish.
+Nice to have option: random event with overbuget resulting in more time to wait and reduction of blue resource (pauses until enough resource.)
+Unlocks defensive buildings and upgrades existing:
+Factory -> new mixtures unlock
+Extractor -> range expand
+Silo -> capacity expand, time to load decrees
+Radar -> range expand
+Pod Hangar -> capacity expand, time to build decrees
+Defence Turret 1 -> unlock
+Defence Turret 2 -> unlock
+Defence Turret 3 -> unlock

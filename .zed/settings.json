@@ -1,5 +1,6 @@
 // Zed settings
 {
+  "enable_language_server": false,
   "edit_predictions": {
     "mode": "subtle",
     "copilot": {
