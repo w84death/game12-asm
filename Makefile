@@ -35,6 +35,14 @@ ASM_SOURCES = src/boot.asm src/game.asm src/img_p1x.asm src/img_title.asm src/sf
 # Default target
 all: $(FLOPPY_IMG)
 
+# Build development tools
+tools:
+	@echo "Building development tools..."
+	$(MAKE) -C tools/fnt2asm
+	$(MAKE) -C tools/png2asm
+	$(MAKE) -C tools/rleimg2asm
+	@echo "All tools built successfully"
+
 # Create directories
 $(BIN_DIR) $(IMG_DIR):
 	$(MKDIR) $@
@@ -145,19 +153,32 @@ stats: $(BOOTLOADER) $(GAME_COM)
 clean:
 	$(RMDIR) $(BUILD_DIR)
 
+# Clean tools
+clean-tools:
+	$(MAKE) -C tools/fnt2asm clean
+	$(MAKE) -C tools/png2asm clean
+	$(MAKE) -C tools/rleimg2asm clean
+
 # Help
 help:
 	@echo "GAME-12 Build Targets:"
-	@echo "  all   - Build FAT12 bootable floppy image (default)"
-	@echo "  com   - Build only the COM file"
-	@echo "  bochs - Run in Bochs debugger"
-	@echo "  jsdos - Build jsdos archive"
-	@echo "  burn  - Burn to physical floppy"
-	@echo "  stats - Display project statistics"
-	@echo "  clean - Remove build artifacts"
+	@echo "  all         - Build FAT12 bootable floppy image (default)"
+	@echo "  com         - Build only the COM file"
+	@echo "  bochs       - Run in Bochs debugger"
+	@echo "  jsdos       - Build jsdos archive"
+	@echo "  burn        - Burn to physical floppy"
+	@echo "  stats       - Display project statistics"
+	@echo "  tools       - Build all development tools"
+	@echo "  clean       - Remove build artifacts"
+	@echo "  clean-tools - Clean development tools"
+	@echo ""
+	@echo "Development Tools:"
+	@echo "  fnt2asm     - Convert PNG fonts to assembly data"
+	@echo "  png2asm     - Convert PNG images to assembly data"
+	@echo "  rleimg2asm  - Convert images to RLE-compressed assembly"
 	@echo ""
 	@echo "The floppy image is DOS-compatible and contains:"
 	@echo "  GAME.COM   - The game executable"
 	@echo "  MANUAL.TXT - Game manual"
 
-.PHONY: all com bochs jsdos burn stats clean help
+.PHONY: all com bochs jsdos burn stats tools clean clean-tools help

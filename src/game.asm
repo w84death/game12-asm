@@ -338,6 +338,7 @@ VIEWPORT_WIDTH                  equ 20      ; Size in tiles 20 = 320 pixels
 VIEWPORT_HEIGHT                 equ 11      ; by 10 = 176 pixels
 VIEWPORT_GRID_SIZE              equ 16      ; Individual cell size DO NOT CHANGE
 SPRITE_SIZE                     equ 16      ; Sprite size 16x16 DO NOT CHANGE
+FONT_SIZE                       equ 8
 
 ; =========================================== COLORS / DB16 =================|80
 
@@ -992,6 +993,16 @@ init_menu:
   mov bx, 0x0607
   call draw_window
 
+  mov si, TestText
+  mov bl, COLOR_WHITE
+  mov dx, 0x0101
+  call draw_font_text
+
+  mov si, TestText
+  mov bl, COLOR_RED
+  mov dx, 0x0201
+  call draw_font_text
+
   mov si, MainMenuArrayText
   mov bl, COLOR_YELLOW
   mov dx, 0x0A0D
@@ -1217,6 +1228,63 @@ draw_text:
     int 0x10                            ; BIOS video interrupt
 
     jmp .next_char                      ; Process next character
+
+  .done:
+ret
+
+; =========================================== DRAW FONT TEXT ================|80
+; IN:
+;  SI - Pointer to text string
+;  DL - X position (in character font size)
+;  DH - Y position (in character font size)
+;  BX - Color
+draw_font_text:
+  .calculate_coordinates_vga_pointer:
+    push bx                             ; Save color
+    movzx ax, dl                        ; Extract X
+    movzx bx, dh                        ; Extract Y
+    shl ax, 3                           ; X * 8
+    shl bx, 3                           ; Y * 8
+    imul bx, SCREEN_WIDTH               ; Y * 8 * 320
+    add bx, ax                          ; Y * 8 * 320 + X * 8
+    mov di, bx                          ; Move result to DI
+    pop bx                              ; Restore color
+
+  .next_char:
+    lodsb
+    test al, al                         ; Test for 0x0 terminator in text string
+    jz .done
+
+    push si                             ; Save string pointer
+
+    .calculate_character_font_pointer:
+      sub al, '0'                       ; Char index
+      shl ax, 3                         ; Font offset (8 bytes)
+      mov si, Font
+      add si, ax
+
+    mov cx, FONT_SIZE
+    .char_line:
+      lodsb                             ; Load font byte
+      push cx
+      mov cx, FONT_SIZE
+      .pixel:
+        shl al, 1
+        jc .draw_px                     ; Transparent
+        inc di                          ; Skip pixel
+      loop .pixel
+        jmp .next_line                  ; Jump to next line on last pixel
+        .draw_px:
+        mov [es:di], bl                 ; Color pixel
+        inc di
+      loop .pixel                       ; Next pixel
+      .next_line:
+      add di, SCREEN_WIDTH-FONT_SIZE
+      pop cx
+    loop .char_line
+    pop si                              ; Restore string pointer
+    add di,FONT_SIZE - SCREEN_WIDTH*FONT_SIZE  ; Next char
+  jmp .next_char
 
   .done:
 ret
@@ -2273,6 +2341,7 @@ ret
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more games...', 0x0D, 0x0A, 0x0
 FakeNumberText db '0000', 0x0
+TestText db '01234',0x0
 
 MainMenuArrayText:
   db 'ENTER: Play',0x0
@@ -2345,6 +2414,7 @@ db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
 
 ; =========================================== INCLUDES ======================|80
 
+include 'font.asm'
 include 'sfx.asm'
 include 'tiles.asm'
 include 'img_p1x.asm'
