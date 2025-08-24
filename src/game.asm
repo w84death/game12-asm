@@ -998,9 +998,14 @@ init_menu:
   mov dx, 0x0101
   call draw_font_text
 
-  mov si, TestText
+  mov si, TestAText
   mov bl, COLOR_RED
   mov dx, 0x0201
+  call draw_font_text
+
+  mov si, Test2Text
+  mov bl, COLOR_PINK
+  mov dx, 0x0401
   call draw_font_text
 
   mov si, MainMenuArrayText
@@ -1251,14 +1256,19 @@ draw_font_text:
     pop bx                              ; Restore color
 
   .next_char:
+    xor ax, ax                          ; Clear leftover in ax
     lodsb
     test al, al                         ; Test for 0x0 terminator in text string
     jz .done
-
+    cmp ax, 32                          ; space
+    jnz .is_not_space
+      add di,FONT_SIZE
+      jmp .next_char
+    .is_not_space:
     push si                             ; Save string pointer
-
+    push di
     .calculate_character_font_pointer:
-      sub al, '0'                       ; Char index
+      sub ax, '0'                       ; Char index
       shl ax, 3                         ; Font offset (8 bytes)
       mov si, Font
       add si, ax
@@ -1282,10 +1292,11 @@ draw_font_text:
       add di, SCREEN_WIDTH-FONT_SIZE
       pop cx
     loop .char_line
-    pop si                              ; Restore string pointer
-    add di,FONT_SIZE - SCREEN_WIDTH*FONT_SIZE  ; Next char
-  jmp .next_char
 
+    pop di
+    pop si                              ; Restore string pointer
+    add di,FONT_SIZE                    ; Next char
+  jmp .next_char
   .done:
 ret
 
@@ -2341,7 +2352,10 @@ ret
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more games...', 0x0D, 0x0A, 0x0
 FakeNumberText db '0000', 0x0
-TestText db '01234',0x0
+TestText db '>0123456789<',0x0
+TestAText db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
+Test2Text db ';:<=>?@',0x0
+
 
 MainMenuArrayText:
   db 'ENTER: Play',0x0

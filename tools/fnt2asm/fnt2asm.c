@@ -12,28 +12,35 @@
 #define CHAR_HEIGHT 8
 
 #ifndef CHARS_PER_ROW
-#define CHARS_PER_ROW 5
+#define CHARS_PER_ROW 16
 #endif
 
 #ifndef TOTAL_CHARS
-#define TOTAL_CHARS 4
+#define TOTAL_CHARS 43
 #endif
 
-// CP437 character names for comments (simplified - first 128 shown)
+// Character names for comments starting from '0'
 const char* get_char_name(int index) {
     static char buffer[32];
 
-    if (index < 32) {
-        // Control characters
-        sprintf(buffer, "Control 0x%02X", index);
-    } else if (index < 127) {
-        // Printable ASCII
-        sprintf(buffer, "'%c'", (char)index);
-    } else if (index == 127) {
-        sprintf(buffer, "DEL");
+    // Tileset starts from character '0' (ASCII 48)
+    char actual_char = '0' + index;
+
+    if (actual_char >= '0' && actual_char <= '9') {
+        // Digits 0-9
+        sprintf(buffer, "'%c'", actual_char);
+    } else if (actual_char >= 'A' && actual_char <= 'Z') {
+        // Uppercase letters
+        sprintf(buffer, "'%c'", actual_char);
+    } else if (actual_char >= 'a' && actual_char <= 'z') {
+        // Lowercase letters
+        sprintf(buffer, "'%c'", actual_char);
+    } else if (actual_char >= 32 && actual_char <= 126) {
+        // Other printable ASCII
+        sprintf(buffer, "'%c'", actual_char);
     } else {
-        // Extended characters
-        sprintf(buffer, "Char 0x%02X", index);
+        // Non-printable or extended
+        sprintf(buffer, "Char %d", index);
     }
 
     return buffer;
