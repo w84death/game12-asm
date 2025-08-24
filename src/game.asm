@@ -746,19 +746,19 @@ window_logic:
       mov si, WindowStationText
       mov dx, 0x060E
       mov bl, COLOR_WHITE
-      call draw_text
+      call draw_font_text
 
       mov si, WindowCloseWindowText
       mov dx, 0x080E
       mov bl, COLOR_YELLOW
-      call draw_text
+      call draw_font_text
 
       mov si, WindowStationSelectionArrayText
       add dh, 0x2
       .station_array:
         cmp byte [si], 0x00
         jz .done
-        call draw_text
+        call draw_font_text
         add dh, 0x2
       jmp .station_array
       jmp .done
@@ -771,19 +771,19 @@ window_logic:
       mov si, WindowBaseBuildingsText
       mov dx, 0x040C
       mov bl, COLOR_WHITE
-      call draw_text
+      call draw_font_text
 
       mov si, WindowCloseWindowText
       mov dx, 0x060C
       mov bl, COLOR_YELLOW
-      call draw_text
+      call draw_font_text
 
       mov si, WindowBaseSelectionArrayText
       add dh, 0x2
       .base_array:
         cmp byte [si], 0x00
         jz .done
-        call draw_text
+        call draw_font_text
         add dh, 0x2
       jmp .base_array
 
@@ -797,19 +797,19 @@ window_logic:
       mov si, WindowRemoteBuildingsText
       mov dx, 0x040C
       mov bl, COLOR_WHITE
-      call draw_text
+      call draw_font_text
 
       mov si, WindowCloseWindowText
       mov dx, 0x060C
       mov bl, COLOR_YELLOW
-      call draw_text
+      call draw_font_text
 
       mov si, WindowBaseSelectionArrayText
       add dh, 0x2
       .remote_array:
         cmp byte [si], 0x00
         jz .done
-        call draw_text
+        call draw_font_text
         add dh, 0x2
       jmp .remote_array
     jmp .done
@@ -966,7 +966,7 @@ live_title_screen:
   je .blink
     mov bl, COLOR_BLACK
   .blink:
-  call draw_text
+  call draw_font_text
 ret
 
 init_menu:
@@ -993,28 +993,13 @@ init_menu:
   mov bx, 0x0607
   call draw_window
 
-  mov si, TestText
-  mov bl, COLOR_WHITE
-  mov dx, 0x0101
-  call draw_font_text
-
-  mov si, TestAText
-  mov bl, COLOR_RED
-  mov dx, 0x0201
-  call draw_font_text
-
-  mov si, Test2Text
-  mov bl, COLOR_PINK
-  mov dx, 0x0301
-  call draw_font_text
-
   mov si, MainMenuArrayText
   mov bl, COLOR_YELLOW
   mov dx, 0x0A0D
   .menu_entry:
     cmp byte [si], 0x00
     jz .done
-    call draw_text
+    call draw_font_text
     add dh, 0x2
   jmp .menu_entry
   .done:
@@ -1022,7 +1007,7 @@ init_menu:
   mov si, MainMenuCopyText
   mov dx, 0x160D
   mov bl, COLOR_LIGHT_GRAY
-  call draw_text
+  call draw_font_text
 
   mov byte [_GAME_STATE_], STATE_MENU
   mov byte [_SCENE_MODE_], SCENE_MODE_MAIN_MENU
@@ -1045,7 +1030,7 @@ init_help:
   .help_entry:
     cmp byte [si], 0x00
     jz .done
-    call draw_text
+    call draw_font_text
     inc dh
   jmp .help_entry
   .done:
@@ -1115,6 +1100,17 @@ init_debug_view:
 
     add di, 18                          ; Move to next slot + 2px
   loop .spr
+
+
+  mov si, Fontset1Text
+  mov bl, COLOR_WHITE
+  mov dx, 0x1002
+  call draw_font_text
+
+  mov si, Fontset2Text
+  mov bl, COLOR_RED
+  mov dx, 0x1102
+  call draw_font_text
 
   .draw_color_palette:
   mov di, SCREEN_WIDTH*160+32           ; Position on screen
@@ -2352,51 +2348,50 @@ ret
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more games...', 0x0D, 0x0A, 0x0
 FakeNumberText db '0000', 0x0
-TestText db '>0123456789<',0x0
-TestAText db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
-Test2Text db ';:<=>?@',0x0
-
+Fontset1Text db '0123456789 ;:<=>?@',0x0
+Fontset2Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
 MainMenuArrayText:
-  db 'ENTER: Play',0x0
-  db 'F1: New map',0x0
-  db 'F2: Tileset',0x0
-  db 'F4: Help',0x0
-  db 'ESC: Quit',0x0
+  db 'ENTER: PLAY',0x0
+  db 'F1: NEW MAP',0x0
+  db 'F2: TILESETS',0x0
+  db 'F4: HELP',0x0
+  db 'ESC: QUIT',0x0
   db 0x00
 
 HelpArrayText:
-  db '------== HOW TO PLAY THE GAME ==-----',0x0
-  db 'Here will be the final help menu with',0x0
-  db 'actual help text. Describing gameplay',0x0
-  db 'and controls.',0x0
+  db 'SHORT HELP',0x0
+  db '> ARROWS TO MOVE CURSOR',0x0
+  db '> SPACEBAR FOR INTERACTION',0x0
+  db '> ENTER TO CONFIRM MENUS',0x0
+  db '> ESC TO BACK TO MAIN MENU',0x0
   db 0x00
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
 
-WindowBaseBuildingsText db ' Base buildings ',0x0
+WindowBaseBuildingsText db 'BASE BUILDING',0x0
 WindowStationText db ' Station ',0x0
-WindowRemoteBuildingsText db ' Remote buildings ',0x0
+WindowRemoteBuildingsText db 'REMOTE BUILDINGS',0x0
 
-WindowCloseWindowText db 'Close window',0x0
-WindowBuildText db 'Build: ',0x0
+WindowCloseWindowText db 'CLOSE WINDOW',0x0
+WindowBuildText db 'BUILD: ',0x0
 
 WindowBaseSelectionArrayText:
-  db 'Expand foundation',0x0
-  db 'Silos',0x0
-  db 'Factory',0x0
-  db 'Radar',0x0
-  db 'Laboratory',0x0
-  db 'Pod Station',0x0
+  db 'EXPAND FOUNDATION',0x0
+  db 'SILOS',0x0
+  db 'FACTORY',0x0
+  db 'RADAR',0x0
+  db 'LABORATORY',0x0
+  db 'POD STATION',0x0
   db 0x00
 
 WindowRemoteSelectionArrayText:
-  db 'Extractor',0x0
-  db 'Radar',0x0
+  db 'EXTRACTOR',0x0
+  db 'RADAR',0x0
   db 0x00
 
 WindowStationSelectionArrayText:
-  db 'Station',0x0
+  db 'STATION',0x0
   db 0x00
 ; =========================================== TERRAIN GEN RULES =============|80
 
