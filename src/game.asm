@@ -1005,7 +1005,7 @@ init_menu:
 
   mov si, Test2Text
   mov bl, COLOR_PINK
-  mov dx, 0x0401
+  mov dx, 0x0301
   call draw_font_text
 
   mov si, MainMenuArrayText
