@@ -10,11 +10,14 @@ Real-time strategy for x86 processors made in assembly.
 Boot from a floppy or run on MS-DOS (FreeDOS).
 
 ## Building
-Create floppy and binary.
+Create floppy and binary:
 ```make```
 
-Make just binary.
+Make just binary:
 ```make com```
+
+Check statistics:
+```make stats```
 
 For more targets check help.
 ```make help```
@@ -22,9 +25,12 @@ For more targets check help.
 ## Tools
 
 ### png2asm
-For compressing .png tilemap.
+For converting .png tilemap into 2-bit compressed and palettes assembly code.
 ```./png2asm tileset.png palettes.png ../../src/tiles.asm```
 
 ### rleimg2asm
-For compressing .png image.
+For converting .png image into RLE compressed assembly code.
 ```./rleimg2asm frames/p1x.png ../../src/img_p1x.asm -asm p1x_logo_image -stats```
+### fnt2asm
+For converting .png font charset into 1-bit compressed assembly code.
+```./fnt2asm font.png ../../src/font.asm```
