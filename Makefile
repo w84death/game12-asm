@@ -3,6 +3,7 @@
 
 # Tools
 ASM = fasm
+UPX = upx
 BOCHS = bochs -q -f .bochsrc
 DD = dd
 MKDIR = mkdir -p
@@ -24,6 +25,7 @@ IMG_DIR = $(BUILD_DIR)/img
 # Files
 BOOTLOADER = $(BIN_DIR)/boot.bin
 GAME = $(BIN_DIR)/game.bin
+GAME_COM_RAW = $(BIN_DIR)/game12_raw.com
 GAME_COM = $(BIN_DIR)/game12.com
 FLOPPY_IMG = $(IMG_DIR)/floppy.img
 JSDOS_ARCHIVE = jsdos/game12.jsdos
@@ -55,13 +57,22 @@ $(BOOTLOADER): src/boot.asm | $(BIN_DIR)
 $(GAME): src/game.asm | $(BIN_DIR)
 	$(ASM) $< $@
 
-# Compile game as COM file
-$(GAME_COM): src/game.asm | $(BIN_DIR)
+# Compile game as uncompressed COM file
+$(GAME_COM_RAW): src/game.asm | $(BIN_DIR)
 	$(ASM) $< $@
 
-# Build just the COM file
+# Compress COM file with UPX
+$(GAME_COM): $(GAME_COM_RAW)
+	cp $(GAME_COM_RAW) $@
+	$(UPX) --best $@
+
+# Build compressed COM file
 com: $(GAME_COM)
-	@echo "COM file built: $(GAME_COM)"
+	@echo "Compressed COM file built: $(GAME_COM)"
+
+# Build uncompressed COM file
+com-raw: $(GAME_COM_RAW)
+	@echo "Uncompressed COM file built: $(GAME_COM_RAW)"
 
 # Create FAT12 bootable floppy image
 $(FLOPPY_IMG): $(BOOTLOADER) $(GAME_COM) | $(IMG_DIR)
@@ -101,16 +112,20 @@ burn: $(FLOPPY_IMG)
 	@echo "Successfully burned to $(USB_FLOPPY)"
 
 # Display project statistics
-stats: $(BOOTLOADER) $(GAME_COM)
+stats: $(BOOTLOADER) $(GAME_COM) $(GAME_COM_RAW)
 	@echo "================================================"
 	@echo "              GAME-12 PROJECT STATISTICS"
 	@echo "================================================"
 	@echo ""
 	@echo "BINARY SIZES:"
-	@echo "  Boot sector:  $$(stat -c%s $(BOOTLOADER) 2>/dev/null || stat -f%z $(BOOTLOADER) 2>/dev/null) bytes"
-	@echo "  Game COM:     $$(stat -c%s $(GAME_COM) 2>/dev/null || stat -f%z $(GAME_COM) 2>/dev/null) bytes"
+	@echo "  Boot sector:     $$(stat -c%s $(BOOTLOADER) 2>/dev/null || stat -f%z $(BOOTLOADER) 2>/dev/null) bytes"
+	@raw_size=$$(stat -c%s $(GAME_COM_RAW) 2>/dev/null || stat -f%z $(GAME_COM_RAW) 2>/dev/null); \
+	compressed_size=$$(stat -c%s $(GAME_COM) 2>/dev/null || stat -f%z $(GAME_COM) 2>/dev/null); \
+	ratio=$$((100 - (compressed_size * 100 / raw_size))); \
+	echo "  Game COM (raw):  $$raw_size bytes"; \
+	echo "  Game COM (UPX):  $$compressed_size bytes ($$ratio% reduction)"
 	@if [ -f $(FLOPPY_IMG) ]; then \
-		echo "  Floppy image: $$(stat -c%s $(FLOPPY_IMG) 2>/dev/null || stat -f%z $(FLOPPY_IMG) 2>/dev/null) bytes"; \
+		echo "  Floppy image:    $$(stat -c%s $(FLOPPY_IMG) 2>/dev/null || stat -f%z $(FLOPPY_IMG) 2>/dev/null) bytes"; \
 	fi
 	@echo ""
 	@echo "SOURCE CODE STATISTICS:"
@@ -149,6 +164,39 @@ stats: $(BOOTLOADER) $(GAME_COM)
 	echo "  Total commented lines: $$total_commented ($$percent%)"
 	@echo "================================================"
 
+# Decompress COM file for debugging
+decompress: $(GAME_COM)
+	@if upx -t $(GAME_COM) >/dev/null 2>&1; then \
+		echo "Decompressing $(GAME_COM)..."; \
+		upx -d $(GAME_COM); \
+		echo "File decompressed successfully"; \
+	else \
+		echo "$(GAME_COM) is not UPX compressed"; \
+	fi
+
+# Test UPX compression on current COM file
+test-upx: $(GAME_COM_RAW)
+	@echo "Testing UPX compression ratios..."
+	@cp $(GAME_COM_RAW) /tmp/test_upx.com
+	@echo "Original size: $$(stat -c%s /tmp/test_upx.com 2>/dev/null || stat -f%z /tmp/test_upx.com 2>/dev/null) bytes"
+	@echo ""
+	@echo "UPX --fast:"
+	@cp $(GAME_COM_RAW) /tmp/test_upx_fast.com && upx --fast /tmp/test_upx_fast.com 2>/dev/null
+	@echo "UPX --best:"
+	@cp $(GAME_COM_RAW) /tmp/test_upx_best.com && upx --best /tmp/test_upx_best.com 2>/dev/null
+	@echo "UPX --ultra-brute:"
+	@cp $(GAME_COM_RAW) /tmp/test_upx_ultra.com && upx --ultra-brute /tmp/test_upx_ultra.com 2>/dev/null || echo "Ultra-brute compression failed or not supported"
+	@rm -f /tmp/test_upx*.com
+
+# Check if file is UPX compressed
+check-upx: $(GAME_COM)
+	@if upx -t $(GAME_COM) >/dev/null 2>&1; then \
+		echo "$(GAME_COM) is UPX compressed"; \
+		upx -l $(GAME_COM); \
+	else \
+		echo "$(GAME_COM) is not UPX compressed"; \
+	fi
+
 # Clean build artifacts
 clean:
 	$(RMDIR) $(BUILD_DIR)
@@ -163,7 +211,8 @@ clean-tools:
 help:
 	@echo "GAME-12 Build Targets:"
 	@echo "  all         - Build FAT12 bootable floppy image (default)"
-	@echo "  com         - Build only the COM file"
+	@echo "  com         - Build compressed COM file with UPX"
+	@echo "  com-raw     - Build uncompressed COM file"
 	@echo "  bochs       - Run in Bochs debugger"
 	@echo "  jsdos       - Build jsdos archive"
 	@echo "  burn        - Burn to physical floppy"
@@ -171,6 +220,11 @@ help:
 	@echo "  tools       - Build all development tools"
 	@echo "  clean       - Remove build artifacts"
 	@echo "  clean-tools - Clean development tools"
+	@echo ""
+	@echo "UPX Compression Targets:"
+	@echo "  decompress  - Decompress COM file for debugging"
+	@echo "  test-upx    - Test different UPX compression levels"
+	@echo "  check-upx   - Check if COM file is UPX compressed"
 	@echo ""
 	@echo "Development Tools:"
 	@echo "  fnt2asm     - Convert PNG fonts to assembly data"
@@ -181,4 +235,4 @@ help:
 	@echo "  GAME.COM   - The game executable"
 	@echo "  MANUAL.TXT - Game manual"
 
-.PHONY: all com bochs jsdos burn stats tools clean clean-tools help
+.PHONY: all com com-raw bochs jsdos burn stats tools decompress test-upx check-upx clean clean-tools help
