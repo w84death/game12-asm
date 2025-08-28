@@ -4,6 +4,7 @@ Real-time strategy for x86 processors made in assembly.
 ![Intro screen](docs/screenshot-0.png)
 ![Menu screen](docs/screenshot-1.png)
 ![Game screen](docs/screenshot-2.png)
+![Sprites](docs/sprites.png)
 
 ## Running
 Boot from a floppy or run on MS-DOS (FreeDOS).
