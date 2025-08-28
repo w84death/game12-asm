@@ -1112,6 +1112,11 @@ init_debug_view:
   mov dx, 0x1102
   call draw_font_text
 
+  mov si, Fontset3Text
+  mov bl, COLOR_BLUE
+  mov dx, 0x1202
+  call draw_font_text
+
   .draw_color_palette:
   mov di, SCREEN_WIDTH*160+32           ; Position on screen
   mov cx, 16                            ; 16 lines
@@ -1264,7 +1269,7 @@ draw_font_text:
     push si                             ; Save string pointer
     push di
     .calculate_character_font_pointer:
-      sub ax, '0'                       ; Char index
+      sub ax, ' '                       ; Char index
       shl ax, 3                         ; Font offset (8 bytes)
       mov si, Font
       add si, ax
@@ -2346,17 +2351,17 @@ ret
 ; =========================================== TEXT DATA =====================|80
 
 PressEnterText db 'PRESS ENTER', 0x0
-QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more games...', 0x0D, 0x0A, 0x0
-FakeNumberText db '0000', 0x0
-Fontset1Text db '0123456789 ;:<=>?@',0x0
-Fontset2Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
+QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more...', 0x0D, 0x0A, 0x0
+Fontset1Text db ' !"#$%&',39,'()*+,-./:;<=>?',0x0
+Fontset2Text db '@ 0123456789',0x0
+Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
 MainMenuArrayText:
-  db 'ENTER >PLAY',0x0
-  db 'F1 >NEW MAP',0x0
-  db 'F2 >TILESETS',0x0
-  db 'F4 >HELP',0x0
-  db 'ESC >QUIT',0x0
+  db 'ENTER > PLAY',0x0
+  db 'F1 > NEW MAP',0x0
+  db 'F2 > TILESETS',0x0
+  db 'F4 > HELP',0x0
+  db 'ESC > QUIT',0x0
   db 0x00
 
 HelpArrayText:
@@ -2367,7 +2372,7 @@ HelpArrayText:
   db '> ESC TO BACK TO MAIN MENU',0x0
   db 0x00
 
-MainMenuCopyText db '2025 P1X',0x0
+MainMenuCopyText db '(C) 2025 P1X',0x0
 
 
 WindowBaseBuildingsText db 'BASE BUILDING',0x0
@@ -2421,57 +2426,6 @@ db 0xA         ; Mountain
 
 RailroadsDict:
 db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
-
-FontDict:
-db '0', 0x00
-db '1', 0x01
-db '2', 0x02
-db '3', 0x03
-db '4', 0x04
-db '5', 0x05
-db '6', 0x06
-db '7', 0x07
-db '8', 0x08
-db '9', 0x09
-db 'A', 0x0A
-db 'B', 0x0B
-db 'C', 0x0C
-db 'D', 0x0D
-db 'E', 0x0E
-db 'F', 0x0F
-db 'G', 0x10
-db 'H', 0x11
-db 'I', 0x12
-db 'J', 0x13
-db 'K', 0x14
-db 'L', 0x15
-db 'M', 0x16
-db 'N', 0x17
-db 'O', 0x18
-db 'P', 0x19
-db 'Q', 0x1A
-db 'R', 0x1B
-db 'S', 0x1C
-db 'T', 0x1D
-db 'U', 0x1E
-db 'V', 0x1F
-db 'W', 0x20
-db 'X', 0x21
-db 'Y', 0x22
-db 'Z', 0x23
-db ' ', 0x24
-db '.', 0x25
-db ',', 0x26
-db ':', 0x27
-db '(', 0x28
-db ')', 0x29
-db '?', 0x2A
-db '!', 0x2B
-db '+', 0x2C
-db '-', 0x2D
-db '=', 0x2E
-db '%', 0x2F
-db '@', 0x30
 
 ; =========================================== INCLUDES ======================|80
 

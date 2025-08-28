@@ -16,33 +16,22 @@
 #endif
 
 #ifndef TOTAL_CHARS
-#define TOTAL_CHARS 43
+#define TOTAL_CHARS 59
 #endif
 
-// Character names for comments starting from '0'
+// Character names for comments starting from ASCII 32 (space)
 const char* get_char_name(int index) {
     static char buffer[32];
 
-    // Tileset starts from character '0' (ASCII 48)
-    char actual_char = '0' + index;
-
-    if (actual_char >= '0' && actual_char <= '9') {
-        // Digits 0-9
-        sprintf(buffer, "'%c'", actual_char);
-    } else if (actual_char >= 'A' && actual_char <= 'Z') {
-        // Uppercase letters
-        sprintf(buffer, "'%c'", actual_char);
-    } else if (actual_char >= 'a' && actual_char <= 'z') {
-        // Lowercase letters
-        sprintf(buffer, "'%c'", actual_char);
-    } else if (actual_char >= 32 && actual_char <= 126) {
-        // Other printable ASCII
+    // Tileset starts from ASCII 32 (space)
+    char actual_char = 32 + index;
+    if (actual_char == 32) {
+        sprintf(buffer, "Space");
+    } else if (actual_char >= 33 && actual_char <= 126) {
         sprintf(buffer, "'%c'", actual_char);
     } else {
-        // Non-printable or extended
         sprintf(buffer, "Char %d", index);
     }
-
     return buffer;
 }
 
@@ -53,7 +42,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "  debug         - Add 'debug' as third argument for debug output\n");
         fprintf(stderr, "  chars_per_row - Number of characters per row (default: %d)\n", CHARS_PER_ROW);
         fprintf(stderr, "  total_chars   - Total number of characters (default: %d)\n", TOTAL_CHARS);
-        fprintf(stderr, "First tile in spritesheet is always skipped\n");
+        fprintf(stderr, "First tile in spritesheet represents space character\n");
         return 1;
     }
 
@@ -90,9 +79,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Verify image dimensions (add 1 to total_chars to account for skipping first tile)
+    // Verify image dimensions
     int expected_width = chars_per_row * CHAR_WIDTH;
-    int expected_height = ((total_chars + 1) / chars_per_row + (((total_chars + 1) % chars_per_row) ? 1 : 0)) * CHAR_HEIGHT;
+    int expected_height = (total_chars / chars_per_row + ((total_chars % chars_per_row) ? 1 : 0)) * CHAR_HEIGHT;
 
     if (width < expected_width || height < expected_height) {
         fprintf(stderr, "Error: Image dimensions should be at least %dx%d, but got %dx%d\n",
@@ -120,22 +109,21 @@ int main(int argc, char* argv[]) {
     fprintf(output, "; %d characters, 8x8 pixels per character\n", total_chars);
     fprintf(output, "; Each character is 8 bytes, one byte per row\n");
     fprintf(output, "; Bit 7 = leftmost pixel, Bit 0 = rightmost pixel\n");
-    fprintf(output, "; First tile in spritesheet is skipped\n\n");
+    fprintf(output, "; Characters start from ASCII 32 (space)\n\n");
     fprintf(output, "Font:\n");
 
-    // Process each character (skip first tile by adding 1)
+    // Process each character
     for (int char_index = 0; char_index < total_chars; char_index++) {
-        // Calculate position of this character in the spritesheet (skip first tile)
-        int sprite_index = char_index + 1;
-        int char_col = sprite_index % chars_per_row;
-        int char_row = sprite_index / chars_per_row;
+        // Calculate position of this character in the spritesheet
+        int char_col = char_index % chars_per_row;
+        int char_row = char_index / chars_per_row;
 
         int start_x = char_col * CHAR_WIDTH;
         int start_y = char_row * CHAR_HEIGHT;
 
         if (debug_mode) {
-            printf("Processing character %d (sprite %d) at (%d,%d)\n",
-                   char_index, sprite_index, start_x, start_y);
+            printf("Processing character %d at (%d,%d)\n",
+                   char_index, start_x, start_y);
         }
 
         // Extract 8 bytes for this character
