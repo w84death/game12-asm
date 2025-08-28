@@ -360,49 +360,30 @@ COLOR_YELLOW        equ 14
 COLOR_WHITE         equ 15
 
 ; =========================================== AUDIO NOTES ===================|80
-; Note values are frequency divisors for the PC speaker
-; Formula: divisor = 1193180 / frequency_hz
-Notes:
-NOTE_REST   equ 0xFF    ; Rest (silence)
-NOTE_C3     equ 0x2394  ; 130.81 Hz
-NOTE_CS3    equ 0x2187  ; 138.59 Hz
-NOTE_D3     equ 0x1F8F  ; 146.83 Hz
-NOTE_DS3    equ 0x1DA8  ; 155.56 Hz
-NOTE_E3     equ 0x1BD0  ; 164.81 Hz
-NOTE_F3     equ 0x1A07  ; 174.61 Hz
-NOTE_FS3    equ 0x184C  ; 185.00 Hz
-NOTE_G3     equ 0x169E  ; 196.00 Hz
-NOTE_GS3    equ 0x14FC  ; 207.65 Hz
-NOTE_A3     equ 0x1365  ; 220.00 Hz
-NOTE_AS3    equ 0x11D9  ; 233.08 Hz
-NOTE_B3     equ 0x1056  ; 246.94 Hz
-NOTE_C4     equ 0x11CA  ; 261.63 Hz (Middle C)
-NOTE_CS4    equ 0x10C4  ; 277.18 Hz
-NOTE_D4     equ 0x0FC8  ; 293.66 Hz
-NOTE_DS4    equ 0x0ED4  ; 311.13 Hz
-NOTE_E4     equ 0x0DE8  ; 329.63 Hz
-NOTE_F4     equ 0x0D04  ; 349.23 Hz
-NOTE_FS4    equ 0x0C26  ; 369.99 Hz
-NOTE_G4     equ 0x0B4F  ; 392.00 Hz
-NOTE_GS4    equ 0x0A7E  ; 415.30 Hz
-NOTE_A4     equ 0x09B3  ; 440.00 Hz
-NOTE_AS4    equ 0x08ED  ; 466.16 Hz
-NOTE_B4     equ 0x082B  ; 493.88 Hz
-NOTE_C5     equ 0x08E5  ; 523.25 Hz
-NOTE_CS5    equ 0x0862  ; 554.37 Hz
-NOTE_D5     equ 0x07E4  ; 587.33 Hz
-NOTE_DS5    equ 0x076A  ; 622.25 Hz
-NOTE_E5     equ 0x06F4  ; 659.25 Hz
-NOTE_F5     equ 0x0682  ; 698.46 Hz
-NOTE_FS5    equ 0x0613  ; 739.99 Hz
-NOTE_G5     equ 0x05A8  ; 783.99 Hz
-NOTE_GS5    equ 0x053F  ; 830.61 Hz
-NOTE_A5     equ 0x04D9  ; 880.00 Hz
-NOTE_AS5    equ 0x0476  ; 932.33 Hz
-NOTE_B5     equ 0x0416  ; 987.77 Hz
-NOTE_C6     equ 0x0473  ; 1046.50 Hz
-NOTE_E6     equ 0x037A  ; 1318.51 Hz
-
+; Common note ID constants for readability
+NOTE_REST     equ 0
+NOTE_C3       equ 1
+NOTE_D3       equ 2
+NOTE_E3       equ 3
+NOTE_F3       equ 4
+NOTE_G3       equ 5
+NOTE_A3       equ 6
+NOTE_B3       equ 7
+NOTE_C4       equ 8
+NOTE_D4       equ 9
+NOTE_E4       equ 10
+NOTE_F4       equ 11
+NOTE_G4       equ 12
+NOTE_A4       equ 13
+NOTE_B4       equ 14
+NOTE_C5       equ 15
+NOTE_D5       equ 16
+NOTE_E5       equ 17
+NOTE_F5       equ 18
+NOTE_G5       equ 19
+NOTE_A5       equ 20
+NOTE_B5       equ 21
+NOTE_C6       equ 22
 
 ; =========================================== INITIALIZATION ================|80
 
@@ -925,9 +906,9 @@ init_engine:
   call reset_to_default_values
   call init_audio_system
   call decompress_tiles
-  call generate_map             ; For quick random number
+  call generate_map
+  call build_initial_base
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN_INIT
-
 ret
 
 reset_to_default_values:
@@ -2296,7 +2277,8 @@ play_sfx:
 ret
 
 update_audio:
-  mov si, [_SFX_POINTER_]
+  mov si, NoteDict
+  add si, [_SFX_POINTER_]
   mov ax, [si]
   test ax, ax
   jz .stop_audio
@@ -2305,13 +2287,13 @@ update_audio:
   jz .skip_note
 
   mov bx, [_GAME_TICK_]
-  and bx, 0x1
+  and bx, 0x1d
   dec bx
   jz .play_pitched
 
   call play_sound
   .skip_note:
-  add word [_SFX_POINTER_], 2
+  inc byte [_SFX_POINTER_]
 ret
   .play_pitched:
    shl ah, 3
@@ -2352,7 +2334,7 @@ ret
 
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more...', 0x0D, 0x0A, 0x0
-Fontset1Text db ' !"#$%&',39,'()*+,-./:;<=>?',0x0
+Fontset1Text db ' !',34,'#$%&',39,'()*+,-./:;<=>?',0x0
 Fontset2Text db '@ 0123456789',0x0
 Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
