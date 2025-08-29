@@ -429,6 +429,7 @@ check_keyboard:
 ; Call BIOS interrupt
 
   ; ========================================= STATE TRANSITIONS ============|80
+  ; Main state game changer. Changes states like intro, menu, game.
   mov si, StateTransitionTable
   mov cx, StateTransitionTableEnd-StateTransitionTable
   .check_transitions:
@@ -521,8 +522,9 @@ ret                                     ; Return to DOS
 
 game_logic:
 
-
 ; =========================================== VIEWPORT MOVE =================|80
+  .back_to_menu:
+  ; hand;e
 
   .move_cursor_up:
     mov ax, [_VIEWPORT_Y_]              ; viewport top position
@@ -860,7 +862,7 @@ StateTransitionTable:
   db STATE_MENU,          KB_F3,    STATE_DEBUG_VIEW_INIT
   db STATE_MENU,          KB_F4,    STATE_HELP_INIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
-  db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
+
   db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT ; TODO: remove, initiate via radar building
   db STATE_MAP_VIEW,      KB_ESC,   STATE_MENU_INIT
   db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
@@ -878,6 +880,8 @@ InputTable:
   dw game_logic.move_cursor_right
   db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_SPACE
   dw game_logic.build_action
+  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_ESC
+  dw game_logic.back_to_menu
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_UP
   dw window_logic.selection_up
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_DOWN
@@ -902,7 +906,7 @@ InputTableEnd:
 
 ; ======================================= PROCEDURES FOR GAME STATES ===C====|80
 
-init_engine:
+init_engine:back_to_menu
   call reset_to_default_values
   call init_audio_system
   call decompress_tiles
