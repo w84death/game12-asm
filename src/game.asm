@@ -56,13 +56,15 @@ _VIEWPORT_X_              equ _BASE_ + 0x07   ; 2 bytes
 _VIEWPORT_Y_              equ _BASE_ + 0x09   ; 2 bytes
 _CURSOR_X_                equ _BASE_ + 0x0B   ; 2 bytes
 _CURSOR_Y_                equ _BASE_ + 0x0D   ; 2 bytes
-_SCENE_MODE_              equ _BASE_ + 0x0F   ; 1 byte
-_EMPTY_                   equ _BASE_ + 0x10   ; 2 bytes
-_ECONOMY_BLUE_RES_        equ _BASE_ + 0x12   ; 2 bytes
-_ECONOMY_YELLOW_RES_      equ _BASE_ + 0x14   ; 2 bytesg
-_ECONOMY_RED_RES_         equ _BASE_ + 0x16   ; 2 bytes
-_ECONOMY_SCORE_           equ _BASE_ + 0x18   ; 2 bytes
-_SFX_POINTER_             equ _BASE_ + 0x1A    ; 2 bytes
+_CURSOR_X_OLD_            equ _BASE_ + 0x0F   ; 2 bytes
+_CURSOR_Y_OLD_            equ _BASE_ + 0x11   ; 2 bytes
+_SCENE_MODE_              equ _BASE_ + 0x13   ; 1 byte
+_EMPTY_                   equ _BASE_ + 0x14   ; 2 bytes
+_ECONOMY_BLUE_RES_        equ _BASE_ + 0x16   ; 2 bytes
+_ECONOMY_YELLOW_RES_      equ _BASE_ + 0x18   ; 2 bytes
+_ECONOMY_RED_RES_         equ _BASE_ + 0x1A   ; 2 bytes
+_ECONOMY_SCORE_           equ _BASE_ + 0x1C   ; 2 bytes
+_SFX_POINTER_             equ _BASE_ + 0x1E   ; 2 bytes
 
 _MAP_                     equ 0x0000  ; Map data 128*128*1b= 0x4000
 _METADATA_                equ 0x0000  ; Map metadata 128*128*1b= 0x4000
@@ -532,31 +534,34 @@ game_logic:
     cmp word [_CURSOR_Y_], ax           ; check if cursor at the top edge
     je .move_viewport_up                ; try move the viewport up
     dec word [_CURSOR_Y_]               ; or just move the cursor up
-  jmp .redraw_tile
+  jmp .redraw_old_tile
 
   .move_cursor_down:
     mov ax, [_VIEWPORT_Y_]              ; viewport top position
     add ax, VIEWPORT_HEIGHT-2           ; get viewport bottom
     cmp word [_CURSOR_Y_], ax           ; check if cursro at the bottom
     jae .move_viewport_down             ; try to move viewport down
+
     inc word [_CURSOR_Y_]               ; or just move the cursor down
-  jmp .redraw_tile
+  jmp .redraw_old_tile
 
   .move_cursor_left:
     mov ax, [_VIEWPORT_X_]              ; viewport left position
     inc ax                              ; one tile before
     cmp word [_CURSOR_X_], ax           ; check if cursor at the left edge
     je .move_viewport_left              ; try to move viewport left
+
     dec word [_CURSOR_X_]               ; or just move the cursor left
-  jmp .redraw_tile
+  jmp .redraw_old_tile
 
   .move_cursor_right:
     mov ax, [_VIEWPORT_X_]              ; viewport left position
     add ax, VIEWPORT_WIDTH-2            ; get viewport right
     cmp word [_CURSOR_X_], ax           ; check if cursor at the right edge
     jae .move_viewport_right            ; try to move viewport right
+
     inc word [_CURSOR_X_]               ; or just move the cursor right
-  jmp .redraw_tile
+  jmp .redraw_old_tile
 
   .move_viewport_up:
     cmp word [_VIEWPORT_Y_], 0          ; check if viewport at the top edge
@@ -689,10 +694,19 @@ game_logic:
     call play_sfx
   .no_error:
 
+  .redraw_old_tile:
+    mov ax, [_CURSOR_X_OLD_]
+    mov bx, [_CURSOR_Y_OLD_]
+    call draw_single_cell
+
   .redraw_tile:
-    ; to be optimize later
-    ; for now redrawn everything
-    ; jmp .done
+    mov ax, [_CURSOR_X_]
+    mov bx, [_CURSOR_Y_]
+    mov word [_CURSOR_X_OLD_], ax
+    mov word [_CURSOR_Y_OLD_], bx
+    call draw_single_cell
+    call draw_cursor
+    jmp .done
 
   .redraw_terrain:
     call draw_terrain
@@ -906,7 +920,7 @@ InputTableEnd:
 
 ; ======================================= PROCEDURES FOR GAME STATES ===C====|80
 
-init_engine:back_to_menu
+init_engine:
   call reset_to_default_values
   call init_audio_system
   call decompress_tiles
@@ -923,6 +937,9 @@ reset_to_default_values:
   mov word [_VIEWPORT_Y_], MAP_SIZE/2-VIEWPORT_HEIGHT/2
   mov word [_CURSOR_X_], MAP_SIZE/2
   mov word [_CURSOR_Y_], MAP_SIZE/2
+  mov word [_CURSOR_X_OLD_], MAP_SIZE/2
+  mov word [_CURSOR_Y_OLD_], MAP_SIZE/2
+
 
   mov word [_ECONOMY_BLUE_RES_], 0
   mov word [_ECONOMY_YELLOW_RES_], 0
@@ -1714,70 +1731,7 @@ draw_terrain:
 
     mov cx, VIEWPORT_WIDTH
     .draw_cell:
-      mov al, [es:si]                   ; SEGMENT_TERRAIN_BACKGROUND
-      mov bl, al
-      and al, BACKGROUND_SPRITE_MASK
-      call draw_tile
-   and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
-      cmp bl, 0x0
-      jz .skip_foreground
-      .draw_forground:
-
-        mov al, [ds:si]                 ; SEGMENT_TERRAIN_FOREGROUND
-        and al, FORGROUND_SPRITE_MASK
-        add al, TILE_FOREGROUND_SHIFT
-        call draw_sprite
-
-        mov dl, [es:si]                 ; SEGMENT_TERRAIN_BACKGROUND
-        .draw_rails_stuff:
-          test dl, RAIL_MASK
-          jz .skip_rails_stuff
-
-          push es
-          push SEGMENT_META_DATA
-          pop es
-
-          .draw_switch:
-            mov al, [es:si]             ; SEGMENT_META_DATA
-            test al, SWITCH_MASK
-            jz .skip_switch
-              and al, SWITCH_TYPE_MASK
-              shr al, SWITCH_TYPE_SHIFT
-              add al, TILE_SWITCH_LEFT
-              call draw_sprite
-            .skip_switch:
-
-          .draw_cart:
-            test byte [ds:si], CART_DRAW_MASK  ; SEGMENT_TERRAIN_FOREGROUND
-            jz .skip_cart
-              mov bl, [es:si]           ; SEGMENT_META_DATA
-              and bl, CART_DIRECTION_MASK
-              shr bl, CART_DIRECTION_SHIFT
-              mov al, TILE_CART_HORIZONTAL
-              cmp bl, CART_DOWN
-              jg .skip_vertical
-              mov al, TILE_CART_VERTICAL
-              .skip_vertical:
-
-              call draw_sprite
-
-              .draw_cart_resource:
-                mov bl, [es:si]               ; SEGMENT_META_DATA
-                and bl, RESOURCE_TYPE_MASK
-                cmp bl, 0x0
-                jz .skip_resource
-                  shr bl, RESOURCE_TYPE_SHIFT
-                  mov al, TILE_ORE_BLUE-1
-                  add al, bl
-                  call draw_sprite
-                .skip_resource:
-            .skip_cart:
-
-            pop es
-        .skip_rails_stuff:
-
-      .skip_foreground:
-
+      call draw_cell
       add di, SPRITE_SIZE
       inc si
     loop .draw_cell
@@ -1790,6 +1744,99 @@ draw_terrain:
 
   pop ds
   pop es
+ret
+
+draw_single_cell:
+  mov si, bx                ; Calculate map position
+  shl si, 7   ; Y * 128
+  add si, ax              ; For quick random number
+
+  sub bx, [_VIEWPORT_Y_]  ; Y - Viewport Y
+  shl bx, 4               ; Y * 16
+  sub ax, [_VIEWPORT_X_]  ; X - Viewport X
+  shl ax, 4               ; X * 16
+  imul bx, SCREEN_WIDTH   ; Y * 16 * 320
+  add bx, ax              ; Y * 16 * 320 + X * 16
+  mov di, bx              ; Move result to DI
+
+  push es
+  push ds
+
+  push SEGMENT_TERRAIN_BACKGROUND
+  pop es
+
+  push SEGMENT_TERRAIN_FOREGROUND
+  pop ds
+
+  call draw_cell
+
+  pop ds
+  pop es
+ret
+
+draw_cell:
+  mov al, [es:si]                   ; SEGMENT_TERRAIN_BACKGROUND
+  mov bl, al
+  and al, BACKGROUND_SPRITE_MASK
+  call draw_tile
+  and bl, TERRAIN_SECOND_LAYER_DRAW_CLIP
+  cmp bl, 0x0
+  jz .skip_foreground
+  .draw_forground:
+
+    mov al, [ds:si]                 ; SEGMENT_TERRAIN_FOREGROUND
+    and al, FORGROUND_SPRITE_MASK
+    add al, TILE_FOREGROUND_SHIFT
+    call draw_sprite
+
+    mov dl, [es:si]                 ; SEGMENT_TERRAIN_BACKGROUND
+    .draw_rails_stuff:
+      test dl, RAIL_MASK
+      jz .skip_rails_stuff
+
+      push es
+      push SEGMENT_META_DATA
+      pop es
+
+      .draw_switch:
+        mov al, [es:si]             ; SEGMENT_META_DATA
+        test al, SWITCH_MASK
+        jz .skip_switch
+          and al, SWITCH_TYPE_MASK
+          shr al, SWITCH_TYPE_SHIFT
+          add al, TILE_SWITCH_LEFT
+          call draw_sprite
+        .skip_switch:
+
+      .draw_cart:
+        test byte [ds:si], CART_DRAW_MASK  ; SEGMENT_TERRAIN_FOREGROUND
+        jz .skip_cart
+          mov bl, [es:si]           ; SEGMENT_META_DATA
+          and bl, CART_DIRECTION_MASK
+          shr bl, CART_DIRECTION_SHIFT
+          mov al, TILE_CART_HORIZONTAL
+          cmp bl, CART_DOWN
+          jg .skip_vertical
+          mov al, TILE_CART_VERTICAL
+          .skip_vertical:
+
+          call draw_sprite
+
+          .draw_cart_resource:
+            mov bl, [es:si]               ; SEGMENT_META_DATA
+            and bl, RESOURCE_TYPE_MASK
+            cmp bl, 0x0
+            jz .skip_resource
+              shr bl, RESOURCE_TYPE_SHIFT
+              mov al, TILE_ORE_BLUE-1
+              add al, bl
+              call draw_sprite
+            .skip_resource:
+        .skip_cart:
+
+        pop es
+    .skip_rails_stuff:
+  .skip_foreground:
 ret
 
 ; =================================== RECALCULATE RAILS =====================|80
