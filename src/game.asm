@@ -568,6 +568,8 @@ game_logic:
     je .done                            ; do nothing if on edge
     dec word [_VIEWPORT_Y_]             ; move viewport up
     dec word [_CURSOR_Y_]               ; move cursor up
+    mov bx, [_CURSOR_Y_]
+    mov word [_CURSOR_Y_OLD_], bx
   jmp .redraw_terrain
 
   .move_viewport_down:
@@ -575,6 +577,8 @@ game_logic:
     jae .done                           ; do nothing if on edge
     inc word [_VIEWPORT_Y_]             ; move viewport down
     inc word [_CURSOR_Y_]               ; move cursor down
+    mov bx, [_CURSOR_Y_]
+    mov word [_CURSOR_Y_OLD_], bx
   jmp .redraw_terrain
 
   .move_viewport_left:
@@ -582,6 +586,8 @@ game_logic:
     je .done                            ; do nothing if on edge
     dec word [_VIEWPORT_X_]             ; move viewport left
     dec word [_CURSOR_X_]               ; move cursor left
+    mov ax, [_CURSOR_X_]
+    mov word [_CURSOR_X_OLD_], ax
   jmp .redraw_terrain
 
   .move_viewport_right:
@@ -589,6 +595,8 @@ game_logic:
     jae .done                           ; do nothing if on edge
     inc word [_VIEWPORT_X_]             ; move viewport right
     inc word [_CURSOR_X_]               ; move cursor right
+    mov ax, [_CURSOR_X_]
+    mov word [_CURSOR_X_OLD_], ax
   jmp .redraw_terrain
 
   .switch_change:
@@ -658,7 +666,10 @@ game_logic:
       call recalculate_rails
       add di, MAP_SIZE*2
       call recalculate_rails
-      jmp .no_action
+
+      pop ds
+      pop es
+      jmp .redraw_four_tiles
 
     .toggle_switch:
     jmp .no_action
@@ -688,11 +699,27 @@ game_logic:
     pop es
   jmp .redraw_tile
 
-  jmp .no_error
-  .error:
-    mov bx, SFX_ERROR
-    call play_sfx
-  .no_error:
+  .redraw_four_tiles:
+    mov ax, [_CURSOR_X_]
+    mov bx, [_CURSOR_Y_]
+    dec ax
+    call draw_single_cell
+
+    mov ax, [_CURSOR_X_]
+    mov bx, [_CURSOR_Y_]
+    inc ax
+    call draw_single_cell
+
+    mov ax, [_CURSOR_X_]
+    mov bx, [_CURSOR_Y_]
+    inc bx
+    call draw_single_cell
+
+    mov ax, [_CURSOR_X_]
+    mov bx, [_CURSOR_Y_]
+    dec bx
+    call draw_single_cell
+    jmp .redraw_tile
 
   .redraw_old_tile:
     mov ax, [_CURSOR_X_OLD_]
@@ -876,7 +903,7 @@ StateTransitionTable:
   db STATE_MENU,          KB_F3,    STATE_DEBUG_VIEW_INIT
   db STATE_MENU,          KB_F4,    STATE_HELP_INIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
-
+  db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT ; TODO: remove, initiate via radar building
   db STATE_MAP_VIEW,      KB_ESC,   STATE_MENU_INIT
   db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
@@ -894,8 +921,6 @@ InputTable:
   dw game_logic.move_cursor_right
   db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_SPACE
   dw game_logic.build_action
-  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_ESC
-  dw game_logic.back_to_menu
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_UP
   dw window_logic.selection_up
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_DOWN
@@ -1747,6 +1772,9 @@ draw_terrain:
 ret
 
 draw_single_cell:
+  push si
+  push di
+
   mov si, bx                ; Calculate map position
   shl si, 7   ; Y * 128
   add si, ax              ; For quick random number
@@ -1772,6 +1800,8 @@ draw_single_cell:
 
   pop ds
   pop es
+  pop di
+  pop si
 ret
 
 draw_cell:
