@@ -319,19 +319,15 @@ METADATA_SWITCH_INITIALIZED     equ 0x01
 METADATA_SWITCH_MASK            equ 0x06
 METADATA_SWITCH_SHIFT           equ 0x01
 
-SCENE_MODE_MAIN_MENU            equ 0x00
-SCENE_MODE_HELP_PAGE1           equ 0x02
-SCENE_MODE_HELP_PAGE2           equ 0x03
-
 SCENE_MODE_GAMEPLAY             equ 0x00
-SCENE_MODE_BASE_BUILDINGS       equ 0x00
-SCENE_MODE_REMOTE_BUILDINGS     equ 0x01
-SCENE_MODE_STATION              equ 0x02
+SCENE_MODE_MAIN_MENU            equ 0x00
+SCENE_MODE_BASE_BUILDINGS       equ 0x01
+SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
+SCENE_MODE_STATION              equ 0x03
+SCENE_MODE_HELP_PAGE            equ 0x00
 
-UI_STATS_WINDOW_POS             equ 0x1502
 UI_STATS_GFX_LINE               equ 320*175
 UI_STATS_TXT_LINE               equ 0x16
-
 
 ; =========================================== MISC SETTINGS =================|80
 
@@ -683,21 +679,18 @@ game_logic:
 
       .base_building:
         mov bx, SCENE_MODE_BASE_BUILDINGS
-        mov byte [_MENU_SELECTION_POS_], 0x0
-        mov byte [_MENU_SELECTION_MAX_], 0x4
         jmp .pop_window
 
       .station:
         mov bx, SCENE_MODE_STATION
-        mov byte [_MENU_SELECTION_POS_], 0x0
-        mov byte [_MENU_SELECTION_MAX_], 0x1
         jmp .pop_window
 
-      .pop_window:
+    .pop_window:
       pop ds
       pop es
       mov byte [_GAME_STATE_], STATE_WINDOW_INIT
       mov byte [_SCENE_MODE_], bl
+      mov byte [_MENU_SELECTION_POS_], 0x0
       jmp .done
 
     .no_action:
@@ -755,9 +748,11 @@ ret
 
 window_logic:
   .create_window:
-    mov si, WindowBaseBuildingDict
+    mov si, WindowDefinitionsArray
+    xor ax, ax
     mov al, [_SCENE_MODE_]
-    shl al, 2
+    shl al, 3
+    add si, ax
 
     mov bx, [si]         ; height:width
     mov ax, [si+2]
@@ -778,9 +773,7 @@ window_logic:
     mov dx, [si+2]
     mov si, ax
     inc dh
-    inc dh
     inc dl
-
 
     xor cx, cx
     .menu_array:
@@ -829,7 +822,41 @@ window_logic:
   jmp .done
 
   .done:
+ret
 
+main_menu_logic:
+  .selection_enter:
+    mov al, [_MENU_SELECTION_POS_]
+    cmp al, 0x0
+    je .start_game
+    cmp al, 0x1
+    je .generate_new_map
+    cmp al, 0x2
+    je .tailset_preview
+    cmp al, 0x3
+    je .help
+    cmp al, 0x4
+    je .quit
+    jmp .done
+
+    .start_game:
+      mov byte [_GAME_STATE_], STATE_GAME_INIT
+    jmp .done
+
+    .generate_new_map:
+      mov byte [_GAME_STATE_], STATE_GAME_INIT
+      jmp .done
+    .tailset_preview:
+      mov byte [_GAME_STATE_], STATE_DEBUG_VIEW_INIT
+      jmp .done
+    .help:
+    mov byte [_GAME_STATE_], STATE_HELP_INIT
+    jmp .done
+    .quit:
+    mov byte [_GAME_STATE_], STATE_QUIT
+    jmp .done
+
+  .done:
 ret
 
 
@@ -877,15 +904,10 @@ StateTransitionTable:
   db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
 
   db STATE_MENU,          KB_ESC,   STATE_QUIT
-  db STATE_MENU,          KB_ENTER, STATE_GAME_INIT
-  db STATE_MENU,          KB_F1,    STATE_GAME_NEW
-  db STATE_MENU,          KB_F2,    STATE_DEBUG_VIEW_INIT
-  db STATE_MENU,          KB_F3,    STATE_DEBUG_VIEW_INIT
-  db STATE_MENU,          KB_F4,    STATE_HELP_INIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT ; TODO: remove, initiate via radar building
-  db STATE_MAP_VIEW,      KB_ESC,   STATE_MENU_INIT
+  db STATE_MAP_VIEW,      KB_ESC,   STATE_GAME_INIT
   db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
   db STATE_DEBUG_VIEW,    KB_ESC,   STATE_MENU_INIT
 StateTransitionTableEnd:
@@ -901,6 +923,12 @@ InputTable:
   dw game_logic.move_cursor_right
   db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_SPACE
   dw game_logic.build_action
+  db STATE_MENU,        SCENE_MODE_MAIN_MENU,    KB_UP
+  dw window_logic.selection_up
+  db STATE_MENU,        SCENE_MODE_MAIN_MENU,    KB_DOWN
+  dw window_logic.selection_down
+  db STATE_MENU,        SCENE_MODE_MAIN_MENU,    KB_ENTER
+  dw main_menu_logic.selection_enter
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_UP
   dw window_logic.selection_up
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_DOWN
@@ -996,28 +1024,16 @@ init_menu:
     add di, 0x10
   loop .logo_loop
 
-  mov ax, 0x090C
-  mov bx, 0x0607
-  call draw_window
+  mov byte [_GAME_STATE_], STATE_MENU
+  mov byte [_SCENE_MODE_], SCENE_MODE_MAIN_MENU
 
-  mov si, MainMenuArrayText
-  mov bl, COLOR_YELLOW
-  mov dx, 0x0A0D
-  .menu_entry:
-    cmp byte [si], 0x00
-    jz .done
-    call draw_font_text
-    add dh, 0x2
-  jmp .menu_entry
-  .done:
+  call window_logic.create_window
 
   mov si, MainMenuCopyText
   mov dx, 0x160D
   mov bl, COLOR_LIGHT_GRAY
   call draw_font_text
 
-  mov byte [_GAME_STATE_], STATE_MENU
-  mov byte [_SCENE_MODE_], SCENE_MODE_MAIN_MENU
 
   mov bx, MENU_JINGLE
   call play_sfx
@@ -1042,7 +1058,7 @@ init_help:
   jmp .help_entry
   .done:
   mov byte [_GAME_STATE_], STATE_HELP
-  mov byte [_SCENE_MODE_], SCENE_MODE_HELP_PAGE1
+  mov byte [_SCENE_MODE_], SCENE_MODE_HELP_PAGE
 ret
 
 live_help:
@@ -2407,36 +2423,42 @@ Fontset1Text db ' !',34,'#$%&',39,'()*+,-./:;<=>?',0x0
 Fontset2Text db '@ 0123456789',0x0
 Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
-MainMenuArrayText:
-  db 'ENTER > PLAY',0x0
-  db 'F1 > NEW MAP',0x0
-  db 'F2 > TILESETS',0x0
-  db 'F4 > HELP',0x0
-  db 'ESC > QUIT',0x0
-  db 0x00
-
 HelpArrayText:
   db 'SHORT HELP',0x0
-  db '> ARROWS TO MOVE CURSOR',0x0
-  db '> SPACEBAR FOR INTERACTION',0x0
-  db '> ENTER TO CONFIRM MENUS',0x0
-  db '> ESC TO BACK TO MAIN MENU',0x0
+  db '* ARROWS TO MOVE CURSOR',0x0
+  db '* SPACEBAR FOR INTERACTION',0x0
+  db '* ENTER TO CONFIRM IN MENUS',0x0
+  db '* ESC TO BACK TO MAIN MENU',0x0
+  db ' ',0x0
+  db 'KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
+  db 'SMOL.P1X.IN/ASSEMBLY/',0x0
   db 0x00
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
 
 ; height/width, Y/X, title, menu entry array
-WindowBaseBuildingDict:
+WindowDefinitionsArray:
+dw 0x060A, 0x0A0A, WindowMainMenuText, MainMenuSelectionArrayText
 dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText
 dw 0x080A, 0x040A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText
 dw 0x080A, 0x040A, WindowStationText, WindowStationSelectionArrayText
 
+
+WindowMainMenuText          db 'MAIN MANU',0x0
 WindowBaseBuildingsText     db 'BASE BUILDING',0x0
 WindowStationText           db 'STATION',0x0
 WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
-WindowCloseWindowText       db 'CLOSE WINDOW',0x0
+
+MainMenuSelectionArrayText:
+  db 'PLAY >',0x0
+  db 'GENERATE NEW MAP',0x0
+  db 'PREVIEW TILESETS',0x0
+  db 'QUICK HELP',0x0
+  db '< QUIT',0x0
+  db 0x00
 
 WindowBaseSelectionArrayText:
+  db '< CLOSE WINDOW',0x0
   db 'EXPAND FOUNDATION',0x0
   db 'SILOS',0x0
   db 'FACTORY',0x0
@@ -2446,11 +2468,13 @@ WindowBaseSelectionArrayText:
   db 0x00
 
 WindowRemoteSelectionArrayText:
+  db '< CLOSE WINDOW',0x0
   db 'EXTRACTOR',0x0
   db 'RADAR',0x0
   db 0x00
 
 WindowStationSelectionArrayText:
+  db '< CLOSE WINDOW',0x0
   db 'STATION',0x0
   db 0x00
 
