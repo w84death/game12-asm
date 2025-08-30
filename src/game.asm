@@ -65,6 +65,8 @@ _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x18   ; 2 bytes
 _ECONOMY_RED_RES_         equ _BASE_ + 0x1A   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x1C   ; 2 bytes
 _SFX_POINTER_             equ _BASE_ + 0x1E   ; 2 bytes
+_MENU_SELECTION_POS_      equ _BASE_ + 0x20   ; 1 byte
+_MENU_SELECTION_MAX_      equ _BASE_ + 0x21   ; 1 byte
 
 _MAP_                     equ 0x0000  ; Map data 128*128*1b= 0x4000
 _METADATA_                equ 0x0000  ; Map metadata 128*128*1b= 0x4000
@@ -322,9 +324,9 @@ SCENE_MODE_HELP_PAGE1           equ 0x02
 SCENE_MODE_HELP_PAGE2           equ 0x03
 
 SCENE_MODE_GAMEPLAY             equ 0x00
-SCENE_MODE_BASE_BUILDINGS       equ 0x01
-SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
-SCENE_MODE_STATION              equ 0x03
+SCENE_MODE_BASE_BUILDINGS       equ 0x00
+SCENE_MODE_REMOTE_BUILDINGS     equ 0x01
+SCENE_MODE_STATION              equ 0x02
 
 UI_STATS_WINDOW_POS             equ 0x1502
 UI_STATS_GFX_LINE               equ 320*175
@@ -573,7 +575,7 @@ game_logic:
   jmp .redraw_terrain
 
   .move_viewport_down:
-    cmp word [_VIEWPORT_Y_], MAP_SIZE-VIEWPORT_HEIGHT ; check if viewport at the bottom edge of map
+    cmp word [_VIEWPORT_Y_], MAP_SIZE-VIEWPORT_HEIGHT ; check if viewport at the bottom edge of ma26p
     jae .done                           ; do nothing if on edge
     inc word [_VIEWPORT_Y_]             ; move viewport down
     inc word [_CURSOR_Y_]               ; move cursor down
@@ -681,10 +683,14 @@ game_logic:
 
       .base_building:
         mov bx, SCENE_MODE_BASE_BUILDINGS
+        mov byte [_MENU_SELECTION_POS_], 0x0
+        mov byte [_MENU_SELECTION_MAX_], 0x4
         jmp .pop_window
 
       .station:
         mov bx, SCENE_MODE_STATION
+        mov byte [_MENU_SELECTION_POS_], 0x0
+        mov byte [_MENU_SELECTION_MAX_], 0x1
         jmp .pop_window
 
       .pop_window:
@@ -719,6 +725,7 @@ game_logic:
     mov bx, [_CURSOR_Y_]
     dec bx
     call draw_single_cell
+    call draw_frame
     jmp .redraw_tile
 
   .redraw_old_tile:
@@ -748,103 +755,76 @@ ret
 
 window_logic:
   .create_window:
+    mov si, WindowBaseBuildingDict
+    mov al, [_SCENE_MODE_]
+    shl al, 2
 
-    cmp byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
-    jz .base_buildings
-    cmp byte [_SCENE_MODE_], SCENE_MODE_REMOTE_BUILDINGS
-    jz .remote_buildings
-    cmp byte [_SCENE_MODE_], SCENE_MODE_STATION
-    jz .station
+    mov bx, [si]         ; height:width
+    mov ax, [si+2]
+    call draw_window
 
-    .default:
-      mov ax, 0x040C
-      mov bx, 0x0207
-      call draw_window
-      jmp .done
+    mov ax, [si+4]
+    mov dx, [si+2]
+    push si
+    mov si, ax
 
-    .station:
-      mov ax, 0x060C
-      mov bx, 0x0407
-      call draw_window
+    dec dh
+    inc dl
+    mov bl, COLOR_WHITE
+    call draw_font_text
 
-      mov si, WindowStationText
-      mov dx, 0x060E
+    pop si
+    mov ax, [si+6]
+    mov dx, [si+2]
+    mov si, ax
+    inc dh
+    inc dh
+    inc dl
+
+
+    xor cx, cx
+    .menu_array:
+
+      cmp byte [si], 0x00
+      jz .done_menu_array
+
       mov bl, COLOR_WHITE
+      cmp byte [_MENU_SELECTION_POS_], cl
+      jne .skip_color_highlight
+        mov bl, COLOR_YELLOW
+      .skip_color_highlight:
+      push cx
       call draw_font_text
-
-      mov si, WindowCloseWindowText
-      mov dx, 0x080E
-      mov bl, COLOR_YELLOW
-      call draw_font_text
-
-      mov si, WindowStationSelectionArrayText
-      add dh, 0x2
-      .station_array:
-        cmp byte [si], 0x00
-        jz .done
-        call draw_font_text
-        add dh, 0x2
-      jmp .station_array
-      jmp .done
-
-    .base_buildings:
-      mov ax, 0x040A
-      mov bx, 0x080A
-      call draw_window
-
-      mov si, WindowBaseBuildingsText
-      mov dx, 0x040C
-      mov bl, COLOR_WHITE
-      call draw_font_text
-
-      mov si, WindowCloseWindowText
-      mov dx, 0x060C
-      mov bl, COLOR_YELLOW
-      call draw_font_text
-
-      mov si, WindowBaseSelectionArrayText
-      add dh, 0x2
-      .base_array:
-        cmp byte [si], 0x00
-        jz .done
-        call draw_font_text
-        add dh, 0x2
-      jmp .base_array
-
-      jmp .done
-
-    .remote_buildings:
-      mov ax, 0x040A
-      mov bx, 0x080A
-      call draw_window
-
-      mov si, WindowRemoteBuildingsText
-      mov dx, 0x040C
-      mov bl, COLOR_WHITE
-      call draw_font_text
-
-      mov si, WindowCloseWindowText
-      mov dx, 0x060C
-      mov bl, COLOR_YELLOW
-      call draw_font_text
-
-      mov si, WindowBaseSelectionArrayText
-      add dh, 0x2
-      .remote_array:
-        cmp byte [si], 0x00
-        jz .done
-        call draw_font_text
-        add dh, 0x2
-      jmp .remote_array
-    jmp .done
+      pop cx
+      inc dh
+      inc dh
+      inc cx
+    jmp .menu_array
+    .done_menu_array:
+    dec cl
+    mov byte [_MENU_SELECTION_MAX_], cl
+  jmp .done
 
   .selection_up:
-  jmp .done
+  mov al, [_MENU_SELECTION_POS_]
+  cmp al, 0x0
+  je .done
+  dec al
+  mov byte [_MENU_SELECTION_POS_], al
+  jmp .create_window
 
   .selection_down:
-  jmp .done
+  mov al, [_MENU_SELECTION_POS_]
+  cmp al, [_MENU_SELECTION_MAX_]
+  je .done
+  inc al
+  mov byte [_MENU_SELECTION_POS_], al
+  jmp .create_window
 
   .selection_enter:
+
+
+
     mov byte [_GAME_STATE_], STATE_GAME_INIT
   jmp .done
 
@@ -1265,6 +1245,19 @@ draw_text:
   .done:
 ret
 
+
+calculate_coordinates_vga_pointer:
+  push bx                             ; Save color
+  movzx ax, dl                        ; Extract X
+  movzx bx, dh                        ; Extract Y
+  shl ax, 3                           ; X * 8
+  shl bx, 3                           ; Y * 8
+  imul bx, SCREEN_WIDTH               ; Y * 8 * 320
+  add bx, ax                          ; Y * 8 * 320 + X * 8
+  mov di, bx                          ; Move result to DI
+  pop bx                              ; Restore color
+ ret
+
 ; =========================================== DRAW FONT TEXT ================|80
 ; IN:
 ;  SI - Pointer to text string
@@ -1272,17 +1265,7 @@ ret
 ;  DH - Y position (in character font size)
 ;  BX - Color
 draw_font_text:
-  .calculate_coordinates_vga_pointer:
-    push bx                             ; Save color
-    movzx ax, dl                        ; Extract X
-    movzx bx, dh                        ; Extract Y
-    shl ax, 3                           ; X * 8
-    shl bx, 3                           ; Y * 8
-    imul bx, SCREEN_WIDTH               ; Y * 8 * 320
-    add bx, ax                          ; Y * 8 * 320 + X * 8
-    mov di, bx                          ; Move result to DI
-    pop bx                              ; Restore color
-
+  call calculate_coordinates_vga_pointer
   .next_char:
     xor ax, ax                          ; Clear leftover in ax
     lodsb
@@ -1295,37 +1278,42 @@ draw_font_text:
     .is_not_space:
     push si                             ; Save string pointer
     push di
-    .calculate_character_font_pointer:
-      sub ax, ' '                       ; Char index
-      shl ax, 3                         ; Font offset (8 bytes)
-      mov si, Font
-      add si, ax
 
-    mov cx, FONT_SIZE
-    .char_line:
-      lodsb                             ; Load font byte
-      push cx
-      mov cx, FONT_SIZE
-      .pixel:
-        shl al, 1
-        jc .draw_px                     ; Transparent
-        inc di                          ; Skip pixel
-      loop .pixel
-        jmp .next_line                  ; Jump to next line on last pixel
-        .draw_px:
-        mov [es:di], bl                 ; Color pixel
-        inc di
-      loop .pixel                       ; Next pixel
-      .next_line:
-      add di, SCREEN_WIDTH-FONT_SIZE
-      pop cx
-    loop .char_line
+    call draw_font_character
 
     pop di
     pop si                              ; Restore string pointer
     add di,FONT_SIZE                    ; Next char
   jmp .next_char
   .done:
+ret
+
+draw_font_character:
+  .calculate_character_font_pointer:
+    sub ax, ' '                       ; Char index
+    shl ax, 3                         ; Font offset (8 bytes)
+    mov si, Font
+    add si, ax
+
+  mov cx, FONT_SIZE
+  .char_line:
+    lodsb                             ; Load font byte
+    push cx
+    mov cx, FONT_SIZE
+    .pixel:
+      shl al, 1
+      jc .draw_px                     ; Transparent
+      inc di                          ; Skip pixel
+    loop .pixel
+      jmp .next_line                  ; Jump to next line on last pixel
+      .draw_px:
+      mov [es:di], bl                 ; Color pixel
+      inc di
+    loop .pixel                       ; Next pixel
+    .next_line:
+    add di, SCREEN_WIDTH-FONT_SIZE
+    pop cx
+  loop .char_line
 ret
 
 ; =========================================== DRAW NUMBER ===================|80
@@ -1777,7 +1765,7 @@ draw_single_cell:
 
   mov si, bx                ; Calculate map position
   shl si, 7   ; Y * 128
-  add si, ax              ; For quick random number
+  add si, ax
 
   sub bx, [_VIEWPORT_Y_]  ; Y - Viewport Y
   shl bx, 4               ; Y * 16
@@ -2437,13 +2425,16 @@ HelpArrayText:
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
 
+; height/width, Y/X, title, menu entry array
+WindowBaseBuildingDict:
+dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText
+dw 0x080A, 0x040A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText
+dw 0x080A, 0x040A, WindowStationText, WindowStationSelectionArrayText
 
-WindowBaseBuildingsText db 'BASE BUILDING',0x0
-WindowStationText db ' Station ',0x0
-WindowRemoteBuildingsText db 'REMOTE BUILDINGS',0x0
-
-WindowCloseWindowText db 'CLOSE WINDOW',0x0
-WindowBuildText db 'BUILD: ',0x0
+WindowBaseBuildingsText     db 'BASE BUILDING',0x0
+WindowStationText           db 'STATION',0x0
+WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
+WindowCloseWindowText       db 'CLOSE WINDOW',0x0
 
 WindowBaseSelectionArrayText:
   db 'EXPAND FOUNDATION',0x0
@@ -2462,6 +2453,7 @@ WindowRemoteSelectionArrayText:
 WindowStationSelectionArrayText:
   db 'STATION',0x0
   db 0x00
+
 ; =========================================== TERRAIN GEN RULES =============|80
 
 TerrainRules:
