@@ -1,5 +1,7 @@
 # Menu System
+
 ![Menu header](menu.jpg)
+
 Now all menus in game are driven by data definitions and uses the same code to operate. Now it is easy to use arrows to navigate menus.
 
 ## Window Definitions
@@ -30,6 +32,7 @@ MainMenuSelectionArrayText:
   db '< QUIT',0x0
   db 0x00
 ```
+
 ![main menu screenshot](menu-main.jpg)
 
 ## Game Menu Example
@@ -46,6 +49,7 @@ WindowBaseSelectionArrayText:
   db 'BUILD POD STATION',0x0
   db 0x00
 ```
+
 ![game menu screenshot](menu-game.jpg)
 
 ## Selection
