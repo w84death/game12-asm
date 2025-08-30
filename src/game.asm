@@ -319,7 +319,7 @@ METADATA_SWITCH_INITIALIZED     equ 0x01
 METADATA_SWITCH_MASK            equ 0x06
 METADATA_SWITCH_SHIFT           equ 0x01
 
-SCENE_MODE_GAMEPLAY             equ 0x00
+SCENE_MODE_ANY             equ 0x00
 SCENE_MODE_MAIN_MENU            equ 0x00
 SCENE_MODE_BASE_BUILDINGS       equ 0x01
 SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
@@ -459,7 +459,7 @@ check_keyboard:
     cmp bl, [si]                        ; Check current state
     jne .next_input
 
-    cmp byte [si+1], SCENE_MODE_GAMEPLAY
+    cmp byte [si+1], SCENE_MODE_ANY
     je .check_keypress
     mov bl, [_SCENE_MODE_]
     cmp bl, [si+1]                      ; Check current mode
@@ -597,6 +597,7 @@ game_logic:
     mov word [_CURSOR_X_OLD_], ax
   jmp .redraw_terrain
 
+  ; TODO: update
   .switch_change:
     mov ax, [_CURSOR_Y_]                ; calculate map position
     shl ax, 7   ; Y * 128
@@ -799,31 +800,25 @@ window_logic:
     mov byte [_MENU_SELECTION_MAX_], cl
   jmp .done
 
+  .done:
+ret
+
+main_menu_logic:
   .selection_up:
     cmp byte [_MENU_SELECTION_POS_], 0x0
     je .done
     dec byte [_MENU_SELECTION_POS_]
-  jmp .redraw_window
+  jmp window_logic.redraw_window
 
   .selection_down:
     mov al, [_MENU_SELECTION_POS_]
     cmp al, [_MENU_SELECTION_MAX_]
     je .done
     inc byte [_MENU_SELECTION_POS_]
-  jmp .redraw_window
-
-  .selection_enter:
+  jmp window_logic.redraw_window
 
 
-
-    mov byte [_GAME_STATE_], STATE_GAME_INIT
-  jmp .done
-
-  .done:
-ret
-
-main_menu_logic:
-  .selection_enter:
+  .main_menu_enter:
     mov al, [_MENU_SELECTION_POS_]
     cmp al, 0x0
     je .start_game
@@ -835,24 +830,34 @@ main_menu_logic:
     je .help
     cmp al, 0x4
     je .quit
-    jmp .done
+  jmp .done
 
-    .start_game:
-      mov byte [_GAME_STATE_], STATE_GAME_INIT
-    jmp .done
+  .selection_base_enter:
+  .selection_remote_enter:
+  .selection_station_enter:
+    call menu_base_buildings_execute
+    mov byte [_GAME_STATE_], STATE_GAME_INIT
+  jmp .done
 
-    .generate_new_map:
-      mov byte [_GAME_STATE_], STATE_GAME_NEW
-      jmp .done
-    .tailset_preview:
-      mov byte [_GAME_STATE_], STATE_DEBUG_VIEW_INIT
-      jmp .done
-    .help:
+  .start_game:
+    mov byte [_GAME_STATE_], STATE_GAME_INIT
+  jmp .done
+
+  .generate_new_map:
+    mov byte [_GAME_STATE_], STATE_GAME_NEW
+  jmp .done
+
+  .tailset_preview:
+    mov byte [_GAME_STATE_], STATE_DEBUG_VIEW_INIT
+  jmp .done
+
+  .help:
     mov byte [_GAME_STATE_], STATE_HELP_INIT
-    jmp .done
-    .quit:
+  jmp .done
+
+  .quit:
     mov byte [_GAME_STATE_], STATE_QUIT
-    jmp .done
+  jmp .done
 
   .done:
 ret
@@ -868,9 +873,6 @@ menu_base_buildings_execute:
   mov bx, TILE_BUILDING_SILOS_ID
   add al, bl
   mov byte [ds:di], al
-
-  mov byte [_GAME_STATE_], STATE_WINDOW_INIT
-  mov byte [_SCENE_MODE_], SCENE_MODE_BASE_BUILDINGS
 ret
 
 
@@ -900,7 +902,6 @@ StateJumpTable:
 StateTransitionTable:
   db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
   db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
-
   db STATE_MENU,          KB_ESC,   STATE_QUIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
@@ -911,40 +912,32 @@ StateTransitionTable:
 StateTransitionTableEnd:
 
 InputTable:
-  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_UP
+  db STATE_GAME,          SCENE_MODE_ANY,  KB_UP
   dw game_logic.move_cursor_up
-  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_DOWN
+  db STATE_GAME,          SCENE_MODE_ANY,  KB_DOWN
   dw game_logic.move_cursor_down
-  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_LEFT
+  db STATE_GAME,          SCENE_MODE_ANY,  KB_LEFT
   dw game_logic.move_cursor_left
-  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_RIGHT
+  db STATE_GAME,          SCENE_MODE_ANY,  KB_RIGHT
   dw game_logic.move_cursor_right
-  db STATE_GAME,          SCENE_MODE_GAMEPLAY,  KB_SPACE
+  db STATE_GAME,          SCENE_MODE_ANY,  KB_SPACE
   dw game_logic.build_action
-  db STATE_MENU,        SCENE_MODE_MAIN_MENU,    KB_UP
-  dw window_logic.selection_up
-  db STATE_MENU,        SCENE_MODE_MAIN_MENU,    KB_DOWN
-  dw window_logic.selection_down
-  db STATE_MENU,        SCENE_MODE_MAIN_MENU,    KB_ENTER
-  dw main_menu_logic.selection_enter
-  db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_UP
-  dw window_logic.selection_up
-  db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_DOWN
-  dw window_logic.selection_down
+  db STATE_MENU,        SCENE_MODE_ANY,    KB_UP
+  dw main_menu_logic.selection_up
+  db STATE_MENU,        SCENE_MODE_ANY,    KB_DOWN
+  dw main_menu_logic.selection_down
+  db STATE_MENU,        SCENE_MODE_ANY,    KB_ENTER
+  dw main_menu_logic.main_menu_enter
+  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_UP
+  dw main_menu_logic.selection_up
+  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_DOWN
+  dw main_menu_logic.selection_down
   db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_ENTER
-  dw window_logic.selection_enter
-  db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_UP
-  dw window_logic.selection_up
-  db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_DOWN
-  dw window_logic.selection_down
+  dw main_menu_logic.selection_base_enter
   db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_ENTER
-  dw window_logic.selection_enter
-  db STATE_WINDOW,        SCENE_MODE_STATION,    KB_UP
-  dw window_logic.selection_up
-  db STATE_WINDOW,        SCENE_MODE_STATION,    KB_DOWN
-  dw window_logic.selection_down
+  dw main_menu_logic.selection_remote_enter
   db STATE_WINDOW,        SCENE_MODE_STATION,    KB_ENTER
-  dw window_logic.selection_enter
+  dw main_menu_logic.selection_station_enter
 InputTableEnd:
 
 
@@ -1024,7 +1017,7 @@ init_menu:
 
   mov byte [_GAME_STATE_], STATE_MENU
   mov byte [_SCENE_MODE_], SCENE_MODE_MAIN_MENU
-
+  mov byte [_MENU_SELECTION_POS_], 0x0
   call window_logic.create_window
 
   mov si, MainMenuCopyText
@@ -1068,7 +1061,7 @@ new_game:
   call reset_to_default_values
 
   mov byte [_GAME_STATE_], STATE_MENU_INIT
-  mov byte [_SCENE_MODE_], SCENE_MODE_GAMEPLAY
+  mov byte [_SCENE_MODE_], SCENE_MODE_ANY
 ret
 
 init_game:
@@ -1078,7 +1071,7 @@ init_game:
   call draw_frame
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
-  mov byte [_SCENE_MODE_], SCENE_MODE_GAMEPLAY
+  mov byte [_SCENE_MODE_], SCENE_MODE_ANY
   mov bx, GAME_JINGLE
 
   call play_sfx
