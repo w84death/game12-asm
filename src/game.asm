@@ -748,6 +748,7 @@ ret
 
 window_logic:
   .create_window:
+  .redraw_window:
     mov si, WindowDefinitionsArray
     xor ax, ax
     mov al, [_SCENE_MODE_]
@@ -799,20 +800,17 @@ window_logic:
   jmp .done
 
   .selection_up:
-  mov al, [_MENU_SELECTION_POS_]
-  cmp al, 0x0
-  je .done
-  dec al
-  mov byte [_MENU_SELECTION_POS_], al
-  jmp .create_window
+    cmp byte [_MENU_SELECTION_POS_], 0x0
+    je .done
+    dec byte [_MENU_SELECTION_POS_]
+  jmp .redraw_window
 
   .selection_down:
-  mov al, [_MENU_SELECTION_POS_]
-  cmp al, [_MENU_SELECTION_MAX_]
-  je .done
-  inc al
-  mov byte [_MENU_SELECTION_POS_], al
-  jmp .create_window
+    mov al, [_MENU_SELECTION_POS_]
+    cmp al, [_MENU_SELECTION_MAX_]
+    je .done
+    inc byte [_MENU_SELECTION_POS_]
+  jmp .redraw_window
 
   .selection_enter:
 
@@ -2455,12 +2453,7 @@ dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText
 dw 0x080A, 0x040A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText
 dw 0x080A, 0x040A, WindowStationText, WindowStationSelectionArrayText
 
-
 WindowMainMenuText          db 'MAIN MANU',0x0
-WindowBaseBuildingsText     db 'BASE BUILDING',0x0
-WindowStationText           db 'STATION',0x0
-WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
-
 MainMenuSelectionArrayText:
   db '> PLAY',0x0
   db '> RESTART GAME',0x0
@@ -2469,6 +2462,7 @@ MainMenuSelectionArrayText:
   db '< QUIT',0x0
   db 0x00
 
+WindowBaseBuildingsText     db 'BASE BUILDING',0x0
 WindowBaseSelectionArrayText:
   db '< CLOSE WINDOW',0x0
   db 'EXPAND FOUNDATION',0x0
@@ -2479,12 +2473,14 @@ WindowBaseSelectionArrayText:
   db 'BUILD POD STATION',0x0
   db 0x00
 
+WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
 WindowRemoteSelectionArrayText:
   db '< CLOSE WINDOW',0x0
   db 'BUILD EXTRACTOR',0x0
   db 'BUILD RADAR',0x0
   db 0x00
 
+WindowStationText           db 'STATION',0x0
 WindowStationSelectionArrayText:
   db '< CLOSE WINDOW',0x0
   db 'BUILD STATION',0x0
