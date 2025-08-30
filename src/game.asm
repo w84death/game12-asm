@@ -844,7 +844,7 @@ main_menu_logic:
     jmp .done
 
     .generate_new_map:
-      mov byte [_GAME_STATE_], STATE_GAME_INIT
+      mov byte [_GAME_STATE_], STATE_GAME_NEW
       jmp .done
     .tailset_preview:
       mov byte [_GAME_STATE_], STATE_DEBUG_VIEW_INIT
@@ -1044,11 +1044,11 @@ live_menu:
 ret
 
 init_help:
-  mov al, COLOR_DARK_GRAY
+  mov al, COLOR_YELLOW
   call clear_screen
 
   mov si, HelpArrayText
-  mov bl, COLOR_YELLOW
+  mov bl, COLOR_BLACK
   xor dx, dx
   .help_entry:
     cmp byte [si], 0x00
@@ -2424,14 +2424,26 @@ Fontset2Text db '@ 0123456789',0x0
 Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
 HelpArrayText:
-  db 'SHORT HELP',0x0
-  db '* ARROWS TO MOVE CURSOR',0x0
-  db '* SPACEBAR FOR INTERACTION',0x0
-  db '* ENTER TO CONFIRM IN MENUS',0x0
-  db '* ESC TO BACK TO MAIN MENU',0x0
+  db '-=== CORTEX LABS HELP FILE ===-',0x0
+  db 'BUILD RAILS. SPAWN PODS. EXPAND BASE.',0x0
+  db 'TRANSPORT CARGO TO BASE.', 0x0
+  db ' ', 0x0
+  db '-=== KEYBOARD ===-',0x0
+  db '* (ARROWS) TO MOVE CURSOR',0x0
+  db '* (SPACEBAR) FOR INTERACTION',0x0
+  db '* (UP/DOWN) NAVIGATION IN MENUS',0x0
+  db '* (ENTER) TO CONFIRM IN MENUS',0x0
+  db '* (ESC) TO BACK TO MAIN MENU',0x0
   db ' ',0x0
-  db 'KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
-  db 'SMOL.P1X.IN/ASSEMBLY/',0x0
+  db 'FOR FULL MANUAL CHECK @ FLOPPY IN DOS',0x0
+  db 'READ > MANUAL.TXT < FILE',0x0
+  db ' ',0x0
+  db ' ',0x0
+  db ' ',0x0
+  db '2025 KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
+  db 'HTTP://SMOL.P1X.IN/ASSEMBLY/',0x0
+  db ' ',0x0
+  db '< PRESS ESC TO BACK TO MAIN MENU',0x0
   db 0x00
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
@@ -2450,32 +2462,32 @@ WindowStationText           db 'STATION',0x0
 WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
 
 MainMenuSelectionArrayText:
-  db 'PLAY >',0x0
-  db 'GENERATE NEW MAP',0x0
-  db 'PREVIEW TILESETS',0x0
-  db 'QUICK HELP',0x0
+  db '> PLAY',0x0
+  db '> RESTART GAME',0x0
+  db '# PREVIEW TILESETS',0x0
+  db '? QUICK HELP',0x0
   db '< QUIT',0x0
   db 0x00
 
 WindowBaseSelectionArrayText:
   db '< CLOSE WINDOW',0x0
   db 'EXPAND FOUNDATION',0x0
-  db 'SILOS',0x0
-  db 'FACTORY',0x0
-  db 'RADAR',0x0
-  db 'LABORATORY',0x0
-  db 'POD STATION',0x0
+  db 'BUILD SILOS',0x0
+  db 'BUILD FACTORY',0x0
+  db 'BUILD RADAR',0x0
+  db 'BUIILD LABORATORY',0x0
+  db 'BUILD POD STATION',0x0
   db 0x00
 
 WindowRemoteSelectionArrayText:
   db '< CLOSE WINDOW',0x0
-  db 'EXTRACTOR',0x0
-  db 'RADAR',0x0
+  db 'BUILD EXTRACTOR',0x0
+  db 'BUILD RADAR',0x0
   db 0x00
 
 WindowStationSelectionArrayText:
   db '< CLOSE WINDOW',0x0
-  db 'STATION',0x0
+  db 'BUILD STATION',0x0
   db 0x00
 
 ; =========================================== TERRAIN GEN RULES =============|80
