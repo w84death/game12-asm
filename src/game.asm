@@ -1036,12 +1036,15 @@ live_menu:
 ret
 
 init_help:
-  mov al, COLOR_YELLOW
+  mov al, COLOR_BLACK
   call clear_screen
 
+  mov si, help_image
+  call draw_rle_image
+
   mov si, HelpArrayText
-  mov bl, COLOR_BLACK
-  xor dx, dx
+  mov bl, COLOR_WHITE
+  mov dx, 0x0102
   .help_entry:
     cmp byte [si], 0x00
     jz .done
@@ -2515,7 +2518,7 @@ include 'sfx.asm'
 include 'tiles.asm'
 include 'img_p1x.asm'
 include 'img_title.asm'
-
+include 'img_help.asm'
 
 ; =========================================== THE END =======================|80
 ; Thanks for reading the source code!
