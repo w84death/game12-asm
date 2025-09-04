@@ -754,7 +754,7 @@ window_logic:
     mov si, WindowDefinitionsArray
     xor ax, ax
     mov al, [_SCENE_MODE_]
-    shl al, 3
+    imul ax, 0xA
     add si, ax
 
     mov bx, [si]         ; height:width
@@ -804,7 +804,7 @@ window_logic:
   .done:
 ret
 
-main_menu_logic:
+menu_logic:
   .selection_up:
     cmp byte [_MENU_SELECTION_POS_], 0x0
     je .done
@@ -818,26 +818,19 @@ main_menu_logic:
     inc byte [_MENU_SELECTION_POS_]
   jmp window_logic.redraw_window
 
-
   .main_menu_enter:
-    mov al, [_MENU_SELECTION_POS_]
-    cmp al, 0x0
-    je .start_game
-    cmp al, 0x1
-    je .generate_new_map
-    cmp al, 0x2
-    je .tailset_preview
-    cmp al, 0x3
-    je .help
-    cmp al, 0x4
-    je .quit
-  jmp .done
+    mov si, WindowDefinitionsArray
+    xor ax, ax
+    mov al, [_SCENE_MODE_]
+    imul ax, 0xA
+    add si, ax
 
-  .selection_base_enter:
-  .selection_remote_enter:
-  .selection_station_enter:
-    call menu_base_buildings_execute
-    mov byte [_GAME_STATE_], STATE_GAME_INIT
+    mov si, [si+8]
+    mov al, [_MENU_SELECTION_POS_]
+    shl al, 1
+    add si, ax
+    call word [si]
+
   jmp .done
 
   .start_game:
@@ -858,6 +851,10 @@ main_menu_logic:
 
   .quit:
     mov byte [_GAME_STATE_], STATE_QUIT
+  jmp .done
+
+  .close_window:
+    mov byte [_GAME_STATE_], STATE_GAME_INIT
   jmp .done
 
   .done:
@@ -924,21 +921,17 @@ InputTable:
   db STATE_GAME,          SCENE_MODE_ANY,  KB_SPACE
   dw game_logic.build_action
   db STATE_MENU,        SCENE_MODE_ANY,    KB_UP
-  dw main_menu_logic.selection_up
+  dw menu_logic.selection_up
   db STATE_MENU,        SCENE_MODE_ANY,    KB_DOWN
-  dw main_menu_logic.selection_down
+  dw menu_logic.selection_down
   db STATE_MENU,        SCENE_MODE_ANY,    KB_ENTER
-  dw main_menu_logic.main_menu_enter
+  dw menu_logic.main_menu_enter
   db STATE_WINDOW,        SCENE_MODE_ANY,    KB_UP
-  dw main_menu_logic.selection_up
+  dw menu_logic.selection_up
   db STATE_WINDOW,        SCENE_MODE_ANY,    KB_DOWN
-  dw main_menu_logic.selection_down
-  db STATE_WINDOW,        SCENE_MODE_BASE_BUILDINGS,    KB_ENTER
-  dw main_menu_logic.selection_base_enter
-  db STATE_WINDOW,        SCENE_MODE_REMOTE_BUILDINGS,    KB_ENTER
-  dw main_menu_logic.selection_remote_enter
-  db STATE_WINDOW,        SCENE_MODE_STATION,    KB_ENTER
-  dw main_menu_logic.selection_station_enter
+  dw menu_logic.selection_down
+  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_ENTER
+   dw menu_logic.main_menu_enter
 InputTableEnd:
 
 
@@ -2445,12 +2438,12 @@ HelpArrayText:
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
 
-; height/width, Y/X, title, menu entry array
+; height/width, Y/X, title, menu entry array, corresponding logic array
 WindowDefinitionsArray:
-dw 0x060A, 0x0A0A, WindowMainMenuText, MainMenuSelectionArrayText
-dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText
-dw 0x080A, 0x040A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText
-dw 0x080A, 0x040A, WindowStationText, WindowStationSelectionArrayText
+dw 0x060A, 0x0A0A, WindowMainMenuText, MainMenuSelectionArrayText, MainMenuLogicArray
+dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText, WindowBaseLogicArray
+dw 0x080A, 0x040A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText, WindowRemoteLogicArray
+dw 0x080A, 0x040A, WindowStationText, WindowStationSelectionArrayText, WindowStationLogicArray
 
 WindowMainMenuText          db 'MAIN MANU',0x0
 MainMenuSelectionArrayText:
@@ -2460,6 +2453,13 @@ MainMenuSelectionArrayText:
   db '? QUICK HELP',0x0
   db '< QUIT',0x0
   db 0x00
+
+MainMenuLogicArray:
+  dw menu_logic.start_game
+  dw menu_logic.generate_new_map
+  dw menu_logic.tailset_preview
+  dw menu_logic.help
+  dw menu_logic.quit
 
 WindowBaseBuildingsText     db 'BASE BUILDING',0x0
 WindowBaseSelectionArrayText:
@@ -2471,6 +2471,14 @@ WindowBaseSelectionArrayText:
   db 'BUIILD LABORATORY',0x0
   db 'BUILD POD STATION',0x0
   db 0x00
+  WindowBaseLogicArray:
+    dw menu_logic.close_window
+    dw menu_logic.close_window
+    dw menu_logic.close_window
+    dw menu_logic.close_window
+    dw menu_logic.close_window
+    dw menu_logic.close_window
+    dw menu_logic.close_window
 
 WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
 WindowRemoteSelectionArrayText:
@@ -2478,12 +2486,19 @@ WindowRemoteSelectionArrayText:
   db 'BUILD EXTRACTOR',0x0
   db 'BUILD RADAR',0x0
   db 0x00
+WindowRemoteLogicArray:
+    dw menu_logic.close_window
+    dw menu_logic.close_window
+    dw menu_logic.close_window
 
 WindowStationText           db 'STATION',0x0
 WindowStationSelectionArrayText:
   db '< CLOSE WINDOW',0x0
   db 'BUILD STATION',0x0
   db 0x00
+WindowStationLogicArray:
+  dw menu_logic.close_window
+  dw menu_logic.close_window
 
 ; =========================================== TERRAIN GEN RULES =============|80
 
