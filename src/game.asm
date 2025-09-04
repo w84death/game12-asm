@@ -2419,7 +2419,8 @@ Fontset2Text db '@ 0123456789',0x0
 Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
 HelpArrayText:
-  db '-=== CORTEX LABS HELP FILE ===-',0x0
+  db '----=== CORTEX LABS HELP FILE ===----',0x0
+  db ' ',0x0
   db 'BUILD RAILS. SPAWN PODS. EXPAND BASE.',0x0
   db 'TRANSPORT CARGO TO BASE.', 0x0
   db ' ', 0x0
@@ -2438,6 +2439,7 @@ HelpArrayText:
   db '2025 KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
   db 'HTTP://SMOL.P1X.IN/ASSEMBLY/',0x0
   db ' ',0x0
+  db '-------------------------------------',0x0
   db '< PRESS ESC TO BACK TO MAIN MENU',0x0
   db 0x00
 
