@@ -941,6 +941,8 @@ menu_logic:
     cmp byte [_MENU_SELECTION_POS_], 0x0
     je .done
     dec byte [_MENU_SELECTION_POS_]
+    mov bx, SFX_MENU_UP
+    call play_sfx
   jmp window_logic.redraw_window
 
   .selection_down:
@@ -948,11 +950,15 @@ menu_logic:
     cmp al, [_MENU_SELECTION_MAX_]
     je .done
     inc byte [_MENU_SELECTION_POS_]
+    mov bx, SFX_MENU_DOWN
+    call play_sfx
   jmp window_logic.redraw_window
 
   .game_menu_enter:
     mov byte [_GAME_STATE_], STATE_GAME_INIT
   .main_menu_enter:
+    mov bx, SFX_MENU_ENTER
+    call play_sfx
     mov si, WindowDefinitionsArray
     xor ax, ax
     mov al, [_SCENE_MODE_]
@@ -1144,8 +1150,8 @@ init_menu:
   call draw_font_text
 
 
-  mov bx, MENU_JINGLE
-  call play_sfx
+  ;mov bx, MENU_JINGLE
+  ;call play_sfx
 ret
 
 live_menu:
@@ -1193,9 +1199,9 @@ init_game:
   call draw_ui
   mov byte [_GAME_STATE_], STATE_GAME
   mov byte [_SCENE_MODE_], SCENE_MODE_ANY
-  mov bx, GAME_JINGLE
 
-  call play_sfx
+  ;mov bx, GAME_JINGLE
+  ;call play_sfx
 ret
 
 live_game:
@@ -1205,8 +1211,9 @@ ret
 init_map_view:
   call draw_minimap
   mov byte [_GAME_STATE_], STATE_MAP_VIEW
-  mov bx, MAP_JINGLE
-  call play_sfx
+
+  ;mov bx, MAP_JINGLE
+  ;call play_sfx
 ret
 
 live_map_view:
@@ -2475,6 +2482,7 @@ play_sfx:
   mov [_SFX_POINTER_], bx
 ret
 
+
 update_audio:
   mov si, NoteDict
   add si, [_SFX_POINTER_]
@@ -2538,16 +2546,17 @@ Fontset2Text db '@ 0123456789',0x0
 Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
 HelpArrayText:
-  db '----=== CORTEX LABS HELP FILE ===----',0x0
+  db '   ----=== CORTEX LABS HELP ===----',0x0
   db ' ',0x0
   db 'BUILD RAILS. SPAWN PODS. EXPAND BASE.',0x0
-  db 'TRANSPORT CARGO TO BASE.', 0x0
+  db 'USE RADAR TO FIND RESOURCES. EXTRACT', 0x0
+  db 'THEM. TRANSPORT CARGO TO BASE. REFINE.', 0x0
+  db 'POD>SILO>FACTORY>REFINED RESOURCE'
   db ' ', 0x0
-  db '-=== KEYBOARD ===-',0x0
+  db 'KEYBOARD:',0x0
   db '* (ARROWS) TO MOVE CURSOR',0x0
   db '* (SPACEBAR) FOR INTERACTION',0x0
   db '* (UP/DOWN) NAVIGATION IN MENUS',0x0
-  db '* (ENTER) TO CONFIRM IN MENUS',0x0
   db '* (ESC) TO BACK TO MAIN MENU',0x0
   db ' ',0x0
   db 'FOR FULL MANUAL CHECK @ FLOPPY IN DOS',0x0

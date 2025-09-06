@@ -25,6 +25,26 @@ NoteDict:
   dw 0x0416      ; ID 37: NOTE_B5  (987.77 Hz)
   dw 0x0473      ; ID 38: NOTE_C6  (1046.50 Hz)
 
+INTRO_JINGLE:
+  db NOTE_A3
+  db 0x0
+
+SFX_MENU_ENTER:
+  db NOTE_C5
+  db NOTE_E5
+  db NOTE_G5
+  db 0x0
+
+SFX_MENU_DOWN:
+  db NOTE_C6
+  db NOTE_C3
+  db 0x0
+
+SFX_MENU_UP:
+  db NOTE_C3
+  db NOTE_C6
+  db 0x0
+
 
 SFX_COLLECT:
   db NOTE_C5
@@ -42,70 +62,3 @@ SFX_ERROR:
   db NOTE_F3
   db NOTE_E3
   db 0x0
-
-INTRO_JINGLE:
-  db NOTE_C5
-  db NOTE_C5
-  db NOTE_REST
-  db NOTE_E5
-  db NOTE_E5
-  db NOTE_G5
-  db NOTE_G5
-  db NOTE_REST
-  db NOTE_REST
-  db NOTE_E5
-  db NOTE_C5
-  db NOTE_C5
-  db NOTE_D5
-  db NOTE_REST
-  db NOTE_D5
-  db NOTE_REST
-  db NOTE_F5
-  db NOTE_F5
-  db NOTE_E5
-  db NOTE_E5
-  db 0x00
-
-GAME_JINGLE:
-TUNE:
-  db NOTE_E3
-  db NOTE_F3
-  db NOTE_E3
-  db NOTE_D3
-  db NOTE_G3
-  db NOTE_REST
-  db NOTE_E3
-  db NOTE_F3
-  db NOTE_D3
-  db NOTE_G3
-  db NOTE_A3
-  db NOTE_REST
-  db NOTE_E3
-  db NOTE_F3
-  db NOTE_G3
-  db NOTE_F3
-  db NOTE_E3
-  db NOTE_D3
-  db 0x00
-
-MENU_JINGLE:
-  db NOTE_E3
-  db NOTE_E3
-  db NOTE_B3
-  db NOTE_B3
-  db NOTE_A3
-  db NOTE_A3
-  db NOTE_B3
-  db NOTE_B3
-  db 0x00
-
-MAP_JINGLE:
-  db NOTE_C3
-  db NOTE_C3
-  db NOTE_G3
-  db NOTE_G3
-  db NOTE_F3
-  db NOTE_F3
-  db NOTE_G3
-  db NOTE_G3
-  db 0x00
