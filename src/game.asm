@@ -251,6 +251,7 @@ TILE_FRAME_8                    equ 0x56
 ; '- infrastructure building, station (1)
 ;
 BACKGROUND_SPRITE_MASK          equ 0xF
+BACKGROUND_SPRITE_CLIP          equ 0xF0
 TERRAIN_TRAVERSAL_MASK          equ 0x10
 TERRAIN_TRAVERSAL_SHIFT         equ 0x4
 TERRAIN_TRAVERSAL_CLIP          equ 0xEF
@@ -304,7 +305,7 @@ CART_RIGHT                      equ 0x03
 
 TERRAIN_RULES_MASK              equ 0x03
 
-CURSOR_ICON_PAN                 equ 0x00
+CURSOR_ICON_POINTER                 equ 0x00
 CURSOR_ICON_PLACE_RAIL          equ 0x01
 CURSOR_ICON_EDIT                equ 0x02
 CURSOR_ICON_PLACE_BUILDING      equ 0x03
@@ -764,7 +765,6 @@ actions_logic:
     pop ds
 
     mov ax, TILE_FOUNDATION
-    ;add al, TERRAIN_TRAVERSAL_MASK
     mov bx, CURSOR_ICON_PLACE_BUILDING
     ror bl, CURSOR_TYPE_ROL
     test byte [es:di+1], TERRAIN_TRAVERSAL_MASK
@@ -806,9 +806,44 @@ actions_logic:
     push SEGMENT_TERRAIN_FOREGROUND
     pop ds
 
+    mov al, [es:di]
+    and al, BACKGROUND_SPRITE_CLIP
+    add al, TILE_STATION
+    mov byte [es:di], al
+    and byte [ds:di], CURSOR_TYPE_CLIP
 
 
+    mov bl, TILE_STATION_EXTEND
+    mov cx, CURSOR_ICON_PLACE_BUILDING
+    ror cl, CURSOR_TYPE_ROL
+    mov al, [ds:di]
+    and al, FORGROUND_SPRITE_MASK
+    cmp al, TILE_RAILS_1-TILE_FOREGROUND_SHIFT  ; horizontal
+    jz .build_horizontal
 
+    .build_vertical:
+      test byte [es:di-1], TERRAIN_TRAVERSAL_MASK
+      jz .skip_left2
+        mov [es:di-1], bl
+        mov [ds:di-1], cl
+      .skip_left2:
+      test byte [es:di+1], TERRAIN_TRAVERSAL_MASK
+      jz .build_done
+        mov [es:di+1], bl
+        mov [ds:di+1], cl
+    jmp .build_done
+
+    .build_horizontal:
+      test byte [es:di-MAP_SIZE], TERRAIN_TRAVERSAL_MASK
+      jz .skip_up2
+        mov [es:di-MAP_SIZE], bl
+        mov [ds:di-MAP_SIZE], cl
+      .skip_up2:
+      test byte [es:di+MAP_SIZE], TERRAIN_TRAVERSAL_MASK
+      jz .build_done
+        mov [es:di+MAP_SIZE], bl
+        mov [ds:di+MAP_SIZE], cl
+    .build_done:
 
     pop ds
     pop es
@@ -1796,12 +1831,14 @@ build_initial_base:
   add al, TERRAIN_TRAVERSAL_MASK
   mov byte [es:di-1], al
   mov byte [es:di+1], al
-  mov al, [es:di+MAP_SIZE]
-  and al, TERRAIN_TRAVERSAL_CLIP
+
+  mov ax, TILE_STATION_EXTEND
   mov byte [es:di+MAP_SIZE], al
-  mov ax, CURSOR_ICON_EDIT
+  mov ax, CURSOR_ICON_PLACE_BUILDING
   ror al, CURSOR_TYPE_ROL
-  add ax, TILE_RAILS_1-TILE_FOREGROUND_SHIFT
+  mov byte [ds:di+MAP_SIZE], al
+
+  mov ax, TILE_RAILS_1-TILE_FOREGROUND_SHIFT
   mov byte [ds:di], al
 
   mov ax, CURSOR_ICON_PLACE_RAIL
@@ -2026,7 +2063,7 @@ recalculate_rails:
     jmp .save_switch
   .prepare_no_switch:
     mov dl, 0                           ; No switch, or last rail (no station)
-    mov ax, CURSOR_ICON_PAN
+    mov ax, CURSOR_ICON_POINTER
 
   .save_switch:
     push es
