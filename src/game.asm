@@ -77,21 +77,23 @@ _ENTITIES_                equ 0x0000  ; Entities 128*128*1b= 0x4000
 ; Check StateJumpTable for functions IDs (n-th in a table)
 STATE_INIT_ENGINE       equ 0
 STATE_QUIT              equ 1
-STATE_TITLE_SCREEN_INIT equ 2
-STATE_TITLE_SCREEN      equ 3
-STATE_MENU_INIT         equ 4
-STATE_MENU              equ 5
-STATE_GAME_NEW          equ 6
-STATE_GAME_INIT         equ 7
-STATE_GAME              equ 8
-STATE_MAP_VIEW_INIT     equ 9
-STATE_MAP_VIEW          equ 10
-STATE_DEBUG_VIEW_INIT   equ 11
-STATE_DEBUG_VIEW        equ 12
-STATE_HELP_INIT         equ 13
-STATE_HELP              equ 14
-STATE_WINDOW_INIT       equ 15
-STATE_WINDOW            equ 16
+STATE_P1X_SCREEN_INIT   equ 2
+STATE_P1X_SCREEN        equ 3
+STATE_TITLE_SCREEN_INIT equ 4
+STATE_TITLE_SCREEN      equ 5
+STATE_MENU_INIT         equ 6
+STATE_MENU              equ 7
+STATE_GAME_NEW          equ 8
+STATE_GAME_INIT         equ 9
+STATE_GAME              equ 10
+STATE_MAP_VIEW_INIT     equ 11
+STATE_MAP_VIEW          equ 12
+STATE_DEBUG_VIEW_INIT   equ 13
+STATE_DEBUG_VIEW        equ 14
+STATE_HELP_INIT         equ 15
+STATE_HELP              equ 16
+STATE_WINDOW_INIT       equ 17
+STATE_WINDOW            equ 18
 
 ; =========================================== KEYBOARD CODES ================|80
 
@@ -1007,6 +1009,8 @@ ret
 StateJumpTable:
   dw init_engine
   dw exit
+  dw init_p1x_screen
+  dw live_p1x_screen
   dw init_title_screen
   dw live_title_screen
   dw init_menu
@@ -1024,9 +1028,11 @@ StateJumpTable:
   dw live_window
 
 StateTransitionTable:
+  db STATE_P1X_SCREEN,    KB_ESC,   STATE_QUIT
+  db STATE_P1X_SCREEN,    KB_ENTER, STATE_TITLE_SCREEN_INIT
   db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
   db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
-  db STATE_MENU,          KB_ESC,   STATE_QUIT
+  db STATE_MENU,          KB_ESC,   STATE_TITLE_SCREEN_INIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT ; TODO: remove, initiate via radar building
@@ -1074,7 +1080,7 @@ init_engine:
   call decompress_tiles
   call generate_map
   call build_initial_base
-  mov byte [_GAME_STATE_], STATE_TITLE_SCREEN_INIT
+  mov byte [_GAME_STATE_], STATE_P1X_SCREEN_INIT
 ret
 
 reset_to_default_values:
@@ -1088,6 +1094,7 @@ reset_to_default_values:
   mov word [_CURSOR_X_OLD_], MAP_SIZE/2
   mov word [_CURSOR_Y_OLD_], MAP_SIZE/2
 
+  mov word [_SFX_POINTER_], SFX_NULL
 
   mov word [_ECONOMY_BLUE_RES_], 0
   mov word [_ECONOMY_YELLOW_RES_], 0
@@ -1095,7 +1102,7 @@ reset_to_default_values:
   mov word [_ECONOMY_SCORE_], 0
 ret
 
-init_title_screen:
+init_p1x_screen:
   mov al, COLOR_BLACK
   call clear_screen
 
@@ -1105,12 +1112,46 @@ init_title_screen:
   mov bx, INTRO_JINGLE
   call play_sfx
 
+  mov byte [_GAME_STATE_], STATE_P1X_SCREEN
+ret
+
+live_p1x_screen:
+  mov si, PressEnterText
+  mov dx, 0x170F
+  mov bl, COLOR_WHITE
+  test word [_GAME_TICK_], 0x4
+  je .blink
+    mov bl, COLOR_BLACK
+  .blink:
+  call draw_font_text
+ret
+
+init_title_screen:
+  mov al, COLOR_BLACK
+  call clear_screen
+
+  mov si, title_image
+  call draw_rle_image
+
+
+  mov si, CreatedByText
+  mov dx, 0x150F
+  mov bl, COLOR_WHITE
+  call draw_font_text
+
+  mov si, KKJText
+  mov dx, 0x1606
+  mov bl, COLOR_WHITE
+  call draw_font_text
+  ;mov bx, INTRO_JINGLE
+  ;call play_sfx
+
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 ret
 
 live_title_screen:
   mov si, PressEnterText
-  mov dx, 0x180F
+  mov dx, 0x170F
   mov bl, COLOR_WHITE
   test word [_GAME_TICK_], 0x4
   je .blink
@@ -1123,21 +1164,8 @@ init_menu:
   mov al, COLOR_BLACK
   call clear_screen
 
-  mov si, title_image
+  mov si, menu_image
   call draw_rle_image
-
-  mov ax, 0x040C
-  mov bx, 0x0207
-  call draw_window
-
-  mov di, 112+39*320
-  mov ax, TILE_LOGO_1
-  mov cx, 5
-  .logo_loop:
-    call draw_sprite
-    inc ax
-    add di, 0x10
-  loop .logo_loop
 
   mov byte [_GAME_STATE_], STATE_MENU
   mov byte [_SCENE_MODE_], SCENE_MODE_MAIN_MENU
@@ -1145,10 +1173,9 @@ init_menu:
   call window_logic.create_window
 
   mov si, MainMenuCopyText
-  mov dx, 0x160D
+  mov dx, 0x170D
   mov bl, COLOR_LIGHT_GRAY
   call draw_font_text
-
 
   ;mov bx, MENU_JINGLE
   ;call play_sfx
@@ -2539,11 +2566,14 @@ ret
 
 ; =========================================== TEXT DATA =====================|80
 
+CreatedByText db 'CREATED BY',0x0
+KKJText db 'KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more...', 0x0D, 0x0A, 0x0
 Fontset1Text db ' !',34,'#$%&',39,'()*+,-./:;<=>?',0x0
 Fontset2Text db '@ 0123456789',0x0
 Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
+
 
 HelpArrayText:
   db '   ----=== CORTEX LABS HELP ===----',0x0
@@ -2564,7 +2594,6 @@ HelpArrayText:
   db ' ',0x0
   db ' ',0x0
   db ' ',0x0
-  db '2025 KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
   db 'HTTP://SMOL.P1X.IN/ASSEMBLY/',0x0
   db ' ',0x0
   db '-------------------------------------',0x0
@@ -2669,8 +2698,9 @@ include 'font.asm'
 include 'sfx.asm'
 include 'tiles.asm'
 include 'img_p1x.asm'
-include 'img_title.asm'
+include 'img_menu.asm'
 include 'img_help.asm'
+include 'img_title.asm'
 
 ; =========================================== THE END =======================|80
 ; Thanks for reading the source code!

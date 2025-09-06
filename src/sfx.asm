@@ -25,6 +25,9 @@ NoteDict:
   dw 0x0416      ; ID 37: NOTE_B5  (987.77 Hz)
   dw 0x0473      ; ID 38: NOTE_C6  (1046.50 Hz)
 
+SFX_NULL:
+  db 0x0
+
 INTRO_JINGLE:
   db NOTE_A3
   db 0x0
