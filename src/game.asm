@@ -747,6 +747,46 @@ game_logic:
     .done:
 ret
 
+actions_logic:
+
+  .expand_foundation:
+  jmp .done
+
+  .place_station:
+  jmp .done
+
+  .place_building:
+
+    ; position
+    mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
+    shl di, 7               ; Y * 128 (optimized shl for *128)
+    add di, [_CURSOR_X_]    ; + absolute X map coordinate
+
+    push es
+    push ds
+
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop es
+
+    push SEGMENT_TERRAIN_FOREGROUND
+    pop ds
+
+    mov bx, ax ; sprite
+    mov al, [es:di]
+    or al, INFRASTRUCTURE_MASK
+    mov byte [es:di], al
+
+    mov al, CURSOR_ICON_EDIT
+    ror al, CURSOR_TYPE_ROL
+    add ax, bx
+    mov byte [ds:di], al
+
+    pop ds
+    pop es
+  jmp .done
+
+  .done:
+ret
 
 window_logic:
   .create_window:
@@ -818,6 +858,8 @@ menu_logic:
     inc byte [_MENU_SELECTION_POS_]
   jmp window_logic.redraw_window
 
+  .game_menu_enter:
+    mov byte [_GAME_STATE_], STATE_GAME_INIT
   .main_menu_enter:
     mov si, WindowDefinitionsArray
     xor ax, ax
@@ -827,10 +869,10 @@ menu_logic:
 
     mov si, [si+8]
     mov al, [_MENU_SELECTION_POS_]
-    shl al, 1
+    shl al, 2
     add si, ax
+    mov ax, [si+2]
     call word [si]
-
   jmp .done
 
   .start_game:
@@ -859,20 +901,6 @@ menu_logic:
 
   .done:
 ret
-
-
-menu_base_buildings_execute:
-  mov al, [es:di]
-  or al, INFRASTRUCTURE_MASK
-  mov byte [es:di], al
-
-  mov al, CURSOR_ICON_EDIT
-  ror al, CURSOR_TYPE_ROL
-  mov bx, TILE_BUILDING_SILOS_ID
-  add al, bl
-  mov byte [ds:di], al
-ret
-
 
 
 ; =========================================== LOGIC FOR GAME STATES =========|80
@@ -924,14 +952,18 @@ InputTable:
   dw menu_logic.selection_up
   db STATE_MENU,        SCENE_MODE_ANY,    KB_DOWN
   dw menu_logic.selection_down
+  db STATE_MENU,        SCENE_MODE_ANY,    KB_SPACE
+  dw menu_logic.selection_down
   db STATE_MENU,        SCENE_MODE_ANY,    KB_ENTER
   dw menu_logic.main_menu_enter
   db STATE_WINDOW,        SCENE_MODE_ANY,    KB_UP
   dw menu_logic.selection_up
   db STATE_WINDOW,        SCENE_MODE_ANY,    KB_DOWN
   dw menu_logic.selection_down
+  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_SPACE
+  dw menu_logic.game_menu_enter
   db STATE_WINDOW,        SCENE_MODE_ANY,    KB_ENTER
-   dw menu_logic.main_menu_enter
+  dw menu_logic.game_menu_enter
 InputTableEnd:
 
 
@@ -2455,11 +2487,11 @@ MainMenuSelectionArrayText:
   db 0x00
 
 MainMenuLogicArray:
-  dw menu_logic.start_game
-  dw menu_logic.generate_new_map
-  dw menu_logic.tailset_preview
-  dw menu_logic.help
-  dw menu_logic.quit
+  dw menu_logic.start_game, 0x0
+  dw menu_logic.generate_new_map, 0x0
+  dw menu_logic.tailset_preview, 0x0
+  dw menu_logic.help, 0x0
+  dw menu_logic.quit, 0x0
 
 WindowBaseBuildingsText     db 'BASE BUILDING',0x0
 WindowBaseSelectionArrayText:
@@ -2472,13 +2504,13 @@ WindowBaseSelectionArrayText:
   db 'BUILD POD STATION',0x0
   db 0x00
   WindowBaseLogicArray:
-    dw menu_logic.close_window
-    dw menu_logic.close_window
-    dw menu_logic.close_window
-    dw menu_logic.close_window
-    dw menu_logic.close_window
-    dw menu_logic.close_window
-    dw menu_logic.close_window
+    dw menu_logic.close_window, 0x0
+    dw actions_logic.expand_foundation, 0x0
+    dw actions_logic.place_building, TILE_BUILDING_SILOS_ID
+    dw actions_logic.place_building, TILE_BUILDING_FACTORY_ID
+    dw actions_logic.place_building, TILE_BUILDING_RADAR_ID
+    dw actions_logic.place_building, TILE_BUILDING_LAB_ID
+    dw actions_logic.place_building, TILE_BUILDING_PODS_ID
 
 WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
 WindowRemoteSelectionArrayText:
@@ -2487,9 +2519,9 @@ WindowRemoteSelectionArrayText:
   db 'BUILD RADAR',0x0
   db 0x00
 WindowRemoteLogicArray:
-    dw menu_logic.close_window
-    dw menu_logic.close_window
-    dw menu_logic.close_window
+  dw menu_logic.close_window, 0x0
+  dw actions_logic.place_building, TILE_BUILDING_COLECTOR_ID
+  dw actions_logic.place_building, TILE_BUILDING_RADAR_ID
 
 WindowStationText           db 'STATION',0x0
 WindowStationSelectionArrayText:
@@ -2497,8 +2529,8 @@ WindowStationSelectionArrayText:
   db 'BUILD STATION',0x0
   db 0x00
 WindowStationLogicArray:
-  dw menu_logic.close_window
-  dw menu_logic.close_window
+  dw menu_logic.close_window, 0x0
+  dw actions_logic.place_station, 0x0
 
 ; =========================================== TERRAIN GEN RULES =============|80
 
