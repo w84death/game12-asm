@@ -750,14 +750,71 @@ ret
 actions_logic:
 
   .expand_foundation:
+    mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
+    shl di, 7               ; Y * 128 (optimized shl for *128)
+    add di, [_CURSOR_X_]    ; + absolute X map coordinate
+
+    push es
+    push ds
+
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop es
+
+    push SEGMENT_TERRAIN_FOREGROUND
+    pop ds
+
+    mov ax, TILE_FOUNDATION
+    ;add al, TERRAIN_TRAVERSAL_MASK
+    mov bx, CURSOR_ICON_PLACE_BUILDING
+    ror bl, CURSOR_TYPE_ROL
+    test byte [es:di+1], TERRAIN_TRAVERSAL_MASK
+    jz .skip_right
+      mov byte [es:di+1], al
+      mov byte [ds:di+1], bl
+    .skip_right:
+    test byte [es:di-1], TERRAIN_TRAVERSAL_MASK
+    jz .skip_left
+      mov byte [es:di-1], al
+      mov byte [ds:di-1], bl
+    .skip_left:
+    test byte [es:di-MAP_SIZE], TERRAIN_TRAVERSAL_MASK
+    jz .skip_up
+      mov byte [es:di-MAP_SIZE], al
+      mov byte [ds:di-MAP_SIZE], bl
+    .skip_up:
+    test byte [es:di+MAP_SIZE], TERRAIN_TRAVERSAL_MASK
+    jz .skip_down
+      mov byte [es:di+MAP_SIZE], al
+      mov byte [ds:di+MAP_SIZE], bl
+    .skip_down:
+
+  pop ds
+  pop es
   jmp .done
 
   .place_station:
+    mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
+    shl di, 7               ; Y * 128 (optimized shl for *128)
+    add di, [_CURSOR_X_]    ; + absolute X map coordinate
+
+    push es
+    push ds
+
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop es
+
+    push SEGMENT_TERRAIN_FOREGROUND
+    pop ds
+
+
+
+
+
+    pop ds
+    pop es
   jmp .done
 
   .place_building:
-
-    ; position
     mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
     shl di, 7               ; Y * 128 (optimized shl for *128)
     add di, [_CURSOR_X_]    ; + absolute X map coordinate
