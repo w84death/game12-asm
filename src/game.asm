@@ -286,19 +286,19 @@ CURSOR_TYPE_ROL                 equ 0x02
 ; 0 00 00 00 0
 ; | |  |  |  |
 ; | |  |  |  '- switch on rail (or not initialized)
-; | |  |  '- switch position (up/down/left/right)
+; | |  |  '- switch / building exit position (up/down/left/right)
 ; | |  '- resource type (4) (for source/pods cargo/buildings)
 ; | '- cart direction
 ; '- unused (1)
 ;
 SWITCH_MASK                     equ 0x1
-SWITCH_TYPE_MASK                equ 0x6
-SWITCH_TYPE_SHIFT               equ 0x1
+TILE_DIRECTION_MASK             equ 0x6
+TILE_DIRECTION_SHIFT            equ 0x1
 SWITCH_DATA_CLIP                equ 0xF8
-RESOURCE_TYPE_MASK              equ 0x18
+RESOURCE_TYPE_MASK  2            equ 0x18
 RESOURCE_TYPE_SHIFT             equ 0x3
 CART_DIRECTION_MASK             equ 0x60
-CART_DIRECTION_SHIFT            equ 0x5
+CART_TILE_DIRECTION_SHIFT       equ 0x5
 
 CART_UP                         equ 0x00
 CART_DOWN                       equ 0x01
@@ -307,7 +307,7 @@ CART_RIGHT                      equ 0x03
 
 TERRAIN_RULES_MASK              equ 0x03
 
-CURSOR_ICON_POINTER                 equ 0x00
+CURSOR_ICON_POINTER             equ 0x00
 CURSOR_ICON_PLACE_RAIL          equ 0x01
 CURSOR_ICON_EDIT                equ 0x02
 CURSOR_ICON_PLACE_BUILDING      equ 0x03
@@ -323,7 +323,7 @@ METADATA_SWITCH_INITIALIZED     equ 0x01
 METADATA_SWITCH_MASK            equ 0x06
 METADATA_SWITCH_SHIFT           equ 0x01
 
-SCENE_MODE_ANY             equ 0x00
+SCENE_MODE_ANY                  equ 0x00
 SCENE_MODE_MAIN_MENU            equ 0x00
 SCENE_MODE_BASE_BUILDINGS       equ 0x01
 SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
@@ -1984,8 +1984,8 @@ draw_cell:
         mov al, [es:si]             ; SEGMENT_META_DATA
         test al, SWITCH_MASK
         jz .skip_switch
-          and al, SWITCH_TYPE_MASK
-          shr al, SWITCH_TYPE_SHIFT
+          and al, TILE_DIRECTION_MASK
+          shr al, TILE_DIRECTION_SHIFT
           add al, TILE_SWITCH_LEFT
           call draw_sprite
         .skip_switch:
@@ -1995,7 +1995,7 @@ draw_cell:
         jz .skip_cart
           mov bl, [es:si]           ; SEGMENT_META_DATA
           and bl, CART_DIRECTION_MASK
-          shr bl, CART_DIRECTION_SHIFT
+          shr bl, CART_TILE_DIRECTION_SHIFT
           mov al, TILE_CART_HORIZONTAL
           cmp bl, CART_DOWN
           jg .skip_vertical
@@ -2084,7 +2084,7 @@ recalculate_rails:
     jmp .save_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
-    shl dl, SWITCH_TYPE_SHIFT
+    shl dl, TILE_DIRECTION_SHIFT
     add dl, SWITCH_MASK
     mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
@@ -2498,7 +2498,7 @@ ret
 ; =========================================== AUDIO SYSTEM ==================|80
 
 init_audio_system:
-  mov byte [_SFX_POINTER_], 0
+  mov word [_SFX_POINTER_], SFX_NULL
 
   mov al, 182         ; Binary mode, square wave, 16-bit divisor
   out 43h, al         ; Write to PIT command register[2]
@@ -2511,11 +2511,16 @@ ret
 
 
 update_audio:
-  mov si, NoteDict
-  add si, [_SFX_POINTER_]
-  mov ax, [si]
-  test ax, ax
+  xor ax,ax
+  mov si, [_SFX_POINTER_]
+  mov al, [si]
+  test al, al
   jz .stop_audio
+
+  mov si, NoteDict
+  shl al, 1
+  add si, ax
+  mov ax, [si]
 
   cmp ax, NOTE_REST
   jz .skip_note
