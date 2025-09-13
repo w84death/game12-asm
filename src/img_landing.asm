@@ -1,0 +1,120 @@
+; Compressed VGA image data (interlaced)
+; Format: [run_length][color_index] pairs
+; Contains only even lines (0, 2, 4...), no EOL markers
+; Assembly code should render each line twice
+; Total size: 1750 bytes
+
+landing_image:
+    db 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h
+    db 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h
+    db 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h, 0FFh, 000h, 041h, 000h
+    db 0B0h, 000h, 00Bh, 00Eh, 085h, 000h, 0AEh, 000h, 018h, 00Eh, 07Ah, 000h, 0AEh, 000h, 01Ah, 00Eh
+    db 078h, 000h, 01Ch, 000h, 001h, 003h, 002h, 00Ah, 08Fh, 000h, 001h, 001h, 009h, 00Eh, 002h, 00Ch
+    db 011h, 00Eh, 075h, 000h, 01Dh, 000h, 002h, 003h, 013h, 000h, 006h, 007h, 076h, 000h, 001h, 001h
+    db 007h, 00Eh, 006h, 00Ch, 012h, 00Eh, 072h, 000h, 031h, 000h, 001h, 007h, 006h, 003h, 001h, 007h
+    db 075h, 000h, 001h, 001h, 004h, 00Eh, 00Bh, 00Ch, 012h, 00Eh, 070h, 000h, 032h, 000h, 007h, 003h
+    db 074h, 000h, 002h, 001h, 002h, 00Eh, 00Fh, 00Ch, 012h, 00Eh, 06Eh, 000h, 034h, 000h, 002h, 003h
+    db 077h, 000h, 002h, 001h, 012h, 00Ch, 013h, 00Eh, 06Ch, 000h, 0ADh, 000h, 003h, 001h, 013h, 00Ch
+    db 012h, 00Eh, 06Bh, 000h, 0ADh, 000h, 004h, 001h, 013h, 00Ch, 013h, 00Eh, 069h, 000h, 0ADh, 000h
+    db 005h, 001h, 014h, 00Ch, 013h, 00Eh, 067h, 000h, 0ADh, 000h, 006h, 001h, 015h, 00Ch, 012h, 00Eh
+    db 066h, 000h, 0ADh, 000h, 008h, 001h, 014h, 00Ch, 013h, 00Eh, 064h, 000h, 0ADh, 000h, 009h, 001h
+    db 015h, 00Ch, 013h, 00Eh, 062h, 000h, 0AEh, 000h, 00Ah, 001h, 014h, 00Ch, 013h, 00Eh, 061h, 000h
+    db 0AFh, 000h, 00Ah, 001h, 015h, 00Ch, 013h, 00Eh, 05Fh, 000h, 0B0h, 000h, 00Bh, 001h, 015h, 00Ch
+    db 013h, 00Eh, 05Dh, 000h, 0B1h, 000h, 00Bh, 001h, 015h, 00Ch, 013h, 00Eh, 05Ch, 000h, 07Ah, 000h
+    db 00Eh, 00Ah, 02Bh, 000h, 00Bh, 001h, 015h, 00Ch, 013h, 00Eh, 05Ah, 000h, 067h, 000h, 03Bh, 00Ah
+    db 012h, 000h, 00Ch, 001h, 014h, 00Ch, 006h, 00Eh, 001h, 001h, 00Eh, 00Eh, 057h, 000h, 05Fh, 000h
+    db 050h, 00Ah, 007h, 000h, 00Bh, 001h, 015h, 00Ch, 003h, 00Eh, 004h, 001h, 00Eh, 00Eh, 055h, 000h
+    db 057h, 000h, 060h, 00Ah, 00Ch, 001h, 015h, 00Ch, 002h, 00Eh, 006h, 001h, 00Eh, 00Eh, 052h, 000h
+    db 051h, 000h, 068h, 00Ah, 00Bh, 001h, 015h, 00Ch, 002h, 00Eh, 007h, 001h, 00Fh, 00Eh, 04Fh, 000h
+    db 04Dh, 000h, 06Dh, 00Ah, 00Ch, 001h, 015h, 00Ch, 002h, 00Eh, 008h, 001h, 00Eh, 00Eh, 04Dh, 000h
+    db 049h, 000h, 073h, 00Ah, 00Bh, 001h, 015h, 00Ch, 002h, 00Eh, 009h, 001h, 00Bh, 00Eh, 002h, 001h
+    db 002h, 00Eh, 04Ah, 000h, 045h, 000h, 078h, 00Ah, 00Ch, 001h, 015h, 00Ch, 002h, 00Eh, 00Ah, 001h
+    db 002h, 00Eh, 007h, 001h, 005h, 00Eh, 048h, 000h, 042h, 000h, 03Eh, 00Ah, 030h, 000h, 00Fh, 00Ah
+    db 00Bh, 001h, 016h, 00Ch, 002h, 00Eh, 00Ch, 001h, 003h, 006h, 001h, 001h, 009h, 00Eh, 045h, 000h
+    db 040h, 000h, 038h, 00Ah, 044h, 000h, 004h, 00Ah, 00Ch, 001h, 015h, 00Ch, 002h, 00Eh, 007h, 001h
+    db 00Dh, 006h, 006h, 00Eh, 043h, 000h, 03Dh, 000h, 034h, 00Ah, 051h, 000h, 004h, 001h, 005h, 00Eh
+    db 002h, 001h, 016h, 00Ch, 002h, 00Eh, 005h, 001h, 012h, 006h, 004h, 00Eh, 040h, 000h, 03Bh, 000h
+    db 032h, 00Ah, 056h, 000h, 004h, 001h, 006h, 00Eh, 002h, 001h, 013h, 00Ch, 008h, 001h, 017h, 006h
+    db 001h, 001h, 03Eh, 000h, 039h, 000h, 030h, 00Ah, 05Ch, 000h, 003h, 001h, 006h, 00Eh, 002h, 001h
+    db 010h, 00Ch, 00Ah, 001h, 01Ah, 006h, 03Ch, 000h, 036h, 000h, 030h, 00Ah, 05Eh, 000h, 004h, 001h
+    db 008h, 00Eh, 002h, 001h, 00Ch, 00Ch, 00Ch, 001h, 022h, 006h, 034h, 000h, 035h, 000h, 02Dh, 00Ah
+    db 062h, 000h, 005h, 001h, 009h, 00Eh, 001h, 001h, 009h, 00Ch, 00Eh, 001h, 024h, 006h, 032h, 000h
+    db 034h, 000h, 02Ch, 00Ah, 065h, 000h, 005h, 001h, 009h, 00Eh, 002h, 001h, 004h, 00Ch, 011h, 001h
+    db 025h, 006h, 031h, 000h, 033h, 000h, 02Ch, 00Ah, 066h, 000h, 006h, 001h, 00Ah, 00Eh, 001h, 001h
+    db 001h, 00Ch, 013h, 001h, 027h, 006h, 02Fh, 000h, 032h, 000h, 02Bh, 00Ah, 01Dh, 000h, 002h, 00Ah
+    db 04Ah, 000h, 006h, 001h, 00Ah, 00Eh, 015h, 001h, 027h, 006h, 02Eh, 000h, 031h, 000h, 02Ah, 00Ah
+    db 01Fh, 000h, 001h, 003h, 047h, 000h, 005h, 00Ah, 005h, 001h, 00Ch, 00Eh, 014h, 001h, 014h, 006h
+    db 00Eh, 00Eh, 005h, 006h, 02Dh, 000h, 02Fh, 000h, 02Ah, 00Ah, 066h, 000h, 009h, 00Ah, 005h, 001h
+    db 007h, 00Eh, 018h, 001h, 002h, 00Ah, 00Eh, 006h, 014h, 00Eh, 005h, 006h, 02Bh, 000h, 02Eh, 000h
+    db 02Ah, 00Ah, 065h, 000h, 00Ch, 00Ah, 005h, 001h, 001h, 00Eh, 001h, 001h, 006h, 006h, 013h, 001h
+    db 006h, 00Ah, 009h, 006h, 01Ah, 00Eh, 004h, 006h, 02Ah, 000h, 02Dh, 000h, 02Bh, 00Ah, 062h, 000h
+    db 00Fh, 00Ah, 005h, 001h, 00Ch, 006h, 00Dh, 001h, 009h, 00Ah, 006h, 006h, 022h, 00Eh, 028h, 000h
+    db 02Dh, 000h, 02Ah, 00Ah, 062h, 000h, 011h, 00Ah, 004h, 001h, 00Eh, 006h, 006h, 001h, 004h, 00Eh
+    db 00Ch, 00Ah, 002h, 006h, 017h, 00Eh, 00Ah, 00Fh, 004h, 00Eh, 003h, 00Ah, 024h, 000h, 02Dh, 000h
+    db 029h, 00Ah, 061h, 000h, 014h, 00Ah, 003h, 001h, 010h, 006h, 007h, 00Eh, 001h, 001h, 00Dh, 00Ah
+    db 001h, 006h, 00Fh, 00Eh, 012h, 00Fh, 005h, 00Eh, 005h, 00Ah, 021h, 000h, 02Ch, 000h, 02Ah, 00Ah
+    db 05Fh, 000h, 001h, 00Ah, 001h, 007h, 006h, 00Ah, 004h, 007h, 00Dh, 00Ah, 012h, 006h, 001h, 001h
+    db 005h, 006h, 00Fh, 00Ah, 00Bh, 00Eh, 015h, 00Fh, 007h, 00Eh, 007h, 00Ah, 01Dh, 000h, 02Ch, 000h
+    db 029h, 00Ah, 05Fh, 000h, 003h, 007h, 004h, 00Ah, 008h, 007h, 00Bh, 00Ah, 01Fh, 006h, 009h, 00Ah
+    db 008h, 00Eh, 017h, 00Fh, 008h, 00Eh, 009h, 00Ah, 01Ah, 000h, 02Ch, 000h, 029h, 00Ah, 05Eh, 000h
+    db 005h, 007h, 002h, 00Ah, 00Bh, 007h, 00Ah, 00Ah, 024h, 006h, 005h, 00Ah, 004h, 00Eh, 019h, 00Fh
+    db 002h, 00Eh, 008h, 00Fh, 00Ah, 00Ah, 017h, 000h, 02Ch, 000h, 029h, 00Ah, 05Dh, 000h, 015h, 007h
+    db 008h, 00Ah, 026h, 006h, 004h, 00Ah, 001h, 00Eh, 025h, 00Fh, 00Dh, 00Ah, 014h, 000h, 02Ch, 000h
+    db 029h, 00Ah, 05Ch, 000h, 018h, 007h, 007h, 00Ah, 013h, 006h, 004h, 00Eh, 00Fh, 006h, 005h, 00Ah
+    db 025h, 00Fh, 00Fh, 00Ah, 011h, 000h, 02Bh, 000h, 02Ah, 00Ah, 05Bh, 000h, 01Bh, 007h, 005h, 00Ah
+    db 010h, 006h, 009h, 00Eh, 00Eh, 006h, 008h, 00Ah, 021h, 00Fh, 012h, 00Ah, 00Eh, 000h, 017h, 000h
+    db 002h, 005h, 012h, 000h, 02Ah, 00Ah, 05Ah, 000h, 01Eh, 007h, 002h, 00Ah, 001h, 007h, 00Eh, 006h
+    db 00Dh, 00Eh, 00Eh, 006h, 002h, 00Ah, 009h, 007h, 01Ch, 00Fh, 016h, 00Ah, 00Ah, 000h, 017h, 000h
+    db 002h, 005h, 012h, 000h, 02Ah, 00Ah, 05Ah, 000h, 004h, 007h, 002h, 003h, 01Dh, 007h, 00Bh, 006h
+    db 010h, 00Eh, 00Dh, 006h, 00Dh, 007h, 002h, 00Eh, 017h, 00Fh, 003h, 000h, 015h, 00Ah, 008h, 000h
+    db 016h, 000h, 004h, 005h, 011h, 000h, 02Ah, 00Ah, 059h, 000h, 001h, 003h, 003h, 007h, 004h, 003h
+    db 01Eh, 007h, 008h, 006h, 013h, 00Eh, 00Dh, 006h, 00Ch, 007h, 004h, 00Eh, 014h, 00Fh, 006h, 000h
+    db 015h, 00Ah, 005h, 000h, 015h, 000h, 006h, 005h, 011h, 000h, 029h, 00Ah, 058h, 000h, 002h, 003h
+    db 002h, 007h, 006h, 003h, 01Eh, 007h, 006h, 006h, 00Bh, 00Eh, 00Ah, 00Fh, 007h, 006h, 006h, 00Eh
+    db 00Ch, 007h, 003h, 00Eh, 014h, 00Fh, 009h, 000h, 015h, 00Ah, 001h, 000h, 001h, 005h, 015h, 000h
+    db 007h, 005h, 010h, 000h, 02Ah, 00Ah, 057h, 000h, 00Ch, 003h, 01Eh, 007h, 003h, 006h, 00Bh, 00Eh
+    db 00Ch, 00Fh, 001h, 006h, 00Dh, 00Eh, 007h, 007h, 005h, 003h, 001h, 00Eh, 014h, 00Fh, 00Bh, 000h
+    db 013h, 00Ah, 002h, 005h, 014h, 000h, 009h, 005h, 010h, 000h, 029h, 00Ah, 057h, 000h, 00Eh, 003h
+    db 00Ch, 007h, 002h, 003h, 010h, 007h, 001h, 006h, 00Ah, 00Eh, 00Dh, 00Fh, 00Fh, 00Eh, 00Ch, 003h
+    db 014h, 00Fh, 00Eh, 000h, 00Fh, 00Ah, 003h, 005h, 013h, 000h, 00Bh, 005h, 00Fh, 000h, 02Ah, 00Ah
+    db 055h, 000h, 011h, 003h, 009h, 007h, 005h, 003h, 010h, 007h, 008h, 00Eh, 00Fh, 00Fh, 010h, 00Eh
+    db 00Eh, 003h, 011h, 00Fh, 00Fh, 000h, 00Ch, 00Ah, 004h, 005h, 013h, 000h, 00Bh, 005h, 010h, 000h
+    db 02Ah, 00Ah, 054h, 000h, 013h, 003h, 005h, 007h, 00Ah, 003h, 00Ch, 007h, 002h, 003h, 006h, 00Eh
+    db 010h, 00Fh, 00Ch, 00Eh, 005h, 00Fh, 010h, 003h, 004h, 000h, 00Ah, 00Fh, 012h, 000h, 008h, 00Ah
+    db 005h, 005h, 012h, 000h, 00Dh, 005h, 00Fh, 000h, 02Bh, 00Ah, 053h, 000h, 015h, 003h, 002h, 007h
+    db 00Dh, 003h, 009h, 007h, 005h, 003h, 003h, 00Eh, 012h, 00Fh, 007h, 00Eh, 00Ah, 00Fh, 00Fh, 003h
+    db 00Bh, 000h, 003h, 00Fh, 014h, 000h, 005h, 00Ah, 006h, 005h, 011h, 000h, 00Fh, 005h, 00Fh, 000h
+    db 02Ah, 00Ah, 053h, 000h, 027h, 003h, 004h, 007h, 009h, 003h, 013h, 00Fh, 002h, 00Eh, 00Fh, 00Fh
+    db 00Fh, 003h, 025h, 000h, 001h, 00Ah, 007h, 005h, 011h, 000h, 010h, 005h, 00Eh, 000h, 02Bh, 00Ah
+    db 052h, 000h, 036h, 003h, 022h, 00Fh, 00Fh, 003h, 025h, 000h, 008h, 005h, 010h, 000h, 012h, 005h
+    db 00Eh, 000h, 02Bh, 00Ah, 051h, 000h, 038h, 003h, 020h, 00Fh, 00Fh, 003h, 024h, 000h, 009h, 005h
+    db 00Fh, 000h, 014h, 005h, 00Dh, 000h, 02Ch, 00Ah, 050h, 000h, 039h, 003h, 01Fh, 00Fh, 00Fh, 003h
+    db 023h, 000h, 00Ah, 005h, 00Fh, 000h, 014h, 005h, 00Eh, 000h, 02Ch, 00Ah, 04Fh, 000h, 03Dh, 003h
+    db 01Ch, 00Fh, 00Dh, 003h, 023h, 000h, 00Bh, 005h, 00Eh, 000h, 016h, 005h, 00Eh, 000h, 02Ch, 00Ah
+    db 04Fh, 000h, 03Fh, 003h, 019h, 00Fh, 00Dh, 003h, 022h, 000h, 00Ch, 005h, 00Eh, 000h, 017h, 005h
+    db 00Eh, 000h, 02Ch, 00Ah, 04Eh, 000h, 043h, 003h, 015h, 00Fh, 00Ch, 003h, 022h, 000h, 00Dh, 005h
+    db 00Dh, 000h, 019h, 005h, 00Eh, 000h, 02Dh, 00Ah, 04Ch, 000h, 04Ah, 003h, 00Eh, 00Fh, 00Ch, 003h
+    db 021h, 000h, 00Eh, 005h, 00Ch, 000h, 01Bh, 005h, 00Eh, 000h, 02Dh, 00Ah, 04Ch, 000h, 04Fh, 003h
+    db 008h, 00Fh, 00Bh, 003h, 020h, 000h, 010h, 005h, 00Ch, 000h, 01Ch, 005h, 00Eh, 000h, 02Eh, 00Ah
+    db 04Bh, 000h, 054h, 003h, 002h, 00Fh, 00Bh, 003h, 01Fh, 000h, 011h, 005h, 00Bh, 000h, 01Dh, 005h
+    db 010h, 000h, 02Dh, 00Ah, 04Bh, 000h, 05Fh, 003h, 01Eh, 000h, 013h, 005h, 00Ah, 000h, 01Fh, 005h
+    db 010h, 000h, 02Dh, 00Ah, 04Ah, 000h, 05Eh, 003h, 01Eh, 000h, 014h, 005h, 00Ah, 000h, 020h, 005h
+    db 010h, 000h, 02Eh, 00Ah, 049h, 000h, 05Ch, 003h, 01Dh, 000h, 016h, 005h, 009h, 000h, 022h, 005h
+    db 010h, 000h, 02Eh, 00Ah, 049h, 000h, 05Ah, 003h, 016h, 000h, 01Eh, 005h, 008h, 000h, 024h, 005h
+    db 010h, 000h, 02Fh, 00Ah, 049h, 000h, 050h, 003h, 03Ch, 005h, 008h, 000h, 025h, 005h, 010h, 000h
+    db 00Fh, 00Ah, 00Bh, 00Bh, 002h, 005h, 014h, 00Ah, 048h, 000h, 02Ah, 003h, 061h, 005h, 007h, 000h
+    db 026h, 005h, 011h, 000h, 003h, 00Ah, 015h, 00Bh, 005h, 005h, 014h, 00Ah, 028h, 000h, 00Bh, 005h
+    db 015h, 000h, 016h, 003h, 073h, 005h, 006h, 000h, 028h, 005h, 008h, 000h, 01Fh, 00Bh, 007h, 005h
+    db 015h, 00Ah, 01Eh, 000h, 018h, 005h, 011h, 000h, 013h, 003h, 075h, 005h, 006h, 000h, 026h, 005h
+    db 00Dh, 00Bh, 008h, 005h, 014h, 00Bh, 009h, 005h, 015h, 00Ah, 015h, 000h, 026h, 005h, 00Ch, 000h
+    db 00Fh, 003h, 077h, 005h, 005h, 000h, 01Ch, 005h, 017h, 00Bh, 010h, 005h, 00Ch, 00Bh, 00Ch, 005h
+    db 015h, 00Ah, 00Ch, 000h, 039h, 005h, 002h, 000h, 00Ch, 003h, 078h, 005h, 016h, 005h, 020h, 00Bh
+    db 019h, 005h, 005h, 00Bh, 00Eh, 005h, 015h, 00Ah, 003h, 000h, 0C6h, 005h, 00Dh, 005h, 028h, 00Bh
+    db 02Eh, 005h, 010h, 00Ah, 0CDh, 005h, 008h, 005h, 02Bh, 00Bh, 032h, 005h, 007h, 00Ah, 0D4h, 005h
+    db 003h, 005h, 02Eh, 00Bh, 036h, 005h, 003h, 00Bh, 0D6h, 005h, 030h, 00Bh, 0FFh, 005h, 011h, 005h
+    db 02Eh, 00Bh, 0FFh, 005h, 013h, 005h, 02Dh, 00Bh, 0FFh, 005h, 014h, 005h, 02Bh, 00Bh, 0FFh, 005h
+    db 016h, 005h, 00Dh, 005h, 01Dh, 00Bh, 0FFh, 005h, 017h, 005h, 01Ch, 005h, 00Ch, 00Bh, 0FFh, 005h
+    db 019h, 005h, 0FFh, 005h, 041h, 005h
+
+landing_image_size equ 1750
+landing_image_end:

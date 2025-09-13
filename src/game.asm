@@ -94,6 +94,8 @@ STATE_HELP_INIT         equ 15
 STATE_HELP              equ 16
 STATE_WINDOW_INIT       equ 17
 STATE_WINDOW            equ 18
+STATE_LANDING_SCREEN_INIT equ 19
+STATE_LANDING_SCREEN    equ 20
 
 ; =========================================== KEYBOARD CODES ================|80
 
@@ -289,23 +291,23 @@ CURSOR_TYPE_ROL                 equ 0x02
 ; | |  |  '- switch / building exit position (up/down/left/right)
 ; | |  '- resource type (4) (for source/pods cargo/buildings)
 ; | '- cart direction
-; '- unused (1)
+; '- building in/out type
 ;
 SWITCH_MASK                     equ 0x1
 TILE_DIRECTION_MASK             equ 0x6
 TILE_DIRECTION_SHIFT            equ 0x1
 SWITCH_DATA_CLIP                equ 0xF8
-RESOURCE_TYPE_MASK  2            equ 0x18
+RESOURCE_TYPE_MASK              equ 0x18
 RESOURCE_TYPE_SHIFT             equ 0x3
 CART_DIRECTION_MASK             equ 0x60
 CART_TILE_DIRECTION_SHIFT       equ 0x5
-
 CART_UP                         equ 0x00
 CART_DOWN                       equ 0x01
 CART_LEFT                       equ 0x02
 CART_RIGHT                      equ 0x03
+BUILDING_INPUT_MASK             equ 0x80
 
-TERRAIN_RULES_MASK              equ 0x03
+TERRAIN_RULES_CROP              equ 0x03
 
 CURSOR_ICON_POINTER             equ 0x00
 CURSOR_ICON_PLACE_RAIL          equ 0x01
@@ -624,6 +626,10 @@ game_logic:
     mov [si], bl                        ; save in _METADATA_
   jmp .redraw_tile
 
+  ; TODO: routine
+  .building_exit_rotate:
+  jmp .redraw_tile
+
   .build_action:
     push es
     push ds
@@ -682,8 +688,17 @@ game_logic:
       test al, RAIL_MASK
       jnz .station
 
+      and al, BACKGROUND_SPRITE_MASK
+      cmp al, TILE_STATION_EXTEND
+      jz .remote_building
+
       .base_building:
         mov bx, SCENE_MODE_BASE_BUILDINGS
+        jmp .pop_window
+
+
+      .remote_building:
+        mov bx, SCENE_MODE_REMOTE_BUILDINGS
         jmp .pop_window
 
       .station:
@@ -1133,7 +1148,6 @@ init_title_screen:
   mov si, title_image
   call draw_rle_image
 
-
   mov si, CreatedByText
   mov dx, 0x150F
   mov bl, COLOR_WHITE
@@ -1143,12 +1157,23 @@ init_title_screen:
   mov dx, 0x1606
   mov bl, COLOR_WHITE
   call draw_font_text
+
   ;mov bx, INTRO_JINGLE
   ;call play_sfx
 
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 ret
 
+init_landing_screen:
+  mov al, COLOR_BLACK
+  call clear_screen
+
+  mov si, landing_image
+  call draw_rle_image
+  mov byte [_GAME_STATE_], STATE_LANDING_SCREEN
+ret
+
+live_landing_screen:
 live_title_screen:
   mov si, PressEnterText
   mov dx, 0x170F
@@ -1753,7 +1778,7 @@ generate_map:
     mov dx, MAP_SIZE                    ; Width
     .next_col:
       call get_random                   ; AX is random value
-      and ax, TERRAIN_RULES_MASK        ; Crop to 0-3
+      and ax, TERRAIN_RULES_CROP        ; Crop to 0-3
       mov [es:di], al                   ; Save terrain tile
       cmp dx, MAP_SIZE                  ; Check if first col
       je .skip_cell
@@ -2706,6 +2731,7 @@ include 'img_p1x.asm'
 include 'img_menu.asm'
 include 'img_help.asm'
 include 'img_title.asm'
+include 'img_landing.asm'
 
 ; =========================================== THE END =======================|80
 ; Thanks for reading the source code!
