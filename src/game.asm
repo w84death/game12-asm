@@ -16,7 +16,7 @@
 ; Compaq Contura 430C (FreeDOS & Boot Floppy)
 ; * CPU: 486 DX4, 100Mhz
 ; * Graphics: VGA
-; * RAM: 24MB (OS recognize up to 640KB only)
+; * RAM: 24MB
 ;
 ; Theoretical minimum requirements:
 ; * CPU: 386 SX, 16Mhz
@@ -26,11 +26,12 @@
 ; Programs used for production:
 ;   - Zed IDE
 ;   - Pro Motion NG
+;   - bochs
 ;   - custom tool for tileset conversion
 ;   - custom tool for RLE image compression
 ;
 ; ==============================================================================
-; Latest revision: 08/2025
+; Latest revision: 09/2025
 ; ==============================================================================
 
 org 0x0100
@@ -94,8 +95,8 @@ STATE_HELP_INIT         equ 15
 STATE_HELP              equ 16
 STATE_WINDOW_INIT       equ 17
 STATE_WINDOW            equ 18
-STATE_LANDING_SCREEN_INIT equ 19
-STATE_LANDING_SCREEN    equ 20
+STATE_BRIEFING_INIT equ 19
+STATE_BRIEFING   equ 20
 
 ; =========================================== KEYBOARD CODES ================|80
 
@@ -316,6 +317,7 @@ SCENE_MODE_MAIN_MENU            equ 0x00
 SCENE_MODE_BASE_BUILDINGS       equ 0x01
 SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
 SCENE_MODE_STATION              equ 0x03
+SCENE_MODE_BRIEFING             equ 0x04
 SCENE_MODE_HELP_PAGE            equ 0x00
 
 UI_STATS_GFX_LINE               equ 320*175
@@ -515,9 +517,6 @@ ret                                     ; Return to DOS
 game_logic:
 
 ; =========================================== VIEWPORT MOVE =================|80
-  .back_to_menu:
-  ; hand;e
-
   .move_cursor_up:
     mov ax, [_VIEWPORT_Y_]              ; viewport top position
     inc ax                              ; one tile before
@@ -901,15 +900,15 @@ window_logic:
     push si
     mov si, ax
 
-    dec dh
     inc dl
-    mov bl, COLOR_WHITE
+    mov bl, COLOR_BLACK
     call draw_font_text
 
     pop si
     mov ax, [si+6]
     mov dx, [si+2]
     mov si, ax
+    inc dh
     inc dh
     inc dl
 
@@ -1000,6 +999,14 @@ menu_logic:
     mov byte [_GAME_STATE_], STATE_GAME_INIT
   jmp .done
 
+  .show_brief:
+    mov byte [_GAME_STATE_], STATE_BRIEFING_INIT
+  jmp .done
+
+  .back_to_menu:
+    mov byte [_GAME_STATE_], STATE_MENU_INIT
+  jmp .done
+
   .done:
 ret
 
@@ -1027,6 +1034,8 @@ StateJumpTable:
   dw live_help
   dw init_window
   dw live_window
+  dw init_briefing
+  dw live_briefing
 
 StateTransitionTable:
   db STATE_P1X_SCREEN,    KB_ESC,   STATE_QUIT
@@ -1034,11 +1043,9 @@ StateTransitionTable:
   db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
   db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
   db STATE_MENU,          KB_ESC,   STATE_TITLE_SCREEN_INIT
+  db STATE_BRIEFING, KB_ESC, STATE_MENU_INIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
-  db STATE_GAME,          KB_TAB,   STATE_MAP_VIEW_INIT ; TODO: remove, initiate via radar building
-  db STATE_MAP_VIEW,      KB_ESC,   STATE_GAME_INIT
-  db STATE_MAP_VIEW,      KB_TAB,   STATE_GAME_INIT
   db STATE_DEBUG_VIEW,    KB_ESC,   STATE_MENU_INIT
 StateTransitionTableEnd:
 
@@ -1067,7 +1074,11 @@ InputTable:
   dw menu_logic.selection_down
   db STATE_WINDOW,        SCENE_MODE_ANY,    KB_SPACE
   dw menu_logic.game_menu_enter
-  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_ENTER
+  db STATE_BRIEFING,        SCENE_MODE_ANY,    KB_UP
+  dw menu_logic.selection_up
+  db STATE_BRIEFING,        SCENE_MODE_ANY,    KB_DOWN
+  dw menu_logic.selection_down
+  db STATE_BRIEFING, SCENE_MODE_ANY,    KB_ENTER
   dw menu_logic.game_menu_enter
 InputTableEnd:
 
@@ -1150,16 +1161,24 @@ init_title_screen:
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 ret
 
-init_landing_screen:
+init_briefing:
   mov al, COLOR_BLACK
   call clear_screen
 
   mov si, landing_image
   call draw_rle_image
-  mov byte [_GAME_STATE_], STATE_LANDING_SCREEN
+
+  call draw_minimap
+  mov byte [_GAME_STATE_], STATE_BRIEFING
+  mov byte [_SCENE_MODE_], SCENE_MODE_BRIEFING
+  call window_logic.create_window
 ret
 
-live_landing_screen:
+
+live_briefing:
+nop
+ret
+
 live_title_screen:
   mov si, PressEnterText
   mov dx, 0x170F
@@ -1225,8 +1244,8 @@ new_game:
   call build_initial_base
   call reset_to_default_values
 
-  mov byte [_GAME_STATE_], STATE_MENU_INIT
-  mov byte [_SCENE_MODE_], SCENE_MODE_ANY
+  mov byte [_GAME_STATE_], STATE_BRIEFING_INIT
+  mov byte [_SCENE_MODE_], SCENE_MODE_BRIEFING
 ret
 
 init_game:
@@ -2339,13 +2358,13 @@ draw_minimap:
   push SEGMENT_VGA
   pop es
 
-  mov ax, 0x040B
+  mov ax, 0x0602
   mov bx, 0x0909
   call draw_window
 
   .draw_mini_map:
   xor si, si
-  mov di, SCREEN_WIDTH*40+94          ; Map position on screen
+  mov di, SCREEN_WIDTH*59+39-16          ; Map position on screen
   mov bx, TerrainColors      ; Terrain colors array
   mov cx, MAP_SIZE           ; Columns
   .draw_loop:
@@ -2620,23 +2639,22 @@ MainMenuCopyText db '(C) 2025 P1X',0x0
 
 ; height/width, Y/X, title, menu entry array, corresponding logic array
 WindowDefinitionsArray:
-dw 0x060A, 0x0A0A, WindowMainMenuText, MainMenuSelectionArrayText, MainMenuLogicArray
+dw 0x050A, 0x0C0A, WindowMainMenuText, MainMenuSelectionArrayText, MainMenuLogicArray
 dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText, WindowBaseLogicArray
-dw 0x080A, 0x040A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText, WindowRemoteLogicArray
-dw 0x080A, 0x040A, WindowStationText, WindowStationSelectionArrayText, WindowStationLogicArray
+dw 0x040A, 0x0A0A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText, WindowRemoteLogicArray
+dw 0x030A, 0x0A0A, WindowStationText, WindowStationSelectionArrayText, WindowStationLogicArray
+dw 0x0409, 0x1015, WindowBriefingText, WindowBriefingSelectionArrayText, WindowBriefingLogicArray
 
 WindowMainMenuText          db 'MAIN MANU',0x0
 MainMenuSelectionArrayText:
-  db '> PLAY',0x0
-  db '> RESTART GAME',0x0
+  db '> NEW GAME',0x0
   db '# PREVIEW TILESETS',0x0
   db '? QUICK HELP',0x0
   db '< QUIT',0x0
   db 0x00
 
 MainMenuLogicArray:
-  dw menu_logic.start_game, 0x0
-  dw menu_logic.generate_new_map, 0x0
+  dw menu_logic.show_brief, 0x0
   dw menu_logic.tailset_preview, 0x0
   dw menu_logic.help, 0x0
   dw menu_logic.quit, 0x0
@@ -2679,6 +2697,18 @@ WindowStationSelectionArrayText:
 WindowStationLogicArray:
   dw menu_logic.close_window, 0x0
   dw actions_logic.place_station, 0x0
+
+  WindowBriefingText           db 'BRIEFING',0x0
+  WindowBriefingSelectionArrayText:
+    db '> ACCEPT MISSION',0x0
+    db 'GENERATE MAP',0x0
+    db '< REJECT',0x0
+    db 0x00
+  WindowBriefingLogicArray:
+    dw menu_logic.start_game, 0x0
+    dw new_game, 0x0
+    dw menu_logic.back_to_menu, 0x0
+
 
 ; =========================================== TERRAIN GEN RULES =============|80
 
