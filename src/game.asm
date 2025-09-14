@@ -130,8 +130,6 @@ KB_0        equ 0x0B
 
 ; =========================================== TILES NAMES ===================|80
 
-TILES_COUNT                     equ 0x56    ; 86 tiles
-
 TILE_MUD_1                      equ 0x00
 TILE_MUD_2                      equ 0x01
 TILE_MUD_GRASS_1                equ 0x02
@@ -142,20 +140,16 @@ TILE_TREES_1                    equ 0x06
 TILE_TREES_2                    equ 0x07
 TILE_MOUNTAINS_1                equ 0x08
 TILE_MOUNTAINS_2                equ 0x09
-
 TILE_FOUNDATION                 equ 0x0A
 TILE_STATION                    equ 0x0B
 TILE_STATION_EXTEND             equ 0x0C
 TILE_EXTRACTION                 equ 0x0D
-
-TILE_FOREGROUND_SHIFT           equ 0x0E ; pointer to first foreground tiles
 TILE_RES_YELLOW_1               equ 0x0E
 TILE_RES_YELLOW_2               equ 0x0F
 TILE_RES_BLUE_1                 equ 0x10
 TILE_RES_BLUE_2                 equ 0x11
 TILE_RES_RED_1                  equ 0x12
 TILE_RES_RED_2                  equ 0x13
-
 TILE_RAILS_1                    equ 0x14
 TILE_RAILS_2                    equ 0x15
 TILE_RAILS_3                    equ 0x16
@@ -167,7 +161,6 @@ TILE_RAILS_8                    equ 0x1B
 TILE_RAILS_9                    equ 0x1C
 TILE_RAILS_10                   equ 0x1D
 TILE_RAILS_11                   equ 0x1E
-
 TILE_ROCKET_BOTTOM              equ 0x1F
 TILE_ROCKET_TOP                 equ 0x20
 TILE_BUILDING_FACTORY           equ 0x21
@@ -177,7 +170,56 @@ TILE_BUILDING_LAB               equ 0x24
 TILE_BUILDING_RADAR             equ 0x25
 TILE_BUILDING_PODS              equ 0x26
 TILE_BUILDING_POWER             equ 0x27
+TILE_OUT_RIGHT                  equ 0x28
+TILE_OUT_UP                     equ 0x29
+TILE_OUT_DOWN                   equ 0x2A
+TILE_OUT_LEFT                   equ 0x2B
+TILE_IN_RIGHT                   equ 0x2C
+TILE_IN_UP                      equ 0x2D
+TILE_IN_DOWN                    equ 0x2E
+TILE_IN_LEFT                    equ 0x2F
+TILE_UFO_FLY                    equ 0x30
+TILE_UFO_ATTACK                 equ 0x31
+TILE_CART_VERTICAL              equ 0x32
+TILE_CART_HORIZONTAL            equ 0x33
+TILE_SWITCH_LEFT                equ 0x34
+TILE_SWITCH_DOWN                equ 0x35
+TILE_SWITCH_RIGHT               equ 0x36
+TILE_SWITCH_UP                  equ 0x37
+TILE_ORE_BLUE                   equ 0x38
+TILE_ORE_YELLOW                 equ 0x39
+TILE_ORE_RED                    equ 0x3A
+TILE_EXTRACT_BLUE               equ 0x3B
+TILE_EXTRACT_YELLOW             equ 0x3C
+TILE_EXTRACT_RED                equ 0x3D
+TILE_SILO_BLUE                  equ 0x3E
+TILE_SILO_YELLOW                equ 0x3F
+TILE_SILO_RED                   equ 0x40
+TILE_CURSOR_PAN                 equ 0x41
+TILE_CURSOR_BUILD               equ 0x42
+TILE_CURSOR_EDIT                equ 0x43
+TILE_CURSOR_BUILDING            equ 0x44
+TILE_WINDOW_1                   equ 0x45
+TILE_WINDOW_2                   equ 0x46
+TILE_WINDOW_3                   equ 0x47
+TILE_WINDOW_4                   equ 0x48
+TILE_WINDOW_5                   equ 0x49
+TILE_WINDOW_6                   equ 0x4A
+TILE_WINDOW_7                   equ 0x4B
+TILE_WINDOW_8                   equ 0x4C
+TILE_WINDOW_9                   equ 0x4D
+TILE_FRAME_1                    equ 0x4E
+TILE_FRAME_2                    equ 0x4F
+TILE_FRAME_3                    equ 0x50
+TILE_FRAME_4                    equ 0x51
+TILE_FRAME_5                    equ 0x52
+TILE_FRAME_6                    equ 0x53
+TILE_FRAME_7                    equ 0x54
+TILE_FRAME_8                    equ 0x55
 
+; Helpers
+TILES_COUNT                     equ 0x56    ; 86 tiles
+TILE_FOREGROUND_SHIFT           equ 0x0E ; pointer to first foreground tiles
 TILE_ROCKET_BOTTOM_ID           equ TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
 TILE_ROCKET_TOP_ID              equ TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_FACTORY_ID        equ TILE_BUILDING_FACTORY-TILE_FOREGROUND_SHIFT
@@ -188,62 +230,6 @@ TILE_BUILDING_RADAR_ID          equ TILE_BUILDING_RADAR-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_PODS_ID           equ TILE_BUILDING_PODS-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_POWER_ID          equ TILE_BUILDING_POWER-TILE_FOREGROUND_SHIFT
 
-TILE_DEFENSE_1                  equ 0x28
-TILE_DEFENSE_2                  equ 0x29
-TILE_DEFENSE_3                  equ 0x2A
-
-TILE_ENEMY_1                    equ 0x2B
-TILE_ENEMY_2                    equ 0x2C
-TILE_ENEMY_3                    equ 0x2D
-
-TILE_CART_VERTICAL              equ 0x2E
-TILE_CART_HORIZONTAL            equ 0x2F
-TILE_SWITCH_LEFT                equ 0x30
-TILE_SWITCH_DOWN                equ 0x31
-TILE_SWITCH_RIGHT               equ 0x32
-TILE_SWITCH_UP                  equ 0x33
-
-TILE_ORE_BLUE                   equ 0x34
-TILE_ORE_YELLOW                 equ 0x35
-TILE_ORE_RED                    equ 0x36
-
-TILE_EXTRACT_BLUE               equ 0x37
-TILE_EXTRACT_YELLOW             equ 0x38
-TILE_EXTRACT_RED                equ 0x39
-
-TILE_SILO_BLUE                  equ 0x3A
-TILE_SILO_YELLOW                equ 0x3B
-TILE_SILO_RED                   equ 0x3C
-
-TILE_CURSOR_PAN                 equ 0x3D
-TILE_CURSOR_BUILD               equ 0x3E
-TILE_CURSOR_EDIT                equ 0x3F
-TILE_CURSOR_BUILDING            equ 0x40
-
-TILE_WINDOW_1                   equ 0x41
-TILE_WINDOW_2                   equ 0x42
-TILE_WINDOW_3                   equ 0x43
-TILE_WINDOW_4                   equ 0x44
-TILE_WINDOW_5                   equ 0x45
-TILE_WINDOW_6                   equ 0x46
-TILE_WINDOW_7                   equ 0x47
-TILE_WINDOW_8                   equ 0x48
-TILE_WINDOW_9                   equ 0x49
-
-TILE_LOGO_1                     equ 0x4A
-TILE_LOGO_2                     equ 0x4B
-TILE_LOGO_3                     equ 0x4C
-TILE_LOGO_4                     equ 0x4D
-TILE_LOGO_5                     equ 0x4E
-
-TILE_FRAME_1                    equ 0x4F
-TILE_FRAME_2                    equ 0x50
-TILE_FRAME_3                    equ 0x51
-TILE_FRAME_4                    equ 0x52
-TILE_FRAME_5                    equ 0x53
-TILE_FRAME_6                    equ 0x54
-TILE_FRAME_7                    equ 0x55
-TILE_FRAME_8                    equ 0x56
 
 ; SEGMENT_TERRAIN_BACKGROUND
 ; 0 0 0 0 0000
@@ -1149,7 +1135,7 @@ init_title_screen:
   call draw_rle_image
 
   mov si, CreatedByText
-  mov dx, 0x150F
+  mov dx, 0x1508
   mov bl, COLOR_WHITE
   call draw_font_text
 
@@ -2596,7 +2582,7 @@ ret
 
 ; =========================================== TEXT DATA =====================|80
 
-CreatedByText db 'CREATED BY',0x0
+CreatedByText db 'HUMAN CODED ASSEMBLY BY',0x0
 KKJText db 'KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
 PressEnterText db 'PRESS ENTER', 0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more...', 0x0D, 0x0A, 0x0
