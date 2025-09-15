@@ -275,10 +275,10 @@ CURSOR_TYPE_ROL                 equ 0x02
 ; 0 00 00 00 0
 ; | |  |  |  |
 ; | |  |  |  '- switch on rail (or not initialized)
-; | |  |  '- switch / building exit position (up/down/left/right)
+; | |  |  '- switch position (4)
 ; | |  '- resource type (4) (for source/pods cargo/buildings)
-; | '- cart direction
-; '- building in/out type
+; | '- direction (4) cart drive and building exit position (up/down/left/right)
+; '- building in/out type and cart running (2)
 ;
 SWITCH_MASK                     equ 0x1
 TILE_DIRECTION_MASK             equ 0x6
@@ -617,7 +617,6 @@ game_logic:
       test bl, SWITCH_MASK
       jz .change_action_done
 
-      push es
       push SEGMENT_META_DATA
       pop es
       mov bl, [es:di]
@@ -629,12 +628,11 @@ game_logic:
       add al, SWITCH_MASK
       or bl, al                         ; set new sitch to saved metadata value
       mov byte [es:di], bl
-
-      pop es
     jmp .change_action_done
 
     ; TODO: routine
     .building_exit_rotate:
+
     jmp .change_action_done
 
     .change_action_done:
