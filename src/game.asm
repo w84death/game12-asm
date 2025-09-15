@@ -588,32 +588,60 @@ game_logic:
     mov word [_CURSOR_X_OLD_], ax
   jmp .redraw_terrain
 
-  ; TODO: update
-  .switch_change:
-    mov ax, [_CURSOR_Y_]                ; calculate map position
-    shl ax, 7   ; Y * 128
-    add ax, [_CURSOR_X_]
-    mov si, _METADATA_
-    add si, ax                          ; set tile position in _METADATA_
-    mov al, [si]                        ; read _METADATA_ for this tile pos
-    test al, METADATA_SWITCH_INITIALIZED
-    jz .done                            ; not a swich, skip
 
-    mov bl, al                          ; save the metadata value
-    mov bh, 0xFF                        ; calculate the bit mask
-    sub bh, METADATA_SWITCH_MASK        ; to everything beside switch
-    and bl, bh                          ; clear switch data (in saved value)
-    and al, METADATA_SWITCH_MASK        ; mask swich data
-    shr al, METADATA_SWITCH_SHIFT       ; move to right to conv to number
-    xor al, 0x2                         ; invert swich top-down or left-right
-    shl al, METADATA_SWITCH_SHIFT       ; move back to left for correct position
-    or bl, al                           ; set new sitch to saved metadata value
-    mov [si], bl                        ; save in _METADATA_
+  .change_action:
+    push es
+    push ds
+
+    mov bx, SFX_BUILD
+    call play_sfx
+
+    mov di, [_CURSOR_Y_]                ; Calculate map position
+    shl di, 7   ; Y * 128
+    add di, [_CURSOR_X_]               ; For quick random number
+
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop es
+    push SEGMENT_TERRAIN_FOREGROUND
+    pop ds
+
+    mov al, [es:di]
+    test al, RAIL_MASK
+    jnz .switch_change
+    test al, INFRASTRUCTURE_MASK
+    jnz .building_exit_rotate
+    jmp .change_action_done
+
+    .switch_change:
+      mov bl, [ds:di]
+      test bl, SWITCH_MASK
+      jz .change_action_done
+
+      push es
+      push SEGMENT_META_DATA
+      pop es
+      mov bl, [es:di]
+      mov al, bl
+      and al, TILE_DIRECTION_MASK
+      shr al, TILE_DIRECTION_SHIFT
+      xor al, 0x2                       ; invert swich top-down or left-right
+      shl al, TILE_DIRECTION_SHIFT      ; move back to left for correct position
+      add al, SWITCH_MASK
+      or bl, al                         ; set new sitch to saved metadata value
+      mov byte [es:di], bl
+
+      pop es
+    jmp .change_action_done
+
+    ; TODO: routine
+    .building_exit_rotate:
+    jmp .change_action_done
+
+    .change_action_done:
+    pop ds
+    pop es
   jmp .redraw_tile
 
-  ; TODO: routine
-  .building_exit_rotate:
-  jmp .redraw_tile
 
   .build_action:
     push es
@@ -641,7 +669,7 @@ game_logic:
       cmp bl, CURSOR_ICON_PLACE_RAIL
       jz .place_rail
 
-    jmp .no_action
+    jmp .build_action_done
 
     .place_rail:
       mov al, [_GAME_TICK_]
@@ -665,9 +693,6 @@ game_logic:
       pop es
       jmp .redraw_four_tiles
 
-    .toggle_switch:
-    jmp .no_action
-
     .place_building:
       mov al, [es:di]
       test al, RAIL_MASK
@@ -680,7 +705,6 @@ game_logic:
       .base_building:
         mov bx, SCENE_MODE_BASE_BUILDINGS
         jmp .pop_window
-
 
       .remote_building:
         mov bx, SCENE_MODE_REMOTE_BUILDINGS
@@ -698,7 +722,7 @@ game_logic:
       mov byte [_MENU_SELECTION_POS_], 0x0
       jmp .done
 
-    .no_action:
+    .build_action_done:
     pop ds
     pop es
   jmp .redraw_tile
@@ -1009,80 +1033,6 @@ menu_logic:
 
   .done:
 ret
-
-
-; =========================================== LOGIC FOR GAME STATES =========|80
-
-; This table needs to corespond to the STATE_ variables IDs
-StateJumpTable:
-  dw init_engine
-  dw exit
-  dw init_p1x_screen
-  dw live_p1x_screen
-  dw init_title_screen
-  dw live_title_screen
-  dw init_menu
-  dw live_menu
-  dw new_game
-  dw init_game
-  dw live_game
-  dw init_map_view
-  dw live_map_view
-  dw init_debug_view
-  dw live_debug_view
-  dw init_help
-  dw live_help
-  dw init_window
-  dw live_window
-  dw init_briefing
-  dw live_briefing
-
-StateTransitionTable:
-  db STATE_P1X_SCREEN,    KB_ESC,   STATE_QUIT
-  db STATE_P1X_SCREEN,    KB_ENTER, STATE_TITLE_SCREEN_INIT
-  db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
-  db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
-  db STATE_MENU,          KB_ESC,   STATE_TITLE_SCREEN_INIT
-  db STATE_BRIEFING, KB_ESC, STATE_MENU_INIT
-  db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
-  db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
-  db STATE_DEBUG_VIEW,    KB_ESC,   STATE_MENU_INIT
-StateTransitionTableEnd:
-
-InputTable:
-  db STATE_GAME,          SCENE_MODE_ANY,  KB_UP
-  dw game_logic.move_cursor_up
-  db STATE_GAME,          SCENE_MODE_ANY,  KB_DOWN
-  dw game_logic.move_cursor_down
-  db STATE_GAME,          SCENE_MODE_ANY,  KB_LEFT
-  dw game_logic.move_cursor_left
-  db STATE_GAME,          SCENE_MODE_ANY,  KB_RIGHT
-  dw game_logic.move_cursor_right
-  db STATE_GAME,          SCENE_MODE_ANY,  KB_SPACE
-  dw game_logic.build_action
-  db STATE_MENU,        SCENE_MODE_ANY,    KB_UP
-  dw menu_logic.selection_up
-  db STATE_MENU,        SCENE_MODE_ANY,    KB_DOWN
-  dw menu_logic.selection_down
-  db STATE_MENU,        SCENE_MODE_ANY,    KB_SPACE
-  dw menu_logic.selection_down
-  db STATE_MENU,        SCENE_MODE_ANY,    KB_ENTER
-  dw menu_logic.main_menu_enter
-  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_UP
-  dw menu_logic.selection_up
-  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_DOWN
-  dw menu_logic.selection_down
-  db STATE_WINDOW,        SCENE_MODE_ANY,    KB_SPACE
-  dw menu_logic.game_menu_enter
-  db STATE_BRIEFING,        SCENE_MODE_ANY,    KB_UP
-  dw menu_logic.selection_up
-  db STATE_BRIEFING,        SCENE_MODE_ANY,    KB_DOWN
-  dw menu_logic.selection_down
-  db STATE_BRIEFING, SCENE_MODE_ANY,    KB_ENTER
-  dw menu_logic.game_menu_enter
-InputTableEnd:
-
-
 
 ; ======================================= PROCEDURES FOR GAME STATES ===C====|80
 
@@ -2595,9 +2545,81 @@ ret
 
 
 
+; =========================================== LOGIC FOR GAME STATES =========|80
 
+; This table needs to corespond to the STATE_ variables IDs
+StateJumpTable:
+  dw init_engine
+  dw exit
+  dw init_p1x_screen
+  dw live_p1x_screen
+  dw init_title_screen
+  dw live_title_screen
+  dw init_menu
+  dw live_menu
+  dw new_game
+  dw init_game
+  dw live_game
+  dw init_map_view
+  dw live_map_view
+  dw init_debug_view
+  dw live_debug_view
+  dw init_help
+  dw live_help
+  dw init_window
+  dw live_window
+  dw init_briefing
+  dw live_briefing
 
+; Transition between major states
+StateTransitionTable:
+  db STATE_P1X_SCREEN,    KB_ESC,   STATE_QUIT
+  db STATE_P1X_SCREEN,    KB_ENTER, STATE_TITLE_SCREEN_INIT
+  db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
+  db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
+  db STATE_MENU,          KB_ESC,   STATE_TITLE_SCREEN_INIT
+  db STATE_BRIEFING, KB_ESC, STATE_MENU_INIT
+  db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
+  db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
+  db STATE_DEBUG_VIEW,    KB_ESC,   STATE_MENU_INIT
+StateTransitionTableEnd:
 
+; In state keyboard handling
+InputTable:
+  db STATE_GAME,                        SCENE_MODE_ANY, KB_UP
+  dw game_logic.move_cursor_up
+  db STATE_GAME,                        SCENE_MODE_ANY, KB_DOWN
+  dw game_logic.move_cursor_down
+  db STATE_GAME,                        SCENE_MODE_ANY, KB_LEFT
+  dw game_logic.move_cursor_left
+  db STATE_GAME,                        SCENE_MODE_ANY, KB_RIGHT
+  dw game_logic.move_cursor_right
+  db STATE_GAME,                        SCENE_MODE_ANY, KB_SPACE
+  dw game_logic.build_action
+  db STATE_GAME,                        SCENE_MODE_ANY, KB_ENTER
+  dw game_logic.change_action
+
+  db STATE_MENU,                        SCENE_MODE_ANY, KB_UP
+  dw menu_logic.selection_up
+  db STATE_MENU,                        SCENE_MODE_ANY, KB_DOWN
+  dw menu_logic.selection_down
+  db STATE_MENU,                        SCENE_MODE_ANY, KB_ENTER
+  dw menu_logic.main_menu_enter
+
+  db STATE_WINDOW,                      SCENE_MODE_ANY, KB_UP
+  dw menu_logic.selection_up
+  db STATE_WINDOW,                      SCENE_MODE_ANY, KB_DOWN
+  dw menu_logic.selection_down
+  db STATE_WINDOW,                      SCENE_MODE_ANY, KB_SPACE
+  dw menu_logic.game_menu_enter
+
+  db STATE_BRIEFING,                    SCENE_MODE_ANY, KB_UP
+  dw menu_logic.selection_up
+  db STATE_BRIEFING,                    SCENE_MODE_ANY, KB_DOWN
+  dw menu_logic.selection_down
+  db STATE_BRIEFING,                    SCENE_MODE_ANY, KB_ENTER
+  dw menu_logic.game_menu_enter
+InputTableEnd:
 
 ; =========================================== TEXT DATA =====================|80
 
@@ -2616,11 +2638,11 @@ HelpArrayText:
   db 'BUILD RAILS. SPAWN PODS. EXPAND BASE.',0x0
   db 'USE RADAR TO FIND RESOURCES. EXTRACT', 0x0
   db 'THEM. TRANSPORT CARGO TO BASE. REFINE.', 0x0
-  db 'POD>SILO>FACTORY>REFINED RESOURCE'
+  db ' '
   db ' ', 0x0
   db 'KEYBOARD:',0x0
   db '* (ARROWS) TO MOVE CURSOR',0x0
-  db '* (SPACEBAR) FOR INTERACTION',0x0
+  db '* (SPACEBAR) FOR INTERACTION AND MENUS',0x0
   db '* (UP/DOWN) NAVIGATION IN MENUS',0x0
   db '* (ESC) TO BACK TO MAIN MENU',0x0
   db ' ',0x0
@@ -2636,6 +2658,8 @@ HelpArrayText:
   db 0x00
 
 MainMenuCopyText db '(C) 2025 P1X',0x0
+
+; =========================================== WINDOWS DEFINITIONS ===========|80
 
 ; height/width, Y/X, title, menu entry array, corresponding logic array
 WindowDefinitionsArray:
@@ -2721,17 +2745,19 @@ db 3, 4, 4, 5   ; 4 Grass
 db 4, 3, 5, 6   ; 5 Bush
 db 6, 7, 7, 4   ; 6 Trees 1
 db 7, 6, 4, 8   ; 7 Trees 2
-db 7, 8, 8, 9   ; 8 Mountains 1
-db 9, 8, 8, 7   ; 9 Mountain 2
+db 7, 8, 8, 9   ; 8 Mountains/Rocks 1
+db 9, 8, 8, 7   ; 9 Mountains/Rocks 2
 
 TerrainColors:
-db 0x4         ; Mud 1
-db 0x4         ; Mud 2
-db 0x4         ; Some Grass
-db 0x5         ; Dense Grass
-db 0x5         ; Bush
-db 0x5         ; Forest
-db 0xA         ; Mountain
+db 0x4          ; Mud 1
+db 0x4          ; Mud 2
+db 0x4          ; Mud Grass 1
+db 0x5          ; Mud Grass 2
+db 0x40         ; Grass
+db 0x5          ; Trees 1
+db 0x5          ; Trees 2
+db 0xA          ; Mountains/Rocks 1
+db 0x5          ; Mountains/Rocks 2
 
 ; =========================================== DICTS =========================|80
 
@@ -2753,7 +2779,7 @@ include 'img_landing.asm'
 ; Thanks for reading the source code!
 ; Visit http://smol.p1x.in/assembly/ for more.
 
-Logo:
+BitLogo:
 db "P1X"    ; Use HEX viewer to see P1X at the end of binary
 
 ; Label marking the end of all code and data
