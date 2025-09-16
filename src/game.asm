@@ -200,23 +200,24 @@ TILE_CURSOR_PAN                 equ 0x41
 TILE_CURSOR_BUILD               equ 0x42
 TILE_CURSOR_EDIT                equ 0x43
 TILE_CURSOR_BUILDING            equ 0x44
-TILE_WINDOW_1                   equ 0x45
-TILE_WINDOW_2                   equ 0x46
-TILE_WINDOW_3                   equ 0x47
-TILE_WINDOW_4                   equ 0x48
-TILE_WINDOW_5                   equ 0x49
-TILE_WINDOW_6                   equ 0x4A
-TILE_WINDOW_7                   equ 0x4B
-TILE_WINDOW_8                   equ 0x4C
-TILE_WINDOW_9                   equ 0x4D
-TILE_FRAME_1                    equ 0x4E
-TILE_FRAME_2                    equ 0x4F
-TILE_FRAME_3                    equ 0x50
-TILE_FRAME_4                    equ 0x51
-TILE_FRAME_5                    equ 0x52
-TILE_FRAME_6                    equ 0x53
-TILE_FRAME_7                    equ 0x54
-TILE_FRAME_8                    equ 0x55
+TILE_CURSOR_SELECTOR            equ 0x45
+TILE_WINDOW_1                   equ 0x46
+TILE_WINDOW_2                   equ 0x47
+TILE_WINDOW_3                   equ 0x48
+TILE_WINDOW_4                   equ 0x49
+TILE_WINDOW_5                   equ 0x4A
+TILE_WINDOW_6                   equ 0x4B
+TILE_WINDOW_7                   equ 0x4C
+TILE_WINDOW_8                   equ 0x4D
+TILE_WINDOW_9                   equ 0x4E
+TILE_FRAME_1                    equ 0x4F
+TILE_FRAME_2                    equ 0x50
+TILE_FRAME_3                    equ 0x51
+TILE_FRAME_4                    equ 0x52
+TILE_FRAME_5                    equ 0x53
+TILE_FRAME_6                    equ 0x54
+TILE_FRAME_7                    equ 0x55
+TILE_FRAME_8                    equ 0x56
 
 ; Helpers
 TILES_COUNT                     equ 0x56    ; 86 tiles
