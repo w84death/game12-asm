@@ -613,26 +613,30 @@ game_logic:
     jmp .change_action_done
 
     .switch_change:
-      mov bl, [ds:di]
-      test bl, SWITCH_MASK
-      jz .change_action_done
-
       push SEGMENT_META_DATA
       pop es
-      mov bl, [es:di]
-      mov al, bl
+      mov al, [es:di]
       and al, TILE_DIRECTION_MASK
       shr al, TILE_DIRECTION_SHIFT
       xor al, 0x2                       ; invert swich top-down or left-right
       shl al, TILE_DIRECTION_SHIFT      ; move back to left for correct position
       add al, SWITCH_MASK
-      or bl, al                         ; set new sitch to saved metadata value
-      mov byte [es:di], bl
+      and byte [es:di], SWITCH_DATA_CLIP
+      add byte [es:di], al
     jmp .change_action_done
 
     ; TODO: routine
     .building_exit_rotate:
-
+      push SEGMENT_META_DATA
+      pop es
+      mov al, [es:di]
+      and al, TILE_DIRECTION_MASK
+      shr al, TILE_DIRECTION_SHIFT
+      inc al
+      and al, 0x3                       ; Clip to 0-3
+      shl al, TILE_DIRECTION_SHIFT      ; move back to left for correct position
+      and byte [es:di], SWITCH_DATA_CLIP
+      add byte [es:di], al
     jmp .change_action_done
 
     .change_action_done:
@@ -1901,6 +1905,7 @@ draw_terrain:
   pop es
 ret
 
+
 draw_single_cell:
   push si
   push di
@@ -2057,13 +2062,13 @@ recalculate_rails:
     jmp .prepare_no_switch
 
   .prepare_switch_horizontal:
-    mov dl, SWITCH_MASK                 ; 0 for left switch ID + initialization
+    mov dl, SWITCH_MASK                 ; 0 for left switch ID + enable switch
     mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
     shl dl, TILE_DIRECTION_SHIFT
-    add dl, SWITCH_MASK
+    add dl, SWITCH_MASK                 ; enable switch
     mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
   .prepare_station:
@@ -2282,7 +2287,12 @@ draw_cursor:
   add bx, ax              ; Y * 16 * 320 + X * 16
   mov di, bx              ; Move result to DI
 
+  push es
   push ds
+
+  push SEGMENT_TERRAIN_BACKGROUND
+  pop es
+
   push SEGMENT_TERRAIN_FOREGROUND
   pop ds
 
@@ -2290,10 +2300,31 @@ draw_cursor:
   and al, CURSOR_TYPE_MASK
   rol al, CURSOR_TYPE_ROL
   add al, TILE_CURSOR_PAN
+  mov bl, al
 
+  test byte [es:si], INFRASTRUCTURE_MASK
+  jz .no_infra
+  push SEGMENT_META_DATA
   pop ds
 
+  mov al, [ds:si]
+  and al, TILE_DIRECTION_MASK
+  shr al, TILE_DIRECTION_SHIFT
+  add al, TILE_OUT_RIGHT
+
+  pop ds
+  pop es
+
   call draw_sprite
+  mov al, bl
+  call draw_sprite
+  jmp .done
+
+  .no_infra:
+    pop ds
+    pop es
+    call draw_sprite
+  .done:
 ret
 
 draw_minimap:
