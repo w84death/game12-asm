@@ -302,12 +302,6 @@ CURSOR_ICON_PLACE_RAIL          equ 0x01
 CURSOR_ICON_EDIT                equ 0x02
 CURSOR_ICON_PLACE_BUILDING      equ 0x03
 
-CURSOR_MODE_PAN                 equ 0x00
-CURSOR_MODE_PLACE_RAIL          equ 0x01
-CURSOR_MODE_SWITCH              equ 0x02
-CURSOR_MODE_PLACE_STATION       equ 0x03
-CURSOR_MODE_PLACE_FOUNDATION    equ 0x04
-CURSOR_MODE_PLACE_BUILDING      equ 0x05
 
 METADATA_SWITCH_INITIALIZED     equ 0x01
 METADATA_SWITCH_MASK            equ 0x06
@@ -897,7 +891,7 @@ actions_logic:
     or al, INFRASTRUCTURE_MASK
     mov byte [es:di], al
 
-    mov al, CURSOR_ICON_EDIT
+    mov al, CURSOR_ICON_POINTER
     ror al, CURSOR_TYPE_ROL
     add ax, bx
     mov byte [ds:di], al
@@ -2305,6 +2299,7 @@ draw_cursor:
 
   test byte [es:si], INFRASTRUCTURE_MASK
   jz .no_infra
+
   push SEGMENT_META_DATA
   pop ds
 
@@ -2316,15 +2311,21 @@ draw_cursor:
   pop ds
   pop es
 
-  call draw_sprite
+  push ax
+  mov al, TILE_CURSOR_SELECTOR
+  call draw_sprite                      ; draw selector
+
+  pop ax
+  call draw_sprite                      ; draw the in/out arrow
+
   mov al, bl
-  call draw_sprite
+  call draw_sprite                      ; draw cursor
   jmp .done
 
   .no_infra:
     pop ds
     pop es
-    call draw_sprite
+    call draw_sprite                    ; draw cursor
   .done:
 ret
 
