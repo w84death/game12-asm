@@ -1121,7 +1121,6 @@ init_briefing:
   call window_logic.create_window
 ret
 
-
 live_briefing:
 nop
 ret
