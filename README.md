@@ -1,9 +1,12 @@
 # ![Cortex Labs](docs/logo.png)
 Real-time strategy for x86 processors made in assembly.
 
-![Intro screen](docs/screenshot-0.png)
-![Menu screen](docs/screenshot-1.png)
-![Game screen](docs/screenshot-2.png)
+![P1X logo screen](docs/screenshot-0.png)
+![Game Title screen](docs/screenshot-1.png)
+![Menu screen](docs/screenshot-2.png)
+![Briefing screen](docs/screenshot-3.png)
+![Game screen](docs/screenshot-4.png)
+
 ![Sprites](docs/sprites.png)
 
 ## Running
