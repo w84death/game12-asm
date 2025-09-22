@@ -65,16 +65,14 @@ _ECONOMY_BLUE_RES_        equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x18   ; 2 bytes
 _ECONOMY_RED_RES_         equ _BASE_ + 0x1A   ; 2 bytes
 _ECONOMY_SCORE_           equ _BASE_ + 0x1C   ; 2 bytes
-_SFX_POINTER_             equ _BASE_ + 0x1E   ; 2 bytes
-_MENU_SELECTION_POS_      equ _BASE_ + 0x20   ; 1 byte
-_MENU_SELECTION_MAX_      equ _BASE_ + 0x21   ; 1 byte
-_AUDIO_TIMER_             equ _BASE_ + 0x22   ; 1 byte - audio update timer
-_SFX_NOTE_INDEX_          equ _BASE_ + 0x23   ; 1 byte - current note index
-_SFX_NOTE_DURATION_       equ _BASE_ + 0x24   ; 1 byte - duration counter
-_OLD_INT08_OFFSET_        equ _BASE_ + 0x25   ; 2 bytes - original INT 08h offset
-_OLD_INT08_SEGMENT_       equ _BASE_ + 0x27   ; 2 bytes - original INT 08h segment
-_AUDIO_ENABLED_           equ _BASE_ + 0x29   ; 1 byte - audio on/off flag
-
+_MENU_SELECTION_POS_      equ _BASE_ + 0x1E   ; 1 byte
+_MENU_SELECTION_MAX_      equ _BASE_ + 0x1F   ; 1 byte
+_SFX_POINTER_             equ _BASE_ + 0x20   ; 2 bytes
+_SFX_NOTE_INDEX_          equ _BASE_ + 0x22   ; 1 byte
+_SFX_NOTE_DURATION_       equ _BASE_ + 0x23   ; 1 byte
+_SFX_IRQ_OFFSET_          equ _BASE_ + 0x24   ; 2 bytes
+_SFX_IRQ_SEGMENT_         equ _BASE_ + 0x26   ; 2 bytes
+_AUDIO_ENABLED_           equ _BASE_ + 0x28   ; 1 byte
 
 _MAP_                     equ 0x0000  ; Map data 128*128*1b= 0x4000
 _METADATA_                equ 0x0000  ; Map metadata 128*128*1b= 0x4000
@@ -2521,8 +2519,6 @@ init_audio_system:
   push es
   push bx
 
-  ; Initialize audio variables
-  mov byte [_AUDIO_TIMER_], 0
   mov byte [_SFX_NOTE_INDEX_], 0
   mov byte [_SFX_NOTE_DURATION_], 0
   mov byte [_AUDIO_ENABLED_], 1
@@ -2534,9 +2530,9 @@ init_audio_system:
   xor ax, ax
   mov es, ax
   mov bx, [es:08h*4]                  ; Get offset
-  mov [_OLD_INT08_OFFSET_], bx
+  mov [_SFX_IRQ_OFFSET_], bx
   mov bx, [es:08h*4+2]                ; Get segment
-  mov [_OLD_INT08_SEGMENT_], bx
+  mov [_SFX_IRQ_SEGMENT_], bx
 
   cli                                  ; Disable interrupts
   mov word [es:08h*4], audio_irq_handler
@@ -2555,14 +2551,12 @@ audio_irq_handler:
 
   cmp byte [_AUDIO_ENABLED_], 0
   je .skip_audio
-
-  mov byte [_AUDIO_TIMER_], 0
   call irq_update_audio
 
 .skip_audio:
   pop ds
 
-  jmp far [cs:_OLD_INT08_OFFSET_]
+  jmp far [cs:_SFX_IRQ_OFFSET_]
 
 irq_update_audio:
   push ax
@@ -2600,32 +2594,27 @@ irq_update_audio:
 ret
 
 play_note_indexed:
-  ; Check for REST note
   test al, al
   jz .rest
 
-  ; Get frequency divisor from enhanced note table
   movzx bx, al
-  shl bx, 1                            ; Multiply by 2 (word size)
-  mov si, NoteTableEnhanced
+  shl bx, 1                             ; Multiply by 2 (word size)
+  mov si, NoteTable
   add si, bx
   mov ax, [si]
 
-  ; Check for valid frequency
   cmp ax, 0xFFFF
   je .rest
 
-  ; Program the PIT with frequency divisor
   push ax
-  mov al, 182                          ; Prepare timer
+  mov al, 182                           ; Prepare timer
   out 43h, al
   pop ax
 
-  out 42h, al                         ; Low byte
+  out 42h, al                           ; Low byte
   mov al, ah
-  out 42h, al                         ; High byte
+  out 42h, al                           ; High byte
 
-  ; Enable PC speaker
   in al, 61h
   or al, 00000011b
   out 61h, al
@@ -2645,9 +2634,9 @@ ret
 
 play_sfx:
   cli                                  ; Atomic operation
-  mov [_SFX_POINTER_], bx
-  mov byte [_SFX_NOTE_INDEX_], 0
-  mov byte [_SFX_NOTE_DURATION_], 0
+    mov [_SFX_POINTER_], bx
+    mov byte [_SFX_NOTE_INDEX_], 0
+    mov byte [_SFX_NOTE_DURATION_], 0
   sti
 ret
 
@@ -2656,11 +2645,11 @@ kill_audio_system:
 
   xor ax, ax
   mov es, ax
-  cli
-  mov ax, [_OLD_INT08_OFFSET_]
-  mov [es:08h*4], ax
-  mov ax, [_OLD_INT08_SEGMENT_]
-  mov [es:08h*4+2], ax
+  cli                                   ; Atomic operation
+    mov ax, [_SFX_IRQ_OFFSET_]
+    mov [es:08h*4], ax
+    mov ax, [_SFX_IRQ_SEGMENT_]
+    mov [es:08h*4+2], ax
   sti
 ret
 
