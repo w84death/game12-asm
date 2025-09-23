@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GAME12 - Unnamed - 8K Version - X86 Assembly - P1X</title>
+    <link rel="stylesheet" href="js-dos.css" />
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #1a1a1a;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: monospace;
+        overflow: hidden;
+      }
+
+      .crt-container {
+        position: relative;
+        width: 90%;
+        height: 90%;
+        max-width: 1024px;
+        max-height: 768px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .crt-monitor {
+        position: relative;
+        width: 100%;
+        height: calc(100% - 60px);
+        background: #2a2a2a;
+        border: 20px solid #3a3a3a;
+        border-radius: 15px;
+        box-shadow:
+          0 0 100px rgba(0, 0, 0, 0.8),
+          inset 0 0 20px rgba(0, 0, 0, 0.5),
+          0 10px 50px rgba(0, 0, 0, 0.7);
+        overflow: hidden;
+      }
+
+      .crt-screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+
+      /* CRT effect overlay */
+      .crt-screen::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0) 50%,
+          rgba(0, 0, 0, 0.25) 50%
+        );
+        background-size: 100% 4px;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.3;
+      }
+
+      /* CRT curve effect */
+      .crt-screen::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0) 60%,
+          rgba(0, 0, 0, 0.3) 100%
+        );
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      #dos {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+
+      .controls {
+        margin-top: 20px;
+        display: flex;
+        gap: 20px;
+      }
+
+      .control-btn {
+        padding: 10px 20px;
+        background: #2a2a2a;
+        border: 2px solid #4a4a4a;
+        color: #00ff00;
+        font-family: monospace;
+        font-size: 14px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: all 0.3s;
+        text-transform: uppercase;
+      }
+
+      .control-btn:hover {
+        background: #3a3a3a;
+        border-color: #00ff00;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      }
+
+      .control-btn:active {
+        transform: scale(0.95);
+      }
+
+      /* Fullscreen styles */
+      body:fullscreen {
+        background: #000;
+      }
+
+      body:-webkit-full-screen {
+        background: #000;
+      }
+
+      body:-moz-full-screen {
+        background: #000;
+      }
+
+      body:-ms-fullscreen {
+        background: #000;
+      }
+
+      /* Flicker animation for retro effect */
+      @keyframes flicker {
+        0% {
+          opacity: 0.98;
+        }
+        5% {
+          opacity: 0.95;
+        }
+        10% {
+          opacity: 0.99;
+        }
+        15% {
+          opacity: 0.97;
+        }
+        25% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.98;
+        }
+      }
+
+      .crt-screen {
+        animation: flicker 0.15s infinite;
+      }
+    </style>
+    <script src="js-dos.js"></script>
+  </head>
+  <body>
+    <div class="crt-container">
+      <div class="crt-monitor">
+        <div class="crt-screen">
+          <div id="dos"></div>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="control-btn" id="fullscreen-btn">[FULLSCREEN]</button>
+        <button class="control-btn" id="clear-cache-btn">[CLEAR CACHE]</button>
+      </div>
+    </div>
+
+    <script>
+      // Initialize JS-DOS
+      Dos(document.getElementById("dos"), {
+        url: "game12.jsdos",
+        kiosk: true,
+        theme: "dark",
+        backend: "dosbox",
+        backendLocked: true,
+        autoStart: true,
+      });
+
+      // Fullscreen functionality
+      document
+        .getElementById("fullscreen-btn")
+        .addEventListener("click", function () {
+          if (
+            !document.fullscreenElement &&
+            !document.webkitFullscreenElement &&
+            !document.mozFullScreenElement &&
+            !document.msFullscreenElement
+          ) {
+            // Enter fullscreen
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+              elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+              elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+              elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+              elem.msRequestFullscreen();
+            }
+          } else {
+            // Exit fullscreen
+            if (document.exitFullscreen) {
+              document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+              document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+              document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+              document.msExitFullscreen();
+            }
+          }
+        });
+
+      // Clear cache functionality
+      document
+        .getElementById("clear-cache-btn")
+        .addEventListener("click", async function () {
+          try {
+            // Try to delete the js-dos-cache database
+            const deleteReq = indexedDB.deleteDatabase("js-dos-cache");
+
+            deleteReq.onsuccess = function () {
+              console.log("Cache cleared successfully");
+              // Reload the page to fetch the latest binary
+              window.location.reload(true);
+            };
+
+            deleteReq.onerror = function () {
+              console.error("Error clearing cache");
+              // Try to reload anyway
+              window.location.reload(true);
+            };
+
+            deleteReq.onblocked = function () {
+              console.log("Cache clearing blocked, reloading anyway");
+              // Force reload even if blocked
+              window.location.reload(true);
+            };
+          } catch (error) {
+            console.error("Error accessing IndexedDB:", error);
+            // Reload the page anyway
+            window.location.reload(true);
+          }
+        });
+
+      // Update fullscreen button text based on state
+      document.addEventListener("fullscreenchange", updateFullscreenButton);
+      document.addEventListener(
+        "webkitfullscreenchange",
+        updateFullscreenButton,
+      );
+      document.addEventListener("mozfullscreenchange", updateFullscreenButton);
+      document.addEventListener("MSFullscreenChange", updateFullscreenButton);
+
+      function updateFullscreenButton() {
+        const btn = document.getElementById("fullscreen-btn");
+        if (
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement
+        ) {
+          btn.textContent = "[EXIT FULLSCREEN]";
+        } else {
+          btn.textContent = "[FULLSCREEN]";
+        }
+      }
+    </script>
+  </body>
+</html>

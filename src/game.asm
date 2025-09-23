@@ -903,6 +903,12 @@ actions_logic:
     pop es
   jmp .done
 
+  .inspect_building:
+  jmp .done
+
+  .build_pod:
+  jmp .done
+
   .done:
 ret
 
@@ -2833,18 +2839,32 @@ WindowStationLogicArray:
   dw menu_logic.close_window, 0x0
   dw actions_logic.place_station, 0x0
 
-  WindowMinimapText           db 'TERRAIN',0x0
-  WindowBriefingText           db 'BRIEFING',0x0
-  WindowBriefingSelectionArrayText:
-    db '> ACCEPT MISSION',0x0
-    db 'GENERATE NEW MAP',0x0
-    db '< REJECT',0x0
-    db 0x00
-  WindowBriefingLogicArray:
-    dw menu_logic.start_game, 0x0
-    dw new_game, 0x0
-    dw menu_logic.back_to_menu, 0x0
+WindowMinimapText           db 'TERRAIN',0x0
+WindowBriefingText           db 'BRIEFING',0x0
+WindowBriefingSelectionArrayText:
+  db '> ACCEPT MISSION',0x0
+  db 'GENERATE NEW MAP',0x0
+  db '< REJECT',0x0
+  db 0x00
+WindowBriefingLogicArray:
+  dw menu_logic.start_game, 0x0
+  dw new_game, 0x0
+  dw menu_logic.back_to_menu, 0x0
 
+WindowPODsText              db 'PODS FACTORY',0x0
+WindowPODSSelectionArrayText:
+  db '< CLOSE WINDOW',0x0
+  db 'CHANGE TILE DIRECTION (ENTER)',0x0
+  db '1.BUILD STATION',0x0
+  db '2.BUILD & SPAWN POD',0x0
+  db 0x00
+WindowPODSSelectionArray:
+  dw menu_logic.close_window, 0x0
+  dw menu_logic.close_window, 0x0
+  dw actions_logic.inspect_building, TILE_BUILDING_PODS_ID
+  dw actions_logic.build_pod, 0x0
+
+WindowInspectText              db 'BUILDING INSPECTION',0x0
 
 ; =========================================== TERRAIN GEN RULES =============|80
 
