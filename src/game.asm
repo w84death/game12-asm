@@ -318,6 +318,7 @@ SCENE_MODE_BASE_BUILDINGS       equ 0x01
 SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
 SCENE_MODE_STATION              equ 0x03
 SCENE_MODE_BRIEFING             equ 0x04
+SCENE_MODE_UPGRADE_BUILDINGS    equ 0x05
 SCENE_MODE_HELP_PAGE            equ 0x00
 
 UI_STATS_GFX_LINE               equ 320*175
@@ -668,7 +669,6 @@ game_logic:
       jz .place_building
       cmp bl, CURSOR_ICON_PLACE_RAIL
       jz .place_rail
-
     jmp .build_action_done
 
     .place_rail:
@@ -698,9 +698,13 @@ game_logic:
       test al, RAIL_MASK
       jnz .station
 
+      test al, INFRASTRUCTURE_MASK
+      jnz .upgrade_building
+
       and al, BACKGROUND_SPRITE_MASK
       cmp al, TILE_STATION_EXTEND
       jz .remote_building
+
 
       .base_building:
         mov bx, SCENE_MODE_BASE_BUILDINGS
@@ -708,6 +712,10 @@ game_logic:
 
       .remote_building:
         mov bx, SCENE_MODE_REMOTE_BUILDINGS
+        jmp .pop_window
+
+      .upgrade_building:
+        mov bx, SCENE_MODE_UPGRADE_BUILDINGS
         jmp .pop_window
 
       .station:
@@ -894,7 +902,7 @@ actions_logic:
     or al, INFRASTRUCTURE_MASK
     mov byte [es:di], al
 
-    mov al, CURSOR_ICON_POINTER
+    mov al, CURSOR_ICON_PLACE_BUILDING
     ror al, CURSOR_TYPE_ROL
     add ax, bx
     mov byte [ds:di], al
@@ -1808,62 +1816,30 @@ build_initial_base:
 
   .build_base:
   mov ax, TILE_FOUNDATION
+  mov byte [es:di], al
   mov byte [es:di+1], al
   mov byte [es:di-1], al
   mov byte [es:di+MAP_SIZE], al
   mov byte [es:di-MAP_SIZE], al
+
   add ax, INFRASTRUCTURE_MASK
   mov byte [es:di], al
   mov byte [es:di-MAP_SIZE], al
-  mov byte [es:di+MAP_SIZE], al
 
   mov ax, CURSOR_ICON_PLACE_BUILDING
   ror al, CURSOR_TYPE_ROL
   mov byte [ds:di+1], al
   mov byte [ds:di-1], al
-  mov byte [ds:di-MAP_SIZE], al
+  mov byte [ds:di+MAP_SIZE], al
 
   .place_rocket:
-  mov ax, CURSOR_ICON_EDIT
+  mov ax, CURSOR_ICON_POINTER
   ror al, CURSOR_TYPE_ROL
-  push ax
+  mov bx, ax
   add ax, TILE_ROCKET_BOTTOM_ID
   mov byte [ds:di], al
-  pop ax
-  add ax, TILE_ROCKET_TOP_ID
-  mov byte [ds:di-MAP_SIZE], al
-
-  .place_pod_factory:
-  mov ax, CURSOR_ICON_EDIT
-  ror al, CURSOR_TYPE_ROL
-  add ax, TILE_BUILDING_PODS_ID
-  mov byte [ds:di+MAP_SIZE], al
-
-  .place_initial_railstation:
-  add di, MAP_SIZE*2
-  mov ax, TILE_STATION
-  add ax, RAIL_MASK
-  add ax, INFRASTRUCTURE_MASK
-  mov byte [es:di], al
-
-  mov ax, TILE_MUD_GRASS_1
-  add al, TERRAIN_TRAVERSAL_MASK
-  mov byte [es:di-1], al
-  mov byte [es:di+1], al
-
-  mov ax, TILE_STATION_EXTEND
-  mov byte [es:di+MAP_SIZE], al
-  mov ax, CURSOR_ICON_PLACE_BUILDING
-  ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di+MAP_SIZE], al
-
-  mov ax, TILE_RAILS_1-TILE_FOREGROUND_SHIFT
-  mov byte [ds:di], al
-
-  mov ax, CURSOR_ICON_PLACE_RAIL
-  ror al, CURSOR_TYPE_ROL
-  mov byte [ds:di-1], al
-  mov byte [ds:di+1], al
+  add bx, TILE_ROCKET_TOP_ID
+  mov byte [ds:di-MAP_SIZE], bl
 
   pop ds
   pop es
@@ -2305,7 +2281,10 @@ draw_cursor:
   add al, TILE_CURSOR_PAN
   mov bl, al
 
-  test byte [es:si], INFRASTRUCTURE_MASK
+  test byte [es:si], INFRASTRUCTURE_MASK ; If not a building then skip arrows
+  jz .no_infra
+
+  test byte [ds:si], CURSOR_TYPE_MASK   ; If it's a pointer then skip arrows
   jz .no_infra
 
   push SEGMENT_META_DATA
@@ -2319,11 +2298,6 @@ draw_cursor:
   pop ds
   pop es
 
-  push ax
-  mov al, TILE_CURSOR_SELECTOR
-  call draw_sprite                      ; draw selector
-
-  pop ax
   call draw_sprite                      ; draw the in/out arrow
 
   mov al, bl
@@ -2785,6 +2759,8 @@ dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText, Window
 dw 0x040A, 0x0A0A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText, WindowRemoteLogicArray
 dw 0x030A, 0x0A0A, WindowStationText, WindowStationSelectionArrayText, WindowStationLogicArray
 dw 0x0409, 0x1015, WindowBriefingText, WindowBriefingSelectionArrayText, WindowBriefingLogicArray
+dw 0x030A, 0x0A0A, WindowPODsText, WindowPODSSelectionArrayText, WindowPODSSelectionArray
+
 
 WindowMainMenuText          db 'MAIN MANU',0x0
 MainMenuSelectionArrayText:
