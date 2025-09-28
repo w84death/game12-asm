@@ -931,28 +931,13 @@ actions_logic:
     and al, TILE_DIRECTION_MASK
     shr al, TILE_DIRECTION_SHIFT
 
-    .test_target_tile:
-    .test_right:
-    cmp al, 0x0
-    jnz .test_up
-      inc di
-      jmp .test_done
-    .test_up:
-    cmp al, 0x1
-    jnz .test_left
-      sub di, MAP_SIZE
-      jmp .test_done
-    .test_left:
-    cmp al, 0x2
-    jnz .test_down
-      dec di
-      jmp .test_done
-    .test_down:
-      add di, MAP_SIZE
-    .test_done:
-      and al, 0x1           ; horizontal or vertical initial rails
-      mov bl, TILE_RAILS_2
-      sub bl, al
+    call get_target_tile
+
+      .set_rail_tile:
+        and al, 0x1           ; horizontal or vertical initial rails
+        mov bl, TILE_RAILS_2
+        sub bl, al
+        sub bl, TILE_FOREGROUND_SHIFT
 
     .set_station_tile:
       mov al, TILE_STATION
@@ -962,9 +947,9 @@ actions_logic:
       push SEGMENT_TERRAIN_FOREGROUND
       pop ds
 
-      sub bl, TILE_FOREGROUND_SHIFT
       mov byte [ds:di], bl
 
+    .recalculate_near_rails:
       dec di
       call recalculate_rails
       add di, 2
@@ -980,9 +965,61 @@ actions_logic:
   jmp .done
 
   .build_pod:
+    mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
+    shl di, 7               ; Y * 128 (optimized shl for *128)
+    add di, [_CURSOR_X_]    ; + absolute X map coordinate
+
+    push es
+    push ds
+
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop es
+
+    push SEGMENT_META_DATA
+    pop ds
+
+    mov al, [ds:di]
+    and al, TILE_DIRECTION_MASK
+    shr al, TILE_DIRECTION_SHIFT
+
+    push SEGMENT_TERRAIN_FOREGROUND
+    pop ds
+
+    call get_target_tile
+
+    mov al, [ds:di]
+    or al, CART_DRAW_MASK
+    mov byte [ds:di], al
+
+    pop ds
+    pop es
   jmp .done
 
   .done:
+ret
+
+; DI current
+; al direction
+; out di of target
+get_target_tile:
+  .test_right:
+  cmp al, 0x0
+  jnz .test_up
+    inc di
+    jmp .test_done
+  .test_up:
+  cmp al, 0x1
+  jnz .test_left
+    sub di, MAP_SIZE
+    jmp .test_done
+  .test_left:
+  cmp al, 0x2
+  jnz .test_down
+    dec di
+    jmp .test_done
+  .test_down:
+    add di, MAP_SIZE
+  .test_done:
 ret
 
 window_logic:
@@ -2902,7 +2939,7 @@ WindowPODSSelectionArrayText:
 WindowPODSSelectionArray:
   dw menu_logic.close_window, 0x0
   dw menu_logic.close_window, 0x0
-  dw actions_logic.build_pods_station, TILE_BUILDING_PODS_ID
+  dw actions_logic.build_pods_station, 0x0
   dw actions_logic.build_pod, 0x0
 
 WindowInspectText              db 'BUILDING INSPECTION',0x0
