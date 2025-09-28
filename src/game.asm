@@ -940,7 +940,7 @@ actions_logic:
     .test_up:
     cmp al, 0x1
     jnz .test_left
-      sub di, SCREEN_WIDTH
+      sub di, MAP_SIZE
       jmp .test_done
     .test_left:
     cmp al, 0x2
@@ -948,11 +948,11 @@ actions_logic:
       dec di
       jmp .test_done
     .test_down:
-      add di, SCREEN_WIDTH
+      add di, MAP_SIZE
     .test_done:
       and al, 0x1           ; horizontal or vertical initial rails
-      mov bl, TILE_RAILS_1
-      add bl, al
+      mov bl, TILE_RAILS_2
+      sub bl, al
 
     .set_station_tile:
       mov al, TILE_STATION
@@ -961,8 +961,19 @@ actions_logic:
 
       push SEGMENT_TERRAIN_FOREGROUND
       pop ds
+
       sub bl, TILE_FOREGROUND_SHIFT
       mov byte [ds:di], bl
+
+      dec di
+      call recalculate_rails
+      add di, 2
+      call recalculate_rails
+      dec di
+      add di, MAP_SIZE
+      call recalculate_rails
+      sub di, MAP_SIZE*2
+      call recalculate_rails
 
     pop ds
     pop es
