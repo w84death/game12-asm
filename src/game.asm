@@ -281,7 +281,7 @@ CURSOR_TYPE_ROL                 equ 0x02
 ; 0 00 00 00 0
 ; | |  |  |  |
 ; | |  |  |  '- switch on rail (or not initialized)
-; | |  |  '- switch position (4)
+; | |  |  '- switch position / tile direction (4)
 ; | |  '- resource type (4) (for source/pods cargo/buildings)
 ; | '- direction (4) cart drive and building exit position (up/down/left/right)
 ; '- building in/out type and cart running (2)
@@ -846,7 +846,6 @@ actions_logic:
     mov byte [es:di], al
     and byte [ds:di], CURSOR_TYPE_CLIP
 
-
     mov bl, TILE_STATION_EXTEND
     mov cx, CURSOR_ICON_PLACE_BUILDING
     ror cl, CURSOR_TYPE_ROL
@@ -912,6 +911,61 @@ actions_logic:
   jmp .done
 
   .inspect_building:
+  jmp .done
+
+  .build_pods_station:
+    mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
+    shl di, 7               ; Y * 128 (optimized shl for *128)
+    add di, [_CURSOR_X_]    ; + absolute X map coordinate
+
+    push es
+    push ds
+
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop es
+
+    push SEGMENT_META_DATA
+    pop ds
+
+    mov al, [ds:di]
+    and al, TILE_DIRECTION_MASK
+    shr al, TILE_DIRECTION_SHIFT
+
+    .test_target_tile:
+    .test_right:
+    cmp al, 0x0
+    jnz .test_up
+      inc di
+      jmp .test_done
+    .test_up:
+    cmp al, 0x1
+    jnz .test_left
+      sub di, SCREEN_WIDTH
+      jmp .test_done
+    .test_left:
+    cmp al, 0x2
+    jnz .test_down
+      dec di
+      jmp .test_done
+    .test_down:
+      add di, SCREEN_WIDTH
+    .test_done:
+      and al, 0x1           ; horizontal or vertical initial rails
+      mov bl, TILE_RAILS_1
+      add bl, al
+
+    .set_station_tile:
+      mov al, TILE_STATION
+      add al, RAIL_MASK
+      mov byte [es:di], al
+
+      push SEGMENT_TERRAIN_FOREGROUND
+      pop ds
+      sub bl, TILE_FOREGROUND_SHIFT
+      mov byte [ds:di], bl
+
+    pop ds
+    pop es
   jmp .done
 
   .build_pod:
@@ -2759,7 +2813,7 @@ dw 0x080A, 0x040A, WindowBaseBuildingsText, WindowBaseSelectionArrayText, Window
 dw 0x040A, 0x0A0A, WindowRemoteBuildingsText, WindowRemoteSelectionArrayText, WindowRemoteLogicArray
 dw 0x030A, 0x0A0A, WindowStationText, WindowStationSelectionArrayText, WindowStationLogicArray
 dw 0x0409, 0x1015, WindowBriefingText, WindowBriefingSelectionArrayText, WindowBriefingLogicArray
-dw 0x030A, 0x0A0A, WindowPODsText, WindowPODSSelectionArrayText, WindowPODSSelectionArray
+dw 0x050F, 0x0A07, WindowPODsText, WindowPODSSelectionArrayText, WindowPODSSelectionArray
 
 
 WindowMainMenuText          db 'MAIN MANU',0x0
@@ -2830,14 +2884,14 @@ WindowBriefingLogicArray:
 WindowPODsText              db 'PODS FACTORY',0x0
 WindowPODSSelectionArrayText:
   db '< CLOSE WINDOW',0x0
-  db 'CHANGE TILE DIRECTION (ENTER)',0x0
-  db '1.BUILD STATION',0x0
-  db '2.BUILD & SPAWN POD',0x0
+  db 'TARGET TILE NOT SUITABLE',0x0
+  db 'BUILD STATION AT TARGET TILE',0x0
+  db 'DEPLOY NEW POD AT STATION',0x0
   db 0x00
 WindowPODSSelectionArray:
   dw menu_logic.close_window, 0x0
   dw menu_logic.close_window, 0x0
-  dw actions_logic.inspect_building, TILE_BUILDING_PODS_ID
+  dw actions_logic.build_pods_station, TILE_BUILDING_PODS_ID
   dw actions_logic.build_pod, 0x0
 
 WindowInspectText              db 'BUILDING INSPECTION',0x0
