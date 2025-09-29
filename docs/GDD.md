@@ -1,25 +1,71 @@
-Game Design Document for GAME 12
+Game Design Document for CORTEX LABS (GAME 12)
 Krzysztof Krystian Jankowski
-(C) 2025.06  P1X
+(C) 2025.06 - 2025.09 P1X
 
-## Name propostions
-"Cortex Labs"
+## Abstract
+Real-time strategy, economic game about extracting and managing resources. Havely based on building optimized train (pods) lines.
 
 ## Story
 
-In 2157, humanity discovered an extraordinary resource on the distant planet Kepler-486i, located 486 light-years from Earth. The planet harbors a unique fungal organism known as Neurofung - a bioluminescent mushroom-like plant that contains compounds capable of triggering neurogenesis in the human brain. When processed and consumed, Neurofung dramatically enhances cognitive abilities, repairs damaged neural tissue, and extends human lifespan by up to 200 years.
+In 2157, humanity discovered an extraordinary resource on the distant planet Kepler-486i, located 16 light-years from Earth. The planet harbors a unique fungal organism known as Neurofung - a bioluminescent mushroom-like plant that contains compounds capable of triggering neurogenesis in the human brain. When processed and consumed, Neurofung dramatically enhances cognitive abilities, repairs damaged neural tissue, and extends human lifespan by up to 200 years.
 
-Kepler-486i's harsh environment makes it impossible for human colonization. The planet's toxic atmosphere, extreme radiation levels, and unpredictable electromagnetic storms would kill any human within minutes. The only viable solution is the deployment of remotely controlled robotic expeditions, operated from orbital relay stations positioned at safe distances.
+Kepler-486i's harsh environment makes it impossible for human colonization. The planet's toxic atmosphere, extreme radiation levels, and unpredictable electromagnetic storms would kill any human within minutes. The only viable solution is the deployment of AI-controlled robotic expeditions, operated from orbital relay stations positioned at safe distances.
 
-You are Commander of Expedition Unit 7, employed by Cortex Labs, the pioneering biotechnology corporation that first discovered Neurofung's potential. Cortex Labs has tasked you with establishing and managing an automated extraction facility on the planet's surface. Your mission is to build a self-sustaining robotic base capable of harvesting, processing, and launching regular shipments of Neurofung back to Earth. The future of human evolution depends on your success - but you're not alone. Competing nations and corporations have also deployed their own robotic expeditions, and resources on Kepler-486i are limited. Time is running out before the next solar storm season makes extraction impossible for the next decade.
+You are Commander of Expedition Unit 7, employed by Cortex Labs, the pioneering biotechnology corporation that first discovered Neurofung's potential. Your consciousness has been digitally mapped and cloned into an advanced AI system - a perfect neural replica of your strategic thinking patterns, decision-making processes, and problem-solving capabilities. This AI duplicate, designated as your operational avatar, will directly control the robotic expedition on the planet's surface while your biological self remains safely on Earth.
 
-## Elements
+The neural cloning process, made possible by earlier Neurofung research, ensures that the AI thinks exactly as you would, making split-second decisions with the same intuition and strategic acumen. You are, in essence, playing as yourself - or rather, as the artificial intelligence version of yourself that now exists within the expedition's quantum computer core. This AI-you must manage resources, expand infrastructure, and outmaneuver competing expeditions, all while adapting to the unpredictable challenges of an alien world.
+
+Cortex Labs has tasked you with establishing and managing an automated extraction facility on the planet's surface. Your mission is to build a self-sustaining robotic base capable of harvesting, processing, and launching regular shipments of Neurofung back to Earth. The future of human evolution depends on your success - but you're not alone. Competing nations and corporations have also deployed their own robotic expeditions, and resources on Kepler-486i are limited. Time is running out before the next solar storm season makes extraction impossible for the next decade.
+
+## Key Elements
+
+### Rocket
+Expedition landed using this rocket. It is a starting place of the base. Once filled with neurofungi can be send back to earth.
+
+### Base
+Base is defined by fundaments around the rocket. You can expand the base by building more fundaments. Each fundament can expand more or be used as a base for new infrastructure building.
+
+Expanding fundaments: 1 blue resource per tile.
+Building new infrastructure: depending on building.
+
+### Buildings
+
+#### PODs Factory
+#### Silos
+#### Rafinery
+#### Radar
+#### Laboratory
+
+
+### Resources
+
+#### Blue Resource - Cristals
+Description:
+Found near: Mountains/Rocks
+Good for: infrastructure and building new PODs
+
+#### Yellow Resource - Gas
+Description: Flammable gas found near ground.
+Found near: Flat terrain
+Good for: supporting PODs movement and rafinery
+
+#### Red Resource - Neurofungi
+Description: Muschroom-like organism.
+Found near: Forests
+Good for: Laboratory operation, sending to Earth
+
+### Transportation
+Main and only way to transport exracted resources to the main base (siloses) is by using PODs. PODs are monorail cargo trains. You need to build optimized monorail network.
+
+### Extraction and Refinment
+
+## All Elements
 
 - main base / rocket
   - silos
     - blue resource / cristals
-    - yellow resource / gases
-    - red resource / shrooms like
+    - yellow resource / gas
+    - red resource / neurofungi
 - rails
   - when T-junction switch is placed
   - switches can be switched by player (left-right or up-down depending on T-junction rotation)
