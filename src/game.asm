@@ -60,11 +60,11 @@ _CURSOR_Y_                equ _BASE_ + 0x0D   ; 2 bytes
 _CURSOR_X_OLD_            equ _BASE_ + 0x0F   ; 2 bytes
 _CURSOR_Y_OLD_            equ _BASE_ + 0x11   ; 2 bytes
 _SCENE_MODE_              equ _BASE_ + 0x13   ; 1 byte
-_EMPTY_                   equ _BASE_ + 0x14   ; 2 bytes
+_GAME_TURN_               equ _BASE_ + 0x14   ; 2 bytes
 _ECONOMY_BLUE_RES_        equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x18   ; 2 bytes
 _ECONOMY_RED_RES_         equ _BASE_ + 0x1A   ; 2 bytes
-_ECONOMY_SCORE_           equ _BASE_ + 0x1C   ; 2 bytes
+_UPGRADES_                equ _BASE_ + 0x1C   ; 2 bytes
 _MENU_SELECTION_POS_      equ _BASE_ + 0x1E   ; 1 byte
 _MENU_SELECTION_MAX_      equ _BASE_ + 0x1F   ; 1 byte
 _SFX_POINTER_             equ _BASE_ + 0x20   ; 2 bytes
@@ -74,9 +74,16 @@ _SFX_IRQ_OFFSET_          equ _BASE_ + 0x24   ; 2 bytes
 _SFX_IRQ_SEGMENT_         equ _BASE_ + 0x26   ; 2 bytes
 _AUDIO_ENABLED_           equ _BASE_ + 0x28   ; 1 byte
 
-_MAP_                     equ 0x0000  ; Map data 128*128*1b= 0x4000
-_METADATA_                equ 0x0000  ; Map metadata 128*128*1b= 0x4000
-_ENTITIES_                equ 0x0000  ; Entities 128*128*1b= 0x4000
+; =========================================== ENGINE SETTINGS ===============|80
+
+SCREEN_WIDTH                    equ 320
+SCREEN_HEIGHT                   equ 200
+MAP_SIZE                        equ 128     ; Map size in cells DO NOT CHANGE
+VIEWPORT_WIDTH                  equ 20      ; Size in tiles 20 = 320 pixels
+VIEWPORT_HEIGHT                 equ 11      ; by 10 = 176 pixels
+VIEWPORT_GRID_SIZE              equ 16      ; Individual cell size DO NOT CHANGE
+SPRITE_SIZE                     equ 16      ; Sprite size 16x16 DO NOT CHANGE
+FONT_SIZE                       equ 8
 
 ; =========================================== GAME STATES ===================|80
 
@@ -103,36 +110,6 @@ STATE_WINDOW            equ 18
 STATE_BRIEFING_INIT equ 19
 STATE_BRIEFING   equ 20
 
-; =========================================== KEYBOARD CODES ================|80
-
-KB_ESC      equ 0x01
-KB_UP       equ 0x48
-KB_DOWN     equ 0x50
-KB_LEFT     equ 0x4B
-KB_RIGHT    equ 0x4D
-KB_ENTER    equ 0x1C
-KB_SPACE    equ 0x39
-KB_DEL      equ 0x53
-KB_BACK     equ 0x0E
-KB_Q        equ 0x10
-KB_W        equ 0x11
-KB_M        equ 0x32
-KB_TAB      equ 0x0F
-KB_F1       equ 0x3B
-KB_F2       equ 0x3C
-KB_F3       equ 0x3D
-KB_F4       equ 0x3E
-KB_F5       equ 0x3F
-KB_1        equ 0x02
-KB_2        equ 0x03
-KB_3        equ 0x04
-KB_4        equ 0x05
-KB_5        equ 0x06
-KB_6        equ 0x07
-KB_7        equ 0x08
-KB_8        equ 0x09
-KB_9        equ 0x0A
-KB_0        equ 0x0B
 
 ; =========================================== TILES NAMES ===================|80
 
@@ -299,25 +276,43 @@ CART_DIRECTION_SHIFT            equ 0x5
 RESOURCE_AMOUNT_MASK            equ 0xF0
 RESOURCE_AMOUNT_SHIFT           equ 0x4
 
+; UPGRADES
+; **** . . . . * * ** .. ..
+; 0000 0 0 0 0 0 0 00 00 00 (16)
+; |    | | | | | | |  |  |
+; |    | | | | | | |  |  '- pods: faster movement 1x-2x-4x-(TBD)
+; |    | | | | | | |  '- pods: more storage 4-8-16-(TBD)
+; |    | | | | | | '- pods: faster load/unload 1x-2x-4x-(TBD)
+; |    | | | | | '- rafinery: speed of refining 1x-2x
+; |    | | | | '- rafinery: efficient of refining 1x-2x
+; |    | | | '- rafinery: lower cost of refining 1x-2x
+; |    | | '- silosL double capacity 1x-2x
+; |    | '- pods factory: lower cost of production 1x-2x
+; |    '- TBD
+; '- TBD
+UPGRADE_PODS_SPEED_MASK         equ 0x3
+UPGRADE_PODS_STORAGE_MASK       equ 0xC
+UPGRADE_PODS_STORAGE_SHIFT      equ 0x2
+UPGRADE_PODS_LOAD_MASK          equ 0x30
+UPGRADE_PODS_LOAD_SHIFT         equ 0x4
+UPGRADE_RAFINERY_SPEED_MASK     equ 0x40
+UPGRADE_RAFINERY_EFFICIENCY_MASK equ 0x80
+UPGRADE_RAFINERY_COST_MASK      equ 0x100
+UPGRADE_SILOS_CAPACITY_MASK     equ 0x200
+UPGRADE_PODS_FACTORY_COST_MASK  equ 0x400
+UPGRADE_SILOS_SPEED_MASK        equ 0x800
+UPGRADE_PODS_FACTORYCOST_MASK   equ 0x1000
+
 ; MISC
 CART_UP                         equ 0x00
 CART_DOWN                       equ 0x01
 CART_LEFT                       equ 0x02
 CART_RIGHT                      equ 0x03
-
-
 TERRAIN_RULES_CROP              equ 0x03
-
 CURSOR_ICON_POINTER             equ 0x00
 CURSOR_ICON_PLACE_RAIL          equ 0x01
 CURSOR_ICON_EDIT                equ 0x02
 CURSOR_ICON_PLACE_BUILDING      equ 0x03
-
-
-METADATA_SWITCH_INITIALIZED     equ 0x01
-METADATA_SWITCH_MASK            equ 0x06
-METADATA_SWITCH_SHIFT           equ 0x01
-
 SCENE_MODE_ANY                  equ 0x00
 SCENE_MODE_MAIN_MENU            equ 0x00
 SCENE_MODE_BASE_BUILDINGS       equ 0x01
@@ -326,65 +321,58 @@ SCENE_MODE_STATION              equ 0x03
 SCENE_MODE_BRIEFING             equ 0x04
 SCENE_MODE_UPGRADE_BUILDINGS    equ 0x05
 SCENE_MODE_HELP_PAGE            equ 0x00
-
 UI_STATS_GFX_LINE               equ 320*175
 UI_STATS_TXT_LINE               equ 0x16
 
-; =========================================== MISC SETTINGS =================|80
-
-SCREEN_WIDTH                    equ 320
-SCREEN_HEIGHT                   equ 200
-MAP_SIZE                        equ 128     ; Map size in cells DO NOT CHANGE
-VIEWPORT_WIDTH                  equ 20      ; Size in tiles 20 = 320 pixels
-VIEWPORT_HEIGHT                 equ 11      ; by 10 = 176 pixels
-VIEWPORT_GRID_SIZE              equ 16      ; Individual cell size DO NOT CHANGE
-SPRITE_SIZE                     equ 16      ; Sprite size 16x16 DO NOT CHANGE
-FONT_SIZE                       equ 8
-
 ; =========================================== COLORS / DB16 =================|80
 
-COLOR_BLACK         equ 0
-COLOR_DEEP_PURPLE   equ 1
-COLOR_NAVY_BLUE     equ 2
-COLOR_DARK_GRAY     equ 3
-COLOR_BROWN         equ 4
-COLOR_DARK_GREEN    equ 5
-COLOR_RED           equ 6
-COLOR_LIGHT_GRAY    equ 7
-COLOR_BLUE          equ 8
-COLOR_ORANGE        equ 9
-COLOR_STEEL_BLUE    equ 10
-COLOR_GREEN         equ 11
-COLOR_PINK          equ 12
-COLOR_CYAN          equ 13
-COLOR_YELLOW        equ 14
-COLOR_WHITE         equ 15
+COLOR_BLACK         equ 0x00
+COLOR_DEEP_PURPLE   equ 0x01
+COLOR_NAVY_BLUE     equ 0x02
+COLOR_DARK_GRAY     equ 0x03
+COLOR_BROWN         equ 0x04
+COLOR_DARK_GREEN    equ 0x05
+COLOR_RED           equ 0x06
+COLOR_LIGHT_GRAY    equ 0x07
+COLOR_BLUE          equ 0x08
+COLOR_ORANGE        equ 0x09
+COLOR_STEEL_BLUE    equ 0x0A
+COLOR_GREEN         equ 0x0B
+COLOR_PINK          equ 0x0C
+COLOR_CYAN          equ 0x0D
+COLOR_YELLOW        equ 0x0E
+COLOR_WHITE         equ 0x0F
 
-; =========================================== AUDIO NOTES ===================|80
-; Common note ID constants for readability
-NOTE_REST     equ 0
-NOTE_C3       equ 1
-NOTE_D3       equ 2
-NOTE_E3       equ 3
-NOTE_F3       equ 4
-NOTE_G3       equ 5
-NOTE_A3       equ 6
-NOTE_B3       equ 7
-NOTE_C4       equ 8
-NOTE_D4       equ 9
-NOTE_E4       equ 10
-NOTE_F4       equ 11
-NOTE_G4       equ 12
-NOTE_A4       equ 13
-NOTE_B4       equ 14
-NOTE_C5       equ 15
-NOTE_D5       equ 16
-NOTE_E5       equ 17
-NOTE_F5       equ 18
-NOTE_G5       equ 19
-NOTE_A5       equ 20
-NOTE_B5       equ 21
-NOTE_C6       equ 22
+; =========================================== KEYBOARD CODES ================|80
+
+KB_ESC      equ 0x01
+KB_UP       equ 0x48
+KB_DOWN     equ 0x50
+KB_LEFT     equ 0x4B
+KB_RIGHT    equ 0x4D
+KB_ENTER    equ 0x1C
+KB_SPACE    equ 0x39
+KB_DEL      equ 0x53
+KB_BACK     equ 0x0E
+KB_Q        equ 0x10
+KB_W        equ 0x11
+KB_M        equ 0x32
+KB_TAB      equ 0x0F
+KB_F1       equ 0x3B
+KB_F2       equ 0x3C
+KB_F3       equ 0x3D
+KB_F4       equ 0x3E
+KB_F5       equ 0x3F
+KB_1        equ 0x02
+KB_2        equ 0x03
+KB_3        equ 0x04
+KB_4        equ 0x05
+KB_5        equ 0x06
+KB_6        equ 0x07
+KB_7        equ 0x08
+KB_8        equ 0x09
+KB_9        equ 0x0A
+KB_0        equ 0x0B
 
 ; =========================================== INITIALIZATION ================|80
 
@@ -2324,31 +2312,6 @@ ret
 
 ; =========================================== INIT ENTITIES =================|80
 init_entities:
-  ; TODO: revrite
-  push es
-  push SEGMENT_ENTITIES
-  pop es
-
-  mov di, _ENTITIES_
-  mov cx, 0x80
-  .next_entity:
-    call get_random
-    and al, MAP_SIZE-1    ; X position (0-127)
-    and ah, MAP_SIZE-1    ; Y position (0-127)
-    mov word [di], ax     ; Store X,Y position
-    add di, 2
-
-    call get_random
-    and ax, 0x7           ; Entity type (0-7)
-    mov byte [di], al     ; Store entity type
-    inc di                ; Move to next entity
-
-    mov byte [di], 0x0   ; META data
-    inc di
-    loop .next_entity
-
-  mov word [di], 0x0      ; Terminator
-  pop es
 ret
 
 draw_cursor:
@@ -2449,28 +2412,6 @@ draw_minimap:
     pop cx
     add di, 320-MAP_SIZE    ; Move to next row
   loop .draw_loop
-
-  xor ax, ax
-
-
-  push SEGMENT_ENTITIES
-  pop ds
-
-  mov si, _ENTITIES_
-  .next_entity:
-    lodsw
-    test ax, ax
-    jz .end_entities
-    movzx bx, ah
-    imul bx, SCREEN_WIDTH
-    movzx cx, al
-    add bx, cx
-    mov di, SCREEN_WIDTH*35+96
-    add di, bx
-    inc si
-    mov byte [es:di], COLOR_WHITE
-  loop .next_entity
-  .end_entities:
 
   pop ds
   pop es

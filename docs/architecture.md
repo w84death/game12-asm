@@ -33,8 +33,12 @@
 
 - tiles - 64 tiles - 16K
 - map data - 128*128 - 32K
+- map foreground - 32K
 - metadata for map - 32K
-- entites - byte for each entity
+- entites - 4K
+  - pods 256*4
+  - buildings 256*4
+  - resources 1024*2
 
 ## Map generation
 
@@ -174,9 +178,31 @@ thing that needs to be check every game tick:
   collector 2: pos, ptr_resource
   collector n: pos, ptr_resource
 
+### Lab
+- timer is > 0
+  - decrease timer
+    - apply research (upgrade stats)
+    - show message of success on 0
+
+### Rafinery
+
 
 ## Upgrades
-  - pods
-    - faster movement 1x 2x 4x
-    - more storage 4-8-16
-    - faster load/unload 1-2-4
+**** . . . . * * ** .. ..
+0000 0 0 0 0 0 0 00 00 00
+|    | | | | | | |  |  |
+|    | | | | | | |  |  '- pods: faster movement 1x 2x 4x ?
+|    | | | | | | |  '- pods: more storage 4 8 16 ?
+|    | | | | | | '- pods: faster load/unload 1x 2x 4x ? / GAME_TURN
+|    | | | | | '- rafinery: speed of refining 1x 2x  / GAME_TURN
+|    | | | | '- rafinery: efficient of refining 1x 2x  / GAME_TURN
+|    | | | '- rafinery: lower cost of refining 1x 2x  / GAME_TURN
+|    | | '- silos: double capacity 1x 2x
+|    | '- pods factory: lower cost of production 1x 2x
+|    '- TBD
+'- TBD
+
+## loop
+
+GAME_TICK = 60/sec
+GAME_TURN = 60 GAME_TICKS
