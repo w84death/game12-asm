@@ -278,27 +278,35 @@ CURSOR_TYPE_ROL                 equ 0x02
 
 
 ; SEGMENT_META_DATA
-; 0 00 00 00 0
-; | |  |  |  |
-; | |  |  |  '- switch on rail (or not initialized)
-; | |  |  '- switch position / tile direction (4)
-; | |  '- resource type (4) (for source/pods cargo/buildings)
-; | '- direction (4) cart drive and building exit position (up/down/left/right)
-; '- building in/out type and cart running (2)
+; 0 00 0 00 00
+; | |  | |  |
+; | |  | |  |
+; | |  | |  '- tile direction (4): switch, building
+; | |  | '- resource type (4) (for source/pods cargo/buildings)
+; | |  '- switch on rail (or not initialized)
+; | '- cart drive direction (4)
+; '- empty
 ;
-SWITCH_MASK                     equ 0x1
-TILE_DIRECTION_MASK             equ 0x6
-TILE_DIRECTION_SHIFT            equ 0x1
-SWITCH_DATA_CLIP                equ 0xF8
-RESOURCE_TYPE_MASK              equ 0x18
-RESOURCE_TYPE_SHIFT             equ 0x3
+; if building/resource then least significant bits are used for:
+; 0000 - resource amount (16)
+;
+
+TILE_DIRECTION_MASK             equ 0x3
+SWITCH_DATA_CLIP                equ 0xEC
+RESOURCE_TYPE_MASK              equ 0xC
+RESOURCE_TYPE_SHIFT             equ 0x2
+SWITCH_MASK                     equ 0x10
 CART_DIRECTION_MASK             equ 0x60
-CART_TILE_DIRECTION_SHIFT       equ 0x5
+CART_DIRECTION_SHIFT            equ 0x5
+RESOURCE_AMOUNT_MASK            equ 0xF0
+RESOURCE_AMOUNT_SHIFT           equ 0x4
+
+; MISC
 CART_UP                         equ 0x00
 CART_DOWN                       equ 0x01
 CART_LEFT                       equ 0x02
 CART_RIGHT                      equ 0x03
-BUILDING_INPUT_MASK             equ 0x80
+
 
 TERRAIN_RULES_CROP              equ 0x03
 
@@ -616,9 +624,7 @@ game_logic:
       pop es
       mov al, [es:di]
       and al, TILE_DIRECTION_MASK
-      shr al, TILE_DIRECTION_SHIFT
       xor al, 0x2                       ; invert swich top-down or left-right
-      shl al, TILE_DIRECTION_SHIFT      ; move back to left for correct position
       add al, SWITCH_MASK
       and byte [es:di], SWITCH_DATA_CLIP
       add byte [es:di], al
@@ -630,10 +636,8 @@ game_logic:
       pop es
       mov al, [es:di]
       and al, TILE_DIRECTION_MASK
-      shr al, TILE_DIRECTION_SHIFT
       inc al
       and al, 0x3                       ; Clip to 0-3
-      shl al, TILE_DIRECTION_SHIFT      ; move back to left for correct position
       and byte [es:di], SWITCH_DATA_CLIP
       add byte [es:di], al
     jmp .change_action_done
@@ -929,7 +933,6 @@ actions_logic:
 
     mov al, [ds:di]
     and al, TILE_DIRECTION_MASK
-    shr al, TILE_DIRECTION_SHIFT
 
     call get_target_tile
 
@@ -980,7 +983,6 @@ actions_logic:
 
     mov al, [ds:di]
     and al, TILE_DIRECTION_MASK
-    shr al, TILE_DIRECTION_SHIFT
 
     push SEGMENT_TERRAIN_FOREGROUND
     pop ds
@@ -2049,7 +2051,6 @@ draw_cell:
         test al, SWITCH_MASK
         jz .skip_switch
           and al, TILE_DIRECTION_MASK
-          shr al, TILE_DIRECTION_SHIFT
           add al, TILE_SWITCH_LEFT
           call draw_sprite
         .skip_switch:
@@ -2059,7 +2060,7 @@ draw_cell:
         jz .skip_cart
           mov bl, [es:si]           ; SEGMENT_META_DATA
           and bl, CART_DIRECTION_MASK
-          shr bl, CART_TILE_DIRECTION_SHIFT
+          shr bl, CART_DIRECTION_SHIFT
           mov al, TILE_CART_HORIZONTAL
           cmp bl, CART_DOWN
           jg .skip_vertical
@@ -2148,7 +2149,6 @@ recalculate_rails:
     jmp .save_switch
   .prepare_switch_vertical:
     mov dl, 1                           ; down switch ID
-    shl dl, TILE_DIRECTION_SHIFT
     add dl, SWITCH_MASK                 ; enable switch
     mov ax, CURSOR_ICON_EDIT
     jmp .save_switch
@@ -2394,7 +2394,6 @@ draw_cursor:
 
   mov al, [ds:si]
   and al, TILE_DIRECTION_MASK
-  shr al, TILE_DIRECTION_SHIFT
   add al, TILE_OUT_RIGHT
 
   pop ds
