@@ -1,15 +1,14 @@
-; ==============================================================================
-; Cortex Labs: 2D Strategic game for x86 processors (and MS-DOS)
-; CODENAME: GAME12
+; ===========================================================================|80
+; CORTEX LABS - 2D Strategic game for x86 processors (and MS-DOS)
 ;
-; Fast rendering of big maps with full screen viewport.
-; Backend for strategic/simulation games. Based on GAME11 ideas.
+; Real-time strategy, economic game about extracting and managing resources.
+; Havely based on building optimized train (pods) lines.
 ;
 ; http://smol.p1x.in/assembly/#game12
-; ==============================================================================
+; ===========================================================================|80
 ; Copyright (C) 2025 Krzysztof Krystian Jankowski
 ; This is free and open software. See LICENSE for details.
-; ==============================================================================
+; ===========================================================================|80
 ;
 ; Should run on any x86 processor and system that supports legacy BIOS boot.
 ; Tested hardware:
@@ -30,9 +29,9 @@
 ;   - custom tool for tileset conversion
 ;   - custom tool for RLE image compression
 ;
-; ==============================================================================
-; Latest revision: 09/2025
-; ==============================================================================
+; ===========================================================================|80
+; Latest revision: 10/2025
+; ===========================================================================|80
 
 org 0x0100
 
