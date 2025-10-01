@@ -51,7 +51,7 @@ Gain as much points and conquer whole map. Waisting resources, bad track managem
 
 ### Building a rails network
 
-Player chooses a best spot and start building rails (tracks). Rails can be only placed on clean tiles (no trees or mountains). Player can clean terrain using one of the resources. Number of rails is limited starting with 100. New rails can be produced in the factory building using resource.
+Player chooses a best spot and start building rails (tracks). Rails can be only placed on clean tiles (no trees or mountains). Player can clean terrain using one of the resources. Number of rails is limited starting with 100. New rails can be produced in the rafinery building using resource.
 
 ### Strategy Design
 
@@ -108,3 +108,75 @@ Placing rafineries is very costly. Build them in strategic place to and bring or
 
 1 0001
 3 0011
+
+## no ECS but lists
+
+thing that needs to be check every game tick:
+- pods
+- resources
+- collectors
+- lab
+- rafinery
+
+### PODs likes to move.
+- is on station
+  - has cargo
+    - check near tiles for collection port
+      - unload resource (based on upgrade level speed)
+      - wait
+  - has no cargo / empty
+    - check near tiles for collector
+      - check if has resource amount > 0
+        - load resource (based on upgrade level speed)
+        - wait
+- move
+  - check tile in front of direction
+    - go if empty
+    - ocupied by pod
+      - check if oposing directions
+        - revert and move
+      - wait if same directions (will be empty in next turn)
+    - end of the road
+      - revert and move
+
+### Resource source
+- shrooms
+  - not collected
+    - increase resource amount
+    - if overgrow then dies and spawns 4x new around
+  - is collected
+    - decrease resouce amount
+    - if zero then dies
+- crystals
+  - not collected
+    - randomely increase resource amount or do nothing
+  - is collected
+    - decrease resouce amount
+    - if zero then it disapear
+- gas
+  - not collected
+    - no nohing
+  - is collected
+    - increase resouce amount
+    - does not go to zero
+
+### collectors
+- needs to know the target
+  - has pointer to target resource?
+  - check target if still exists (has resource amount > 0)
+    - exists then increase own resource amount
+    - empty then remove pointer (zero)
+  res 1: pos
+  res 2: pos
+  res n: pos
+
+  collector 1: pos, ptr_resource
+  collector 2: pos, ptr_resource
+  collector n: pos, ptr_resource
+
+
+## Upgrades
+  - pods
+    - faster movement 1x 2x 4x
+    - more storage 4-8-16
+    - faster load/unload 1-2-4

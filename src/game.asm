@@ -169,7 +169,7 @@ TILE_RAILS_10                   equ 0x1D
 TILE_RAILS_11                   equ 0x1E
 TILE_ROCKET_BOTTOM              equ 0x1F
 TILE_ROCKET_TOP                 equ 0x20
-TILE_BUILDING_FACTORY           equ 0x21
+TILE_BUILDING_RAFINERY           equ 0x21
 TILE_BUILDING_COLECTOR          equ 0x22
 TILE_BUILDING_SILOS             equ 0x23
 TILE_BUILDING_LAB               equ 0x24
@@ -226,17 +226,16 @@ TILE_FRAME_8                    equ 0x56
 
 ; Helpers
 TILES_COUNT                     equ 0x56    ; 86 tiles
-TILE_FOREGROUND_SHIFT           equ 0x0E ; pointer to first foreground tiles
+TILE_FOREGROUND_SHIFT           equ 0x0E    ; pointer to first foreground tiles
 TILE_ROCKET_BOTTOM_ID           equ TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
 TILE_ROCKET_TOP_ID              equ TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
-TILE_BUILDING_FACTORY_ID        equ TILE_BUILDING_FACTORY-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_RAFINERY_ID        equ TILE_BUILDING_RAFINERY-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_COLECTOR_ID      equ TILE_BUILDING_COLECTOR-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_SILOS_ID          equ TILE_BUILDING_SILOS-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_LAB_ID            equ TILE_BUILDING_LAB-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_RADAR_ID          equ TILE_BUILDING_RADAR-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_PODS_ID           equ TILE_BUILDING_PODS-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_POWER_ID          equ TILE_BUILDING_POWER-TILE_FOREGROUND_SHIFT
-
 
 ; SEGMENT_TERRAIN_BACKGROUND
 ; 0 0 0 0 0000
@@ -276,7 +275,6 @@ CURSOR_TYPE_CLIP                equ 0x3F
 CURSOR_TYPE_SHIFT               equ 0x06
 CURSOR_TYPE_ROL                 equ 0x02
 
-
 ; SEGMENT_META_DATA
 ; 0 00 0 00 00
 ; | |  | |  |
@@ -288,9 +286,9 @@ CURSOR_TYPE_ROL                 equ 0x02
 ; '- empty
 ;
 ; if building/resource then least significant bits are used for:
-; 0000 - resource amount (16)
+; 0000 00 00
+; '- resource amount (16)
 ;
-
 TILE_DIRECTION_MASK             equ 0x3
 SWITCH_DATA_CLIP                equ 0xEC
 RESOURCE_TYPE_MASK              equ 0xC
@@ -2882,7 +2880,7 @@ WindowBaseSelectionArrayText:
   db '< CLOSE WINDOW',0x0
   db 'EXPAND FOUNDATION',0x0
   db 'BUILD SILOS',0x0
-  db 'BUILD FACTORY',0x0
+  db 'BUILD RAFINERY',0x0
   db 'BUILD RADAR',0x0
   db 'BUIILD LABORATORY',0x0
   db 'BUILD POD STATION',0x0
@@ -2891,7 +2889,7 @@ WindowBaseSelectionArrayText:
     dw menu_logic.close_window, 0x0
     dw actions_logic.expand_foundation, 0x0
     dw actions_logic.place_building, TILE_BUILDING_SILOS_ID
-    dw actions_logic.place_building, TILE_BUILDING_FACTORY_ID
+    dw actions_logic.place_building, TILE_BUILDING_RAFINERY_ID
     dw actions_logic.place_building, TILE_BUILDING_RADAR_ID
     dw actions_logic.place_building, TILE_BUILDING_LAB_ID
     dw actions_logic.place_building, TILE_BUILDING_PODS_ID
@@ -2928,7 +2926,7 @@ WindowBriefingLogicArray:
   dw new_game, 0x0
   dw menu_logic.back_to_menu, 0x0
 
-WindowPODsText              db 'PODS FACTORY',0x0
+WindowPODsText              db 'PODS RAFINERY',0x0
 WindowPODSSelectionArrayText:
   db '< CLOSE WINDOW',0x0
   db 'TARGET TILE NOT SUITABLE',0x0
