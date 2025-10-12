@@ -92,7 +92,7 @@ VIEWPORT_HEIGHT                 equ 11      ; by 10 = 176 pixels
 VIEWPORT_GRID_SIZE              equ 16      ; Individual cell size DO NOT CHANGE
 SPRITE_SIZE                     equ 16      ; Sprite size 16x16 DO NOT CHANGE
 FONT_SIZE                       equ 8
-GAME_TURN_LENGTH                equ 6
+GAME_TURN_LENGTH                equ 4
 
 ; =========================================== GAME STATES ===================|80
 
@@ -767,21 +767,41 @@ game_logic:
         push SEGMENT_TERRAIN_BACKGROUND
         pop ds
 
-        call calculate_directed_tile
-        test byte [ds:di], RAIL_MASK
-        jnz .check_forward_move
+        .test_forward_move:
+          call calculate_directed_tile
+          test byte [ds:di], RAIL_MASK
+          jnz .check_forward_move
 
-        mov di, bx
-        xor al, 0x2
-        call calculate_directed_tile
-        test byte [ds:di], RAIL_MASK
-        jnz .check_forward_move
+        ; check if has switch
+        .test_if_switch:
+          push ds
+          push SEGMENT_META_DATA
+          pop ds
+          mov ah, [ds:di]
+          pop ds
+          test ah, SWITCH_MASK
+          jz .test_other_axis_move
+          and ah, TILE_DIRECTION_MASK
 
-        mov di, bx
-        xor al, 0x1
-        call calculate_directed_tile
-        test byte [ds:di], RAIL_MASK
-        jnz .check_forward_move
+          ;xchg bx, bx
+          jmp .next_pod
+
+
+          jmp .check_forward_move
+
+        .test_other_axis_move:
+          mov di, bx
+          xor al, 0x2
+          call calculate_directed_tile
+          test byte [ds:di], RAIL_MASK
+          jnz .check_forward_move
+
+        .test_other_axis_second_move:
+          mov di, bx
+          xor al, 0x1
+          call calculate_directed_tile
+          test byte [ds:di], RAIL_MASK
+          jnz .check_forward_move
 
         mov al, cl
         jmp .revert_move
