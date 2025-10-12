@@ -128,40 +128,29 @@ stats: $(BOOTLOADER) $(GAME_COM) $(GAME_COM_RAW)
 		echo "  Floppy image:    $$(stat -c%s $(FLOPPY_IMG) 2>/dev/null || stat -f%z $(FLOPPY_IMG) 2>/dev/null) bytes"; \
 	fi
 	@echo ""
-	@echo "SOURCE CODE STATISTICS:"
-	@for file in $(ASM_SOURCES); do \
-		if [ -f $$file ]; then \
-			total=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | wc -l); \
-			code_with_comment=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | grep -v '^\s*[a-zA-Z_][a-zA-Z0-9_]*:\s*$$' | grep ';' | wc -l); \
-			if [ $$total -gt 0 ]; then \
-				percent=$$((code_with_comment * 100 / total)); \
-			else \
-				percent=0; \
-			fi; \
-			echo "  $$file:"; \
-			echo "    Total LOC (non-empty, non-comment-only): $$total"; \
-			echo "    Code lines with comments: $$code_with_comment ($$percent%)"; \
+	@echo "Lines of Code (all files in /src/):"
+	@for file in src/*.asm; do \
+		if [ -f "$$file" ]; then \
+			lines=$$(wc -l < "$$file"); \
+			basename=$$(basename "$$file"); \
+			printf "  %-20s %5d lines\n" "$$basename" "$$lines"; \
 		fi; \
 	done
 	@echo ""
-	@echo "TOTAL PROJECT STATISTICS:"
-	@total_loc=0; \
-	total_commented=0; \
-	for file in $(ASM_SOURCES); do \
-		if [ -f $$file ]; then \
-			loc=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | wc -l); \
-			commented=$$(grep -v '^\s*$$' $$file | grep -v '^\s*;' | grep -v '^\s*[a-zA-Z_][a-zA-Z0-9_]*:\s*$$' | grep ';' | wc -l); \
-			total_loc=$$((total_loc + loc)); \
-			total_commented=$$((total_commented + commented)); \
+	@echo "Total LOC:" $$(cat src/*.asm | wc -l)
+	@echo ""
+	@echo "Comment Coverage (main files only):"
+	@for file in src/boot.asm src/game.asm; do \
+		if [ -f "$$file" ]; then \
+			basename=$$(basename "$$file"); \
+			total_lines=$$(wc -l < "$$file"); \
+			comment_lines=$$(grep -c "^[[:space:]]*;" "$$file" || true); \
+			if [ "$$total_lines" -gt 0 ]; then \
+				coverage=$$((comment_lines * 100 / total_lines)); \
+				printf "  %-20s %5d/%5d (%d%%)\n" "$$basename" "$$comment_lines" "$$total_lines" "$$coverage"; \
+			fi; \
 		fi; \
-	done; \
-	if [ $$total_loc -gt 0 ]; then \
-		percent=$$((total_commented * 100 / total_loc)); \
-	else \
-		percent=0; \
-	fi; \
-	echo "  Total lines of code: $$total_loc"; \
-	echo "  Total commented lines: $$total_commented ($$percent%)"
+	done
 	@echo "================================================"
 
 # Decompress COM file for debugging
