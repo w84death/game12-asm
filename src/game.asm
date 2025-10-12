@@ -278,7 +278,7 @@ RESOURCE_TYPE_SHIFT             equ 0x2
 SWITCH_MASK                     equ 0x10
 CART_DIRECTION_MASK             equ 0x60
 CART_DIRECTION_SHIFT            equ 0x5
-CART_DIRECTION_CLIP             equ 0x9A
+CART_DIRECTION_CLIP             equ 0x9F
 RESOURCE_AMOUNT_MASK            equ 0xF0
 RESOURCE_AMOUNT_SHIFT           equ 0x4
 
