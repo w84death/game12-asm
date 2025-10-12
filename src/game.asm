@@ -160,56 +160,52 @@ TILE_BUILDING_LAB               equ 0x24
 TILE_BUILDING_RADAR             equ 0x25
 TILE_BUILDING_PODS              equ 0x26
 TILE_BUILDING_POWER             equ 0x27
-TILE_OUT_RIGHT                  equ 0x28
-TILE_OUT_UP                     equ 0x29
-TILE_OUT_DOWN                   equ 0x2A
-TILE_OUT_LEFT                   equ 0x2B
-TILE_IN_RIGHT                   equ 0x2C
-TILE_IN_UP                      equ 0x2D
-TILE_IN_DOWN                    equ 0x2E
-TILE_IN_LEFT                    equ 0x2F
-TILE_UFO_FLY                    equ 0x30
-TILE_UFO_ATTACK                 equ 0x31
-TILE_CART_VERTICAL              equ 0x32
-TILE_CART_HORIZONTAL            equ 0x33
-TILE_SWITCH_LEFT                equ 0x34
-TILE_SWITCH_DOWN                equ 0x35
-TILE_SWITCH_RIGHT               equ 0x36
-TILE_SWITCH_UP                  equ 0x37
-TILE_ORE_BLUE                   equ 0x38
-TILE_ORE_YELLOW                 equ 0x39
-TILE_ORE_RED                    equ 0x3A
-TILE_EXTRACT_BLUE               equ 0x3B
-TILE_EXTRACT_YELLOW             equ 0x3C
-TILE_EXTRACT_RED                equ 0x3D
-TILE_SILO_BLUE                  equ 0x3E
-TILE_SILO_YELLOW                equ 0x3F
-TILE_SILO_RED                   equ 0x40
-TILE_CURSOR_PAN                 equ 0x41
-TILE_CURSOR_BUILD               equ 0x42
-TILE_CURSOR_EDIT                equ 0x43
-TILE_CURSOR_BUILDING            equ 0x44
-TILE_CURSOR_SELECTOR            equ 0x45
-TILE_WINDOW_1                   equ 0x46
-TILE_WINDOW_2                   equ 0x47
-TILE_WINDOW_3                   equ 0x48
-TILE_WINDOW_4                   equ 0x49
-TILE_WINDOW_5                   equ 0x4A
-TILE_WINDOW_6                   equ 0x4B
-TILE_WINDOW_7                   equ 0x4C
-TILE_WINDOW_8                   equ 0x4D
-TILE_WINDOW_9                   equ 0x4E
-TILE_FRAME_1                    equ 0x4F
-TILE_FRAME_2                    equ 0x50
-TILE_FRAME_3                    equ 0x51
-TILE_FRAME_4                    equ 0x52
-TILE_FRAME_5                    equ 0x53
-TILE_FRAME_6                    equ 0x54
-TILE_FRAME_7                    equ 0x55
-TILE_FRAME_8                    equ 0x56
+TILE_IO_RIGHT                   equ 0x28
+TILE_IO_UP                      equ 0x29
+TILE_IO_DOWN                    equ 0x2A
+TILE_IO_LEFT                    equ 0x2B
+TILE_UFO_FLY                    equ 0x2C
+TILE_UFO_ATTACK                 equ 0x2D
+TILE_CART_VERTICAL              equ 0x2E
+TILE_CART_HORIZONTAL            equ 0x2F
+TILE_SWITCH_LEFT                equ 0x30
+TILE_SWITCH_DOWN                equ 0x31
+TILE_SWITCH_RIGHT               equ 0x32
+TILE_SWITCH_UP                  equ 0x33
+TILE_ORE_BLUE                   equ 0x34
+TILE_ORE_YELLOW                 equ 0x35
+TILE_ORE_RED                    equ 0x36
+TILE_EXTRACT_BLUE               equ 0x37
+TILE_EXTRACT_YELLOW             equ 0x38
+TILE_EXTRACT_RED                equ 0x39
+TILE_SILO_BLUE                  equ 0x3A
+TILE_SILO_YELLOW                equ 0x3B
+TILE_SILO_RED                   equ 0x3C
+TILE_CURSOR_PAN                 equ 0x3D
+TILE_CURSOR_BUILD               equ 0x3E
+TILE_CURSOR_EDIT                equ 0x3F
+TILE_CURSOR_BUILDING            equ 0x40
+TILE_CURSOR_SELECTOR            equ 0x41
+TILE_WINDOW_1                   equ 0x42
+TILE_WINDOW_2                   equ 0x43
+TILE_WINDOW_3                   equ 0x44
+TILE_WINDOW_4                   equ 0x45
+TILE_WINDOW_5                   equ 0x46
+TILE_WINDOW_6                   equ 0x47
+TILE_WINDOW_7                   equ 0x48
+TILE_WINDOW_8                   equ 0x49
+TILE_WINDOW_9                   equ 0x4A
+TILE_FRAME_1                    equ 0x4B
+TILE_FRAME_2                    equ 0x4C
+TILE_FRAME_3                    equ 0x4D
+TILE_FRAME_4                    equ 0x4E
+TILE_FRAME_5                    equ 0x4F
+TILE_FRAME_6                    equ 0x50
+TILE_FRAME_7                    equ 0x51
+TILE_FRAME_8                    equ 0x52
 
 ; Helpers
-TILES_COUNT                     equ 0x56    ; 86 tiles
+TILES_COUNT                     equ 95
 TILE_FOREGROUND_SHIFT           equ 0x0E    ; pointer to first foreground tiles
 TILE_ROCKET_BOTTOM_ID           equ TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
 TILE_ROCKET_TOP_ID              equ TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
@@ -929,11 +925,14 @@ actions_logic:
 
     call get_target_tile
 
-      .set_rail_tile:
-        and al, 0x1           ; horizontal or vertical initial rails
-        mov bl, TILE_RAILS_2
-        sub bl, al
-        sub bl, TILE_FOREGROUND_SHIFT
+    test byte [es:di], TERRAIN_TRAVERSAL_MASK
+    jz .skip_station
+
+    .set_rail_tile:
+      and al, 0x1           ; horizontal or vertical initial rails
+      mov bl, TILE_RAILS_2
+      sub bl, al
+      sub bl, TILE_FOREGROUND_SHIFT
 
     .set_station_tile:
       mov al, TILE_STATION
@@ -956,6 +955,7 @@ actions_logic:
       sub di, MAP_SIZE*2
       call recalculate_rails
 
+    .skip_station:
     pop ds
     pop es
   jmp .done
@@ -992,12 +992,12 @@ actions_logic:
     mov si, [_LAST_ENT_POD_ID_]
     inc word [_LAST_ENT_POD_ID_]
     shl si, 1
-    
+
     push es
     push SEGMENT_MAP_ENTITIES
     pop es
     mov [es:si], di
-    pop es    
+    pop es
   jmp .done
 
   .done:
@@ -2372,7 +2372,7 @@ draw_cursor:
 
   mov al, [ds:si]
   and al, TILE_DIRECTION_MASK
-  add al, TILE_OUT_RIGHT
+  add al, TILE_IO_RIGHT
 
   pop ds
   pop es
@@ -2836,21 +2836,21 @@ MainMenuLogicArray:
 WindowBaseBuildingsText     db 'BASE BUILDING',0x0
 WindowBaseSelectionArrayText:
   db '< CLOSE WINDOW',0x0
-  db 'EXPAND FOUNDATION',0x0
+  db 'EXPAND BASE FOUNDATIONS',0x0
+  db 'BUILD POD STATION',0x0
   db 'BUILD SILOS',0x0
   db 'BUILD RAFINERY',0x0
   db 'BUILD RADAR',0x0
   db 'BUIILD LABORATORY',0x0
-  db 'BUILD POD STATION',0x0
   db 0x00
   WindowBaseLogicArray:
     dw menu_logic.close_window, 0x0
     dw actions_logic.expand_foundation, 0x0
+    dw actions_logic.place_building, TILE_BUILDING_PODS_ID
     dw actions_logic.place_building, TILE_BUILDING_SILOS_ID
     dw actions_logic.place_building, TILE_BUILDING_RAFINERY_ID
     dw actions_logic.place_building, TILE_BUILDING_RADAR_ID
     dw actions_logic.place_building, TILE_BUILDING_LAB_ID
-    dw actions_logic.place_building, TILE_BUILDING_PODS_ID
 
 WindowRemoteBuildingsText   db 'REMOTE BUILDINGS',0x0
 WindowRemoteSelectionArrayText:
@@ -2887,12 +2887,10 @@ WindowBriefingLogicArray:
 WindowPODsText              db 'PODS RAFINERY',0x0
 WindowPODSSelectionArrayText:
   db '< CLOSE WINDOW',0x0
-  db 'TARGET TILE NOT SUITABLE',0x0
   db 'BUILD STATION AT TARGET TILE',0x0
   db 'DEPLOY NEW POD AT STATION',0x0
   db 0x00
 WindowPODSSelectionArray:
-  dw menu_logic.close_window, 0x0
   dw menu_logic.close_window, 0x0
   dw actions_logic.build_pods_station, 0x0
   dw actions_logic.build_pod, 0x0
