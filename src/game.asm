@@ -46,6 +46,9 @@ SEGMENT_MAP_ENTITIES        equ 0x7000    ; Fourth map layer (16KB)
 SEGMENT_ENTITIES            equ 0x7400    ; Entities data
 SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
 
+OFFSET_ENTITIES_PODS        equ 0x0000
+OFFSET_ENTITIES_RESOURCES   equ 0x0400
+
 ; =========================================== MEMORY ALLOCATION =============|80
 
 _BASE_                    equ _END_OF_CODE_ + 0x100
@@ -72,9 +75,14 @@ _SFX_NOTE_DURATION_       equ _BASE_ + 0x23   ; 1 byte
 _SFX_IRQ_OFFSET_          equ _BASE_ + 0x24   ; 2 bytes
 _SFX_IRQ_SEGMENT_         equ _BASE_ + 0x26   ; 2 bytes
 _AUDIO_ENABLED_           equ _BASE_ + 0x28   ; 1 byte
+_LAST_ENT_POD_ID_         equ _BASE_ + 0x29   ; 2 bytes
+
 
 ; =========================================== ENGINE SETTINGS ===============|80
+;
 
+TRUE                            equ 1
+FALSE                           equ 0
 SCREEN_WIDTH                    equ 320
 SCREEN_HEIGHT                   equ 200
 MAP_SIZE                        equ 128     ; Map size in cells DO NOT CHANGE
@@ -980,6 +988,16 @@ actions_logic:
 
     pop ds
     pop es
+
+    mov si, [_LAST_ENT_POD_ID_]
+    inc word [_LAST_ENT_POD_ID_]
+    shl si, 1
+    
+    push es
+    push SEGMENT_MAP_ENTITIES
+    pop es
+    mov [es:si], di
+    pop es    
   jmp .done
 
   .done:
@@ -1160,11 +1178,11 @@ reset_to_default_values:
   mov word [_CURSOR_Y_OLD_], MAP_SIZE/2
 
   mov word [_SFX_POINTER_], SFX_NULL
+  mov word [_LAST_ENT_POD_ID_], 0
 
-  mov word [_ECONOMY_BLUE_RES_], 0
-  mov word [_ECONOMY_YELLOW_RES_], 0
-  mov word [_ECONOMY_RED_RES_], 0
-  mov word [_ECONOMY_SCORE_], 0
+  mov word [_ECONOMY_BLUE_RES_], 0xF
+  mov word [_ECONOMY_YELLOW_RES_], 0xF
+  mov word [_ECONOMY_RED_RES_], 0xF
 ret
 
 init_p1x_screen:
@@ -2540,7 +2558,7 @@ init_audio_system:
 
   mov byte [_SFX_NOTE_INDEX_], 0
   mov byte [_SFX_NOTE_DURATION_], 0
-  mov byte [_AUDIO_ENABLED_], 1
+  mov byte [_AUDIO_ENABLED_], TRUE
   mov word [_SFX_POINTER_], SFX_NULL
 
   mov al, 182                          ; Binary mode, square wave, 16-bit divisor
@@ -2568,7 +2586,7 @@ audio_irq_handler:
   push cs
   pop ds
 
-  cmp byte [_AUDIO_ENABLED_], 0
+  cmp byte [_AUDIO_ENABLED_], FALSE
   je .skip_audio
   call irq_update_audio
 
