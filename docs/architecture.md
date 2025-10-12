@@ -123,6 +123,22 @@ thing that needs to be check every game tick:
 - rafinery
 
 ### PODs likes to move.
+
+CART_UP                         equ 0x00 3   00 11
+CART_DOWN                       equ 0x01 1   01 01
+CART_LEFT                       equ 0x02 0   10 00
+CART_RIGHT                      equ 0x03 2   11 10
+
+00 01
+10 11
+shr 1
+0 vertical
+1 horizontal
+
+X 00 01 10 11 10 11 01
+Y 00 00 00 00 10 10 00
+  W  R  W  W  W  R
+
 - is on station
   - has cargo
     - check near tiles for collection port
@@ -202,7 +218,22 @@ thing that needs to be check every game tick:
 |    '- TBD
 '- TBD
 
+## Stations
+
 ## loop
 
 GAME_TICK = 60/sec
 GAME_TURN = 60 GAME_TICKS
+
+check all pods
+check all extractors
+check all ports
+check all rafineries
+
+spawning pods:
+  - add to pods_ents_list
+ - increase the_last_pod_ent
+
+pods_ents_list
+  - pos y
+  - pos x

@@ -42,7 +42,7 @@ SEGMENT_SPRITES             equ 0x5400    ; 96 tiles (6KB)
 SEGMENT_TERRAIN_BACKGROUND  equ 0x6400    ; First map layer (16KB)
 SEGMENT_TERRAIN_FOREGROUND  equ 0x6800    ; Second map layer (16KB)
 SEGMENT_META_DATA           equ 0x6C00    ; Third map layer (16KB)
-SEGMENT_MAP_ENTITIES        equ 0x7000    ; Fourth map layer (16KB)
+SEGMENT_RESERVED            equ 0x7000    ; Fourth map layer (16KB)
 SEGMENT_ENTITIES            equ 0x7400    ; Entities data
 SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
 
@@ -62,7 +62,8 @@ _CURSOR_Y_                equ _BASE_ + 0x0D   ; 2 bytes
 _CURSOR_X_OLD_            equ _BASE_ + 0x0F   ; 2 bytes
 _CURSOR_Y_OLD_            equ _BASE_ + 0x11   ; 2 bytes
 _SCENE_MODE_              equ _BASE_ + 0x13   ; 1 byte
-_GAME_TURN_               equ _BASE_ + 0x14   ; 2 bytes
+_GAME_TURN_               equ _BASE_ + 0x14   ; 1 bytes
+_XXX_                     equ _BASE_ + 0x15   ; 1 bytes
 _ECONOMY_BLUE_RES_        equ _BASE_ + 0x16   ; 2 bytes
 _ECONOMY_YELLOW_RES_      equ _BASE_ + 0x18   ; 2 bytes
 _ECONOMY_RED_RES_         equ _BASE_ + 0x1A   ; 2 bytes
@@ -91,6 +92,7 @@ VIEWPORT_HEIGHT                 equ 11      ; by 10 = 176 pixels
 VIEWPORT_GRID_SIZE              equ 16      ; Individual cell size DO NOT CHANGE
 SPRITE_SIZE                     equ 16      ; Sprite size 16x16 DO NOT CHANGE
 FONT_SIZE                       equ 8
+GAME_TURN_LENGTH                equ 6
 
 ; =========================================== GAME STATES ===================|80
 
@@ -209,7 +211,7 @@ TILES_COUNT                     equ 95
 TILE_FOREGROUND_SHIFT           equ 0x0E    ; pointer to first foreground tiles
 TILE_ROCKET_BOTTOM_ID           equ TILE_ROCKET_BOTTOM-TILE_FOREGROUND_SHIFT
 TILE_ROCKET_TOP_ID              equ TILE_ROCKET_TOP-TILE_FOREGROUND_SHIFT
-TILE_BUILDING_RAFINERY_ID        equ TILE_BUILDING_RAFINERY-TILE_FOREGROUND_SHIFT
+TILE_BUILDING_RAFINERY_ID       equ TILE_BUILDING_RAFINERY-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_COLECTOR_ID      equ TILE_BUILDING_COLECTOR-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_SILOS_ID          equ TILE_BUILDING_SILOS-TILE_FOREGROUND_SHIFT
 TILE_BUILDING_LAB_ID            equ TILE_BUILDING_LAB-TILE_FOREGROUND_SHIFT
@@ -249,7 +251,7 @@ INFRASTRUCTURE_SHIFT            equ 0x7
 FORGROUND_SPRITE_MASK           equ 0x1F
 FOREGROUND_SPRITE_CLIP          equ 0xE0
 CART_DRAW_MASK                  equ 0x20
-CART_DRAW_SHIFT                 equ 0x05
+CART_DRAW_CLIP                  equ 0xDF
 CURSOR_TYPE_MASK                equ 0xC0
 CURSOR_TYPE_CLIP                equ 0x3F
 CURSOR_TYPE_SHIFT               equ 0x06
@@ -276,6 +278,7 @@ RESOURCE_TYPE_SHIFT             equ 0x2
 SWITCH_MASK                     equ 0x10
 CART_DIRECTION_MASK             equ 0x60
 CART_DIRECTION_SHIFT            equ 0x5
+CART_DIRECTION_CLIP             equ 0x9A
 RESOURCE_AMOUNT_MASK            equ 0xF0
 RESOURCE_AMOUNT_SHIFT           equ 0x4
 
@@ -489,6 +492,16 @@ check_keyboard:
 
 .update_system_tick:
   inc dword [_GAME_TICK_]               ; overflow naturally
+
+.update_game_logic:
+  cmp byte [_GAME_STATE_], STATE_GAME
+  jnz .skip_turn
+  dec byte [_GAME_TURN_]
+  cmp byte [_GAME_TURN_], 0x0
+  jg .skip_turn
+    call game_logic.calculate_pods
+    mov byte [_GAME_TURN_], GAME_TURN_LENGTH
+  .skip_turn:
 
 ; =========================================== ESC OR LOOP ===================|80
 
@@ -728,6 +741,104 @@ game_logic:
     pop es
   jmp .redraw_tile
 
+  .calculate_pods:
+    push es
+    push ds
+
+    push SEGMENT_ENTITIES
+    pop es
+
+    xor si, si
+    .ent_loop:
+      mov di, [es:si]
+      cmp di, 0x0
+      jz .done_ent_loop
+
+      .calculate_cart_direction:
+        push SEGMENT_META_DATA
+        pop ds
+        mov al, [ds:di]
+        and al, CART_DIRECTION_MASK
+        shr al, CART_DIRECTION_SHIFT
+
+        mov cl, al
+        mov bx, di                      ; Save original position
+
+        push SEGMENT_TERRAIN_BACKGROUND
+        pop ds
+
+        call calculate_directed_tile
+        test byte [ds:di], RAIL_MASK
+        jnz .check_forward_move
+
+        mov di, bx
+        xor al, 0x2
+        call calculate_directed_tile
+        test byte [ds:di], RAIL_MASK
+        jnz .check_forward_move
+
+        mov di, bx
+        xor al, 0x1
+        call calculate_directed_tile
+        test byte [ds:di], RAIL_MASK
+        jnz .check_forward_move
+
+        mov al, cl
+        jmp .revert_move
+
+        .check_forward_move:
+          push SEGMENT_TERRAIN_FOREGROUND
+          pop ds
+          test byte [ds:di], CART_DRAW_MASK
+          jz .save_pod_move
+
+        .pod_meet:
+          push SEGMENT_META_DATA
+          pop ds
+          mov ah, [ds:di]
+          and ah, CART_DIRECTION_MASK
+          shr ah, CART_DIRECTION_SHIFT
+
+          add cl, al
+          add cl, ah
+          and cl, 0x3
+          cmp cl, 0x1
+          jz .next_pod
+
+      .revert_move:
+        xor al, 0x1
+        push SEGMENT_META_DATA
+        pop ds
+        and byte [ds:bx], CART_DIRECTION_CLIP
+        shl al, CART_DIRECTION_SHIFT
+        add byte [ds:bx], al
+      jmp .next_pod
+
+      .save_pod_move:
+        ; ES = ENTITIES SEGMENT
+        mov word [es:si], di            ; update entitie ref to new pos
+        ; DS = FOREGROIND
+        and byte [ds:bx], CART_DRAW_CLIP  ; remove cart drawing from old pos
+        add byte [ds:di], CART_DRAW_MASK  ; draw cart on new pos
+
+        ; move also resources
+        push SEGMENT_META_DATA
+        pop ds
+        and byte [ds:di], CART_DIRECTION_CLIP
+        shl al, CART_DIRECTION_SHIFT
+        add byte [ds:di], al
+
+      .next_pod:
+      add si, 0x2
+    jmp .ent_loop
+    .done_ent_loop:
+
+    pop ds
+    pop es
+  jmp .redraw_terrain
+  ;jmp .done
+  ; TODO: redraw visible
+
   .redraw_four_tiles:
     mov ax, [_CURSOR_X_]
     mov bx, [_CURSOR_Y_]
@@ -772,7 +883,32 @@ game_logic:
     call draw_ui
     jmp .done
 
-    .done:
+  .done:
+ret
+
+; in:
+; DI position
+; AL direction
+; out:
+; DI changed
+calculate_directed_tile:
+  .check_up:
+  cmp al, CART_UP
+    jnz .check_left
+    sub di, MAP_SIZE
+    ret
+  .check_left:
+  cmp al, CART_LEFT
+    jnz .check_down
+    dec di
+    ret
+  .check_down:
+  cmp al, CART_DOWN
+    jnz .check_right
+    add di, MAP_SIZE
+    ret
+  .check_right:
+    inc di
 ret
 
 actions_logic:
@@ -836,6 +972,7 @@ actions_logic:
     mov al, [es:di]
     and al, BACKGROUND_SPRITE_CLIP
     add al, TILE_STATION
+    or al, RAIL_MASK
     mov byte [es:di], al
     and byte [ds:di], CURSOR_TYPE_CLIP
 
@@ -994,7 +1131,7 @@ actions_logic:
     shl si, 1
 
     push es
-    push SEGMENT_MAP_ENTITIES
+    push SEGMENT_ENTITIES
     pop es
     mov [es:si], di
     pop es
@@ -1167,7 +1304,8 @@ init_engine:
 ret
 
 reset_to_default_values:
-  mov word [_GAME_TICK_], 0x0
+  mov dword [_GAME_TICK_], 0x0
+  mov byte [_GAME_TURN_], 0x0
   mov word [_RNG_], 0x42
 
   mov word [_VIEWPORT_X_], MAP_SIZE/2-VIEWPORT_WIDTH/2
@@ -2505,6 +2643,13 @@ draw_ui:
 
   mov si, [_CURSOR_Y_]  ; Blue resource count
   mov dh, UI_STATS_TXT_LINE+1
+  mov dl, 0x04
+  mov bl, COLOR_WHITE
+  mov cx, 100
+  call draw_number
+
+  mov si, [_GAME_TURN_]  ; Blue resource count
+  mov dh, UI_STATS_TXT_LINE+2
   mov dl, 0x04
   mov bl, COLOR_WHITE
   mov cx, 100
