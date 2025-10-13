@@ -2891,7 +2891,7 @@ StateTransitionTable:
   db STATE_TITLE_SCREEN,  KB_ESC,   STATE_QUIT
   db STATE_TITLE_SCREEN,  KB_ENTER, STATE_MENU_INIT
   db STATE_MENU,          KB_ESC,   STATE_TITLE_SCREEN_INIT
-  db STATE_BRIEFING, KB_ESC, STATE_MENU_INIT
+  db STATE_BRIEFING,      KB_ESC,   STATE_MENU_INIT
   db STATE_HELP,          KB_ESC,   STATE_MENU_INIT
   db STATE_GAME,          KB_ESC,   STATE_MENU_INIT
   db STATE_DEBUG_VIEW,    KB_ESC,   STATE_MENU_INIT
@@ -2924,6 +2924,8 @@ InputTable:
   db STATE_WINDOW,                      SCENE_MODE_ANY, KB_DOWN
   dw menu_logic.selection_down
   db STATE_WINDOW,                      SCENE_MODE_ANY, KB_SPACE
+  dw menu_logic.game_menu_enter
+  db STATE_WINDOW,                      SCENE_MODE_ANY, KB_ENTER
   dw menu_logic.game_menu_enter
 
   db STATE_BRIEFING,                    SCENE_MODE_ANY, KB_UP

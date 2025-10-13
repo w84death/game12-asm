@@ -65,6 +65,7 @@ $(GAME_COM_RAW): src/game.asm | $(BIN_DIR)
 $(GAME_COM): $(GAME_COM_RAW)
 	cp $(GAME_COM_RAW) $@
 	$(UPX) --best $@
+	echo -n "P1X" >> $@
 
 # Build compressed COM file
 com: $(GAME_COM)
