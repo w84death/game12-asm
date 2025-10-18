@@ -329,6 +329,7 @@ SCENE_MODE_UPGRADE_BUILDINGS    equ 0x05
 SCENE_MODE_HELP_PAGE            equ 0x00
 UI_STATS_GFX_LINE               equ 320*175
 UI_STATS_TXT_LINE               equ 0x16
+UI_BOTTOM_FRAME                 equ 320*176
 
 ; =========================================== COLORS / DB16 =================|80
 
@@ -845,13 +846,11 @@ game_logic:
         shl al, CART_DIRECTION_SHIFT
         add byte [ds:di], al
 
-        ; bx = 8254
-
         push si
         push di
 
         mov di, bx
-        mov si, bx  ;8254
+        mov si, bx
         call draw_single_cell
 
         pop di
@@ -890,8 +889,6 @@ game_logic:
     mov bx, [_CURSOR_Y_]
     dec bx
     call draw_selected_cell
-    ; TODO: draw only when hit
-    ;call draw_frame
     jmp .redraw_tile
 
   .redraw_old_tile:
@@ -911,11 +908,11 @@ game_logic:
   .redraw_terrain:
     call draw_terrain
     call draw_cursor
-    call draw_frame
     call draw_ui
     jmp .done
 
   .done:
+  call draw_frame
 ret
 
 ; in:
@@ -1490,7 +1487,6 @@ ret
 
 init_game:
   call draw_terrain
-  ;call draw_entities
   call draw_cursor
   call draw_frame
   call draw_ui
@@ -2204,23 +2200,37 @@ draw_single_cell:
   push cs
   pop es
 
-  mov ax, di
-  mov bx, di
-  shr bx, 7
-  push bx
-  shl bx, 7
-  sub ax, bx ; x
-  pop bx  ; y
+  .calculate_position:
+    mov ax, di
+    mov bx, di
+    shr bx, 7
+    push bx
+    shl bx, 7
+    sub ax, bx ; ax = x
+    pop bx  ; bx = y
 
-  sub bx, [es:_VIEWPORT_Y_]
-  shl bx, 4
-  sub ax, [es:_VIEWPORT_X_]
-  shl ax, 4
-  imul bx, SCREEN_WIDTH
-  add bx, ax
-  mov di, bx
+  .clip_viewport:
+    cmp ax, [es:_VIEWPORT_X_]
+    jb .skip_drawing                    ; x < viewport x
+    cmp bx, [es:_VIEWPORT_Y_]
+    jb .skip_drawing                    ; y < viewport y
+    mov cx, [es:_VIEWPORT_X_]
+    add cx, VIEWPORT_WIDTH
+    cmp ax, cx
+    jae .skip_drawing                    ; x >= viewport x
+    mov cx, [es:_VIEWPORT_Y_]
+    add cx, VIEWPORT_HEIGHT
+    cmp bx, cx
+    jae .skip_drawing                    ; y >= viewport y
 
-  ; TODO: .skip_drawing
+  .calculate_memory_position:
+    sub bx, [es:_VIEWPORT_Y_]
+    shl bx, 4
+    sub ax, [es:_VIEWPORT_X_]
+    shl ax, 4
+    imul bx, SCREEN_WIDTH
+    add bx, ax
+    mov di, bx
 
   push SEGMENT_TERRAIN_BACKGROUND
   pop es
@@ -2687,7 +2697,10 @@ draw_frame:
   mov al, TILE_FRAME_8                  ; right-bottom corner
   call draw_sprite
 
-  add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
+ret
+
+draw_bottom_frame:
+  mov di, UI_BOTTOM_FRAME
 
   mov dx, 12
   .stripes_loop:
@@ -2704,27 +2717,7 @@ draw_frame:
 ret
 
 draw_ui:
-
-  mov si, [_CURSOR_X_]  ; Blue resource count
-  mov dh, UI_STATS_TXT_LINE
-  mov dl, 0x04
-  mov bl, COLOR_WHITE
-  mov cx, 100
-  call draw_number
-
-  mov si, [_CURSOR_Y_]  ; Blue resource count
-  mov dh, UI_STATS_TXT_LINE+1
-  mov dl, 0x04
-  mov bl, COLOR_WHITE
-  mov cx, 100
-  call draw_number
-
-  mov si, [_GAME_TURN_]  ; Blue resource count
-  mov dh, UI_STATS_TXT_LINE+2
-  mov dl, 0x04
-  mov bl, COLOR_WHITE
-  mov cx, 100
-  call draw_number
+  call draw_bottom_frame
 
   mov di, UI_STATS_GFX_LINE+90   ; Resource blue icon
   mov al, TILE_ORE_BLUE
