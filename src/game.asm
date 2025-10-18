@@ -845,12 +845,18 @@ game_logic:
         shl al, CART_DIRECTION_SHIFT
         add byte [ds:di], al
 
+        ; bx = 8254
+
         push si
+        push di
 
-        ;mov si, bx                      ; old position
-        ;call draw_single_cell
+        mov di, bx
+        mov si, bx  ;8254
+        call draw_single_cell
 
-        mov si, di                      ; new position
+        pop di
+
+        mov si, di
         call draw_single_cell
 
         pop si
