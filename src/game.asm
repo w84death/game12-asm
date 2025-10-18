@@ -772,7 +772,6 @@ game_logic:
           test byte [ds:di], RAIL_MASK
           jnz .check_forward_move
 
-        ; check if has switch
         .test_if_switch:
           push ds
           push SEGMENT_META_DATA
@@ -783,10 +782,7 @@ game_logic:
           jz .test_other_axis_move
           and ah, TILE_DIRECTION_MASK
 
-          ;xchg bx, bx
           jmp .next_pod
-
-
           jmp .check_forward_move
 
         .test_other_axis_move:
@@ -836,17 +832,28 @@ game_logic:
 
       .save_pod_move:
         ; ES = ENTITIES SEGMENT
-        mov word [es:si], di            ; update entitie ref to new pos
         ; DS = FOREGROIND
+        mov word [es:si], di            ; update entitie pointer to new pos
         and byte [ds:bx], CART_DRAW_CLIP  ; remove cart drawing from old pos
         add byte [ds:di], CART_DRAW_MASK  ; draw cart on new pos
 
-        ; move also resources
+        ; TODO: move also resources
+
         push SEGMENT_META_DATA
         pop ds
         and byte [ds:di], CART_DIRECTION_CLIP
         shl al, CART_DIRECTION_SHIFT
         add byte [ds:di], al
+
+        push si
+
+        ;mov si, bx                      ; old position
+        ;call draw_single_cell
+
+        mov si, di                      ; new position
+        call draw_single_cell
+
+        pop si
 
       .next_pod:
       add si, 0x2
@@ -855,44 +862,43 @@ game_logic:
 
     pop ds
     pop es
-  jmp .redraw_terrain
-  ;jmp .done
-  ; TODO: redraw visible
+  jmp .done
 
   .redraw_four_tiles:
     mov ax, [_CURSOR_X_]
     mov bx, [_CURSOR_Y_]
     dec ax
-    call draw_single_cell
+    call draw_selected_cell
 
     mov ax, [_CURSOR_X_]
     mov bx, [_CURSOR_Y_]
     inc ax
-    call draw_single_cell
+    call draw_selected_cell
 
     mov ax, [_CURSOR_X_]
     mov bx, [_CURSOR_Y_]
     inc bx
-    call draw_single_cell
+    call draw_selected_cell
 
     mov ax, [_CURSOR_X_]
     mov bx, [_CURSOR_Y_]
     dec bx
-    call draw_single_cell
-    call draw_frame
+    call draw_selected_cell
+    ; TODO: draw only when hit
+    ;call draw_frame
     jmp .redraw_tile
 
   .redraw_old_tile:
     mov ax, [_CURSOR_X_OLD_]
     mov bx, [_CURSOR_Y_OLD_]
-    call draw_single_cell
+    call draw_selected_cell
 
   .redraw_tile:
     mov ax, [_CURSOR_X_]
     mov bx, [_CURSOR_Y_]
     mov word [_CURSOR_X_OLD_], ax
     mov word [_CURSOR_Y_OLD_], bx
-    call draw_single_cell
+    call draw_selected_cell
     call draw_cursor
     jmp .done
 
@@ -2150,7 +2156,7 @@ draw_terrain:
 ret
 
 
-draw_single_cell:
+draw_selected_cell:
   push si
   push di
 
@@ -2177,6 +2183,48 @@ draw_single_cell:
 
   call draw_cell
 
+  pop ds
+  pop es
+  pop di
+  pop si
+ret
+
+draw_single_cell:
+  push si
+  push di
+  push es
+  push ds
+
+  push cs
+  pop es
+
+  mov ax, di
+  mov bx, di
+  shr bx, 7
+  push bx
+  shl bx, 7
+  sub ax, bx ; x
+  pop bx  ; y
+
+  sub bx, [es:_VIEWPORT_Y_]
+  shl bx, 4
+  sub ax, [es:_VIEWPORT_X_]
+  shl ax, 4
+  imul bx, SCREEN_WIDTH
+  add bx, ax
+  mov di, bx
+
+  ; TODO: .skip_drawing
+
+  push SEGMENT_TERRAIN_BACKGROUND
+  pop es
+
+  push SEGMENT_TERRAIN_FOREGROUND
+  pop ds
+
+  call draw_cell
+
+  .skip_drawing:
   pop ds
   pop es
   pop di
@@ -2552,8 +2600,6 @@ draw_minimap:
   push es
   push ds
 
-
-
   push SEGMENT_VGA
   pop es
 
@@ -2580,7 +2626,6 @@ draw_minimap:
       inc si
       and al, BACKGROUND_SPRITE_MASK ; Clear metadata
       ; TODO: colors
-      mov ah, al           ; Copy color for second pixel
       mov [es:di], al      ; Draw 1 pixels
       add di, 1            ; Move to next column
     loop .draw_row
@@ -3082,11 +3127,12 @@ TerrainColors:
 db 0x4          ; Mud 1
 db 0x4          ; Mud 2
 db 0x4          ; Mud Grass 1
-db 0x5          ; Mud Grass 2
-db 0x40         ; Grass
+db 0x4          ; Mud Grass 2
+db 0x4          ; Grass
+db 0x4          ; Bush
 db 0x5          ; Trees 1
 db 0x5          ; Trees 2
-db 0xA          ; Mountains/Rocks 1
+db 0x5          ; Mountains/Rocks 1
 db 0x5          ; Mountains/Rocks 2
 
 ; =========================================== DICTS =========================|80
