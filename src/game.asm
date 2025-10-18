@@ -625,6 +625,10 @@ game_logic:
     .switch_change:
       push SEGMENT_META_DATA
       pop es
+
+      test byte [es:di], SWITCH_MASK
+      jz .change_action_done
+
       mov al, [es:di]
       and al, TILE_DIRECTION_MASK
       xor al, 0x2                       ; invert swich top-down or left-right
@@ -838,7 +842,7 @@ game_logic:
         and byte [ds:bx], CART_DRAW_CLIP  ; remove cart drawing from old pos
         add byte [ds:di], CART_DRAW_MASK  ; draw cart on new pos
 
-        ; TODO: move also resources
+        ; TODO: move also resources and cursor!
 
         push SEGMENT_META_DATA
         pop ds
