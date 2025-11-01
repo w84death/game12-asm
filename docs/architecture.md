@@ -106,12 +106,11 @@ Placing rafineries is very costly. Build them in strategic place to and bring or
 0   2
   1
 
+000
+010 xor 010
 
-0 0000
-2 0010
-
-1 0001
-3 0011
+0001
+0011
 
 ## no ECS but lists
 

@@ -310,10 +310,11 @@ UPGRADE_SILOS_SPEED_MASK        equ 0x800
 UPGRADE_PODS_FACTORYCOST_MASK   equ 0x1000
 
 ; MISC
-CART_UP                         equ 0x00
+;
+CART_LEFT                       equ 0x00
 CART_DOWN                       equ 0x01
-CART_LEFT                       equ 0x02
-CART_RIGHT                      equ 0x03
+CART_RIGHT                      equ 0x02
+CART_UP                         equ 0x03
 TERRAIN_RULES_CROP              equ 0x03
 CURSOR_ICON_POINTER             equ 0x00
 CURSOR_ICON_PLACE_RAIL          equ 0x01
@@ -637,7 +638,6 @@ game_logic:
       add byte [es:di], al
     jmp .change_action_done
 
-    ; TODO: routine
     .building_exit_rotate:
       push SEGMENT_META_DATA
       pop es
@@ -653,7 +653,6 @@ game_logic:
     pop ds
     pop es
   jmp .redraw_tile
-
 
   .build_action:
     push es
@@ -778,28 +777,37 @@ game_logic:
           jnz .check_forward_move
 
         .test_if_switch:
-          push ds
           push SEGMENT_META_DATA
           pop ds
+          mov di, bx
           mov ah, [ds:di]
-          pop ds
           test ah, SWITCH_MASK
           jz .test_other_axis_move
-          and ah, TILE_DIRECTION_MASK
+
+          mov al, ah                    ; ah - segment data
+          and ax, TILE_DIRECTION_MASK   ; keep only direction
+
+          push SEGMENT_TERRAIN_BACKGROUND
+          pop ds
+
+          call calculate_directed_tile
+          test byte [ds:di], RAIL_MASK
+          jnz .check_forward_move
 
           jmp .next_pod
-          jmp .check_forward_move
 
         .test_other_axis_move:
           mov di, bx
-          xor al, 0x2
+          ; todo: swap axis
+          inc al
+          and al, 0x3
           call calculate_directed_tile
           test byte [ds:di], RAIL_MASK
           jnz .check_forward_move
 
         .test_other_axis_second_move:
           mov di, bx
-          xor al, 0x1
+          xor al, 0x2 ; todo: the other
           call calculate_directed_tile
           test byte [ds:di], RAIL_MASK
           jnz .check_forward_move
@@ -1155,6 +1163,15 @@ actions_logic:
     mov al, [ds:di]
     or al, CART_DRAW_MASK
     mov byte [ds:di], al
+
+    ; TODO: temporary for debug
+    push SEGMENT_META_DATA
+    pop ds
+    call get_random
+    and ax, 0x3
+    shl ax, RESOURCE_TYPE_SHIFT
+    or byte [ds:di], al
+    ; END TODO
 
     pop ds
     pop es
