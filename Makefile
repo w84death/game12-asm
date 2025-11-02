@@ -132,19 +132,19 @@ stats: $(BOOTLOADER) $(GAME_COM) $(GAME_COM_RAW)
 	@echo "Lines of Code (all files in /src/):"
 	@for file in src/*.asm; do \
 		if [ -f "$$file" ]; then \
-			lines=$$(wc -l < "$$file"); \
+			lines=$$(grep -v "^[[:space:]]*$$" "$$file" | grep -v "^[[:space:]]*;" | wc -l); \
 			basename=$$(basename "$$file"); \
 			printf "  %-20s %5d lines\n" "$$basename" "$$lines"; \
 		fi; \
 	done
 	@echo ""
-	@echo "Total LOC:" $$(cat src/*.asm | wc -l)
+	@echo "Total LOC:" $$(cat src/*.asm | grep -v "^[[:space:]]*$$" | grep -v "^[[:space:]]*;" | wc -l)
 	@echo ""
 	@echo "Comment Coverage (main files only):"
 	@for file in src/boot.asm src/game.asm; do \
 		if [ -f "$$file" ]; then \
 			basename=$$(basename "$$file"); \
-			total_lines=$$(wc -l < "$$file"); \
+			total_lines=$$(grep -v '^[[:space:]]*$$' "$$file" | grep -v '^[[:space:]]*;' | wc -l); \
 			comment_lines=$$(grep -c "^[[:space:]]*;" "$$file" || true); \
 			if [ "$$total_lines" -gt 0 ]; then \
 				coverage=$$((comment_lines * 100 / total_lines)); \

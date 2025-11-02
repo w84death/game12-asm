@@ -248,7 +248,7 @@ INFRASTRUCTURE_SHIFT            equ 0x7
 ; |  '- draw cart (1)
 ; '- cursor type (4)
 ;
-FORGROUND_SPRITE_MASK           equ 0x1F
+FOREGROUND_SPRITE_MASK          equ 0x1F
 FOREGROUND_SPRITE_CLIP          equ 0xE0
 CART_DRAW_MASK                  equ 0x20
 CART_DRAW_CLIP                  equ 0xDF
@@ -754,71 +754,70 @@ game_logic:
 
     xor si, si
     .ent_loop:
-      mov di, [es:si]
+      mov di, [es:si]                   ; SEGMENT_ENTITIES
       cmp di, 0x0
       jz .done_ent_loop
 
       .calculate_cart_direction:
         push SEGMENT_META_DATA
         pop ds
-        mov al, [ds:di]
+        mov al, [ds:di]                 ; SEGMENT_META_DATA
         and al, CART_DIRECTION_MASK
         shr al, CART_DIRECTION_SHIFT
 
-        mov cl, al
+        mov cl, al                      ; save initial cart direction
         mov bx, di                      ; Save original position
-
-        push SEGMENT_TERRAIN_BACKGROUND
-        pop ds
-
+        ;xchg bx,bx;debug
         .test_forward_move:
+          push SEGMENT_TERRAIN_BACKGROUND
+          pop ds
           call calculate_directed_tile
-          test byte [ds:di], RAIL_MASK
+          test byte [ds:di], RAIL_MASK  ; SEGMENT_TERRAIN_BACKGROUND
           jnz .check_forward_move
 
         .test_if_switch:
           push SEGMENT_META_DATA
           pop ds
-          mov di, bx
-          mov ah, [ds:di]
-          test ah, SWITCH_MASK
-          jz .test_other_axis_move
 
-          mov al, ah                    ; ah - segment data
-          and ax, TILE_DIRECTION_MASK   ; keep only direction
+          mov di, bx                    ; restore position
+          mov al, [ds:di]               ; SEGMENT_META_DATA
+          test al, SWITCH_MASK          ; check if its stay on a switch
+          jz .test_other_axis_turn_move ; if not then left or right turn
+
+          mov al, cl                    ; restore initial cart direction
 
           push SEGMENT_TERRAIN_BACKGROUND
           pop ds
 
-          call calculate_directed_tile
-          test byte [ds:di], RAIL_MASK
-          jnz .check_forward_move
+          call calculate_directed_tile  ; check target position tile
+          test byte [ds:di], RAIL_MASK  ; SEGMENT_TERRAIN_BACKGROUND
+          jnz .check_forward_move       ; then try move forward
 
           jmp .next_pod
 
-        .test_other_axis_move:
-          mov di, bx
-          ; todo: swap axis
-          inc al
-          and al, 0x3
+        ; TODO: checking for making turns
+        .test_other_axis_turn_move:
+          push SEGMENT_TERRAIN_BACKGROUND
+          pop ds
+          mov al, cl
+          xor ax, 0x1                   ; rotate target (up-down to left-right)
           call calculate_directed_tile
-          test byte [ds:di], RAIL_MASK
+          test byte [ds:di], RAIL_MASK  ; SEGMENT_TERRAIN_BACKGROUND
           jnz .check_forward_move
 
-        .test_other_axis_second_move:
           mov di, bx
-          xor al, 0x2 ; todo: the other
+          xor ax, 0x2                   ; mirror left/right or up/down
           call calculate_directed_tile
-          test byte [ds:di], RAIL_MASK
+          test byte [ds:di], RAIL_MASK  ; SEGMENT_TERRAIN_BACKGROUND
           jnz .check_forward_move
 
-        mov al, cl
+        mov al, cl                      ; restore initial direction
         jmp .revert_move
 
         .check_forward_move:
           push SEGMENT_TERRAIN_FOREGROUND
           pop ds
-          test byte [ds:di], CART_DRAW_MASK
+          test byte [ds:di], CART_DRAW_MASK ; SEGMENT_TERRAIN_FOREGROUND
           jz .save_pod_move
 
         .pod_meet:
@@ -832,15 +831,16 @@ game_logic:
           add cl, ah
           and cl, 0x3
           cmp cl, 0x1
-          jz .next_pod
+        jz .next_pod
 
       .revert_move:
-        xor al, 0x1
+        mov al, cl                      ; restore initial direction
+        xor ax, 0x2                     ; mirror direction
         push SEGMENT_META_DATA
         pop ds
-        and byte [ds:bx], CART_DIRECTION_CLIP
+        and byte [ds:bx], CART_DIRECTION_CLIP ; SEGMENT_META_DATA
         shl al, CART_DIRECTION_SHIFT
-        add byte [ds:bx], al
+        add byte [ds:bx], al            ; SEGMENT_META_DATA
       jmp .next_pod
 
       .save_pod_move:
@@ -854,10 +854,11 @@ game_logic:
 
         push SEGMENT_META_DATA
         pop ds
-        and byte [ds:di], CART_DIRECTION_CLIP
+        and byte [ds:di], CART_DIRECTION_CLIP ; SEGMENT_META_DATA
         shl al, CART_DIRECTION_SHIFT
-        add byte [ds:di], al
+        add byte [ds:di], al            ; SEGMENT_META_DATA
 
+      .redraw_tiles:
         push si
         push di
 
@@ -1021,7 +1022,7 @@ actions_logic:
     mov cx, CURSOR_ICON_PLACE_BUILDING
     ror cl, CURSOR_TYPE_ROL
     mov al, [ds:di]
-    and al, FORGROUND_SPRITE_MASK
+    and al, FOREGROUND_SPRITE_MASK
     cmp al, TILE_RAILS_1-TILE_FOREGROUND_SHIFT  ; horizontal
     jz .build_horizontal
 
@@ -1159,19 +1160,25 @@ actions_logic:
     pop ds
 
     call get_target_tile
+    .check_for_station:
+      mov al, [es:di]
+      and al, BACKGROUND_SPRITE_MASK
+      cmp al, TILE_STATION
+      jnz .skip_build_pod
 
-    mov al, [ds:di]
-    or al, CART_DRAW_MASK
-    mov byte [ds:di], al
+    .pod_on_station:
+      mov al, [ds:di]
+      or al, CART_DRAW_MASK
+      mov byte [ds:di], al
 
-    ; TODO: temporary for debug
-    push SEGMENT_META_DATA
-    pop ds
-    call get_random
-    and ax, 0x3
-    shl ax, RESOURCE_TYPE_SHIFT
-    or byte [ds:di], al
-    ; END TODO
+      ; TODO: temporary for debug
+      push SEGMENT_META_DATA
+      pop ds
+      call get_random
+      and ax, 0x3
+      shl ax, RESOURCE_TYPE_SHIFT
+      or byte [ds:di], al
+      ; END TODO
 
     pop ds
     pop es
@@ -1188,6 +1195,11 @@ actions_logic:
   jmp .done
 
   .done:
+ret
+
+  .skip_build_pod:
+  pop ds
+  pop es
 ret
 
 ; DI current
@@ -2279,7 +2291,7 @@ draw_cell:
   .draw_forground:
 
     mov al, [ds:si]                 ; SEGMENT_TERRAIN_FOREGROUND
-    and al, FORGROUND_SPRITE_MASK
+    and al, FOREGROUND_SPRITE_MASK
     add al, TILE_FOREGROUND_SHIFT
     call draw_sprite
 

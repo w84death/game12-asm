@@ -102,15 +102,19 @@ Placing rafineries is very costly. Build them in strategic place to and bring or
 7, 13 left/right     0111 1101
 14, 11 up/down 1110 1011
 
+## Switch/direction
   3
 0   2
   1
 
-000
-010 xor 010
+up    0011
+down  0001
+right 0010
+left  0000
 
-0001
-0011
+up-right, left-right: xor 0x2
+change axis: xor 0x1
+
 
 ## no ECS but lists
 
