@@ -767,7 +767,7 @@ game_logic:
 
         mov cl, al                      ; save initial cart direction
         mov bx, di                      ; Save original position
-        ;xchg bx,bx;debug
+
         .test_forward_move:
           push SEGMENT_TERRAIN_BACKGROUND
           pop ds
@@ -784,18 +784,11 @@ game_logic:
           test al, SWITCH_MASK          ; check if its stay on a switch
           jz .test_other_axis_turn_move ; if not then left or right turn
 
-          mov al, cl                    ; restore initial cart direction
-
-          push SEGMENT_TERRAIN_BACKGROUND
-          pop ds
-
+          mov al, [ds:di]               ; SEGMENT_META_DATA
+          and al, TILE_DIRECTION_MASK
           call calculate_directed_tile  ; check target position tile
-          test byte [ds:di], RAIL_MASK  ; SEGMENT_TERRAIN_BACKGROUND
-          jnz .check_forward_move       ; then try move forward
+          jmp .check_forward_move       ; try move forward
 
-          jmp .next_pod
-
-        ; TODO: checking for making turns
         .test_other_axis_turn_move:
           push SEGMENT_TERRAIN_BACKGROUND
           pop ds
@@ -823,15 +816,16 @@ game_logic:
         .pod_meet:
           push SEGMENT_META_DATA
           pop ds
-          mov ah, [ds:di]
+          mov ah, [ds:di]               ; SEGMENT_META_DATA
           and ah, CART_DIRECTION_MASK
           shr ah, CART_DIRECTION_SHIFT
 
-          add cl, al
-          add cl, ah
-          and cl, 0x3
-          cmp cl, 0x1
-        jz .next_pod
+          cmp al, ah                    ; check if same dir
+          je .next_pod                  ; not in collision, wait
+
+          xor ah, 0x2
+          cmp al, ah                    ; check if pointing at each other
+        jne .next_pod                   ; not in collision, wait
 
       .revert_move:
         mov al, cl                      ; restore initial direction

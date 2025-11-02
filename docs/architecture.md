@@ -115,6 +115,20 @@ left  0000
 up-right, left-right: xor 0x2
 change axis: xor 0x1
 
+### Pods meet
+
+A down    0001
+b up      0011
+
+A up      0011
+B up      0011 WAIT
+
+A left    0000
+B up      0011 WAIT
+
+A right   0010
+B up      0011 WAIT
+
 
 ## no ECS but lists
 
