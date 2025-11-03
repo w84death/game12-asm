@@ -327,7 +327,6 @@ SCENE_MODE_REMOTE_BUILDINGS     equ 0x02
 SCENE_MODE_STATION              equ 0x03
 SCENE_MODE_BRIEFING             equ 0x04
 SCENE_MODE_UPGRADE_BUILDINGS    equ 0x05
-SCENE_MODE_HELP_PAGE            equ 0x00
 UI_STATS_GFX_LINE               equ 320*175
 UI_STATS_TXT_LINE               equ 0x16
 UI_BOTTOM_FRAME                 equ 320*176
@@ -1480,13 +1479,25 @@ live_menu:
 ret
 
 init_help:
+
+  mov byte [_SCENE_MODE_], 0x0
+  call draw_help_page
+  mov byte [_GAME_STATE_], STATE_HELP
+ret
+
+draw_help_page:
   mov al, COLOR_BLACK
   call clear_screen
 
   mov si, help_image
   call draw_rle_image
 
-  mov si, HelpArrayText
+  mov di, HelpArrayText
+  movzx ax, byte [_SCENE_MODE_]
+  shl ax, 1
+  add di, ax
+  mov si, [di]
+
   mov bl, COLOR_WHITE
   mov dx, 0x0102
   .help_entry:
@@ -1496,8 +1507,22 @@ init_help:
     inc dh
   jmp .help_entry
   .done:
-  mov byte [_GAME_STATE_], STATE_HELP
-  mov byte [_SCENE_MODE_], SCENE_MODE_HELP_PAGE
+
+
+  mov bl, COLOR_WHITE
+  mov dx, 0x1502
+  mov si, HelpFooter1Text
+  call draw_font_text
+  mov si, HelpFooter2Text
+  inc dh
+  call draw_font_text
+
+ret
+
+ror_help_page:
+  inc byte [_SCENE_MODE_]
+  and byte [_SCENE_MODE_], 0x03
+  call draw_help_page
 ret
 
 live_help:
@@ -3005,6 +3030,9 @@ InputTable:
   dw menu_logic.selection_down
   db STATE_BRIEFING,                    SCENE_MODE_ANY, KB_ENTER
   dw menu_logic.game_menu_enter
+
+  db STATE_HELP,                        SCENE_MODE_ANY, KB_ENTER
+  dw ror_help_page
 InputTableEnd:
 
 ; =========================================== TEXT DATA =====================|80
@@ -3012,14 +3040,19 @@ InputTableEnd:
 CreatedByText db 'HUMAN CODED ASSEMBLY BY',0x0
 KKJText db 'KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
 PressEnterText db 'PRESS ENTER', 0x0
+MainMenuCopyText db '(MIT) 2025 P1X',0x0
 QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more...', 0x0D, 0x0A, 0x0
+
 Fontset1Text db ' !',34,'#$%&',39,'()*+,-./:;<=>?',0x0
 Fontset2Text db '@ 0123456789',0x0
 Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 
 
-HelpArrayText:
-  db '   ----=== CORTEX LABS HELP ===----',0x0
+HelpFooter1Text db '> PRESS ENTER FOR NEXT PAGE',0x0
+HelpFooter2Text db '< PRESS ESC TO BACK TO MAIN MENU',0x0
+
+HelpPage1Text:
+  db 'CORTEX LABS QUICK HELP!',0x0
   db ' ',0x0
   db 'BUILD RAILS. SPAWN PODS. EXPAND BASE.',0x0
   db 'USE RADAR TO FIND RESOURCES. EXTRACT', 0x0
@@ -3037,13 +3070,32 @@ HelpArrayText:
   db ' ',0x0
   db ' ',0x0
   db ' ',0x0
-  db 'HTTP://SMOL.P1X.IN/ASSEMBLY/',0x0
-  db ' ',0x0
-  db '-------------------------------------',0x0
-  db '< PRESS ESC TO BACK TO MAIN MENU',0x0
+  db 'HTTP://SMOL.P1X.IN/ASSEMBLY',0x0
   db 0x00
 
-MainMenuCopyText db '(C) 2025 P1X',0x0
+HelpPage2Text:
+  db 'BASE EXPANSION & BUILDINGS',0x0
+  db ' ',0x0
+  db 'PAGE 2 OF 4',0x0
+  db 0x00
+
+HelpPage3Text:
+  db 'RAILS MANAGEMENT',0x0
+  db ' ',0x0
+  db 'PAGE 3 OF 4',0x0
+  db 0x00
+
+HelpPage4Text:
+  db 'RESOURCES & UPGRADES',0x0
+  db ' ',0x0
+  db 'PAGE 4 OF 4',0x0
+  db 0x00
+
+HelpArrayText:
+  dw HelpPage1Text
+  dw HelpPage2Text
+  dw HelpPage3Text
+  dw HelpPage4Text
 
 ; =========================================== WINDOWS DEFINITIONS ===========|80
 
