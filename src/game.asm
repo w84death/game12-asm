@@ -1521,7 +1521,7 @@ ret
 
 ror_help_page:
   inc byte [_SCENE_MODE_]
-  and byte [_SCENE_MODE_], 0x03
+  and byte [_SCENE_MODE_], 0x07
   call draw_help_page
 ret
 
@@ -3051,51 +3051,73 @@ Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
 HelpFooter1Text db '> PRESS ENTER FOR NEXT PAGE',0x0
 HelpFooter2Text db '< PRESS ESC TO BACK TO MAIN MENU',0x0
 
-HelpPage1Text:
-  db 'CORTEX LABS QUICK HELP!',0x0
+HelpPage0Text:
+  db 'CORTEX LABS - QUICK HELP!',0x0
   db ' ',0x0
-  db 'BUILD RAILS. SPAWN PODS. EXPAND BASE.',0x0
-  db 'USE RADAR TO FIND RESOURCES. EXTRACT', 0x0
-  db 'THEM. TRANSPORT CARGO TO BASE. REFINE.', 0x0
-  db ' '
-  db ' ', 0x0
-  db 'KEYBOARD:',0x0
-  db '* (ARROWS) TO MOVE CURSOR',0x0
-  db '* (SPACEBAR) FOR INTERACTION AND MENUS',0x0
-  db '* (UP/DOWN) NAVIGATION IN MENUS',0x0
-  db '* (ESC) TO BACK TO MAIN MENU',0x0
-  db ' ',0x0
+  db '-------------------------------------',0x0
   db 'FOR FULL MANUAL CHECK @ FLOPPY IN DOS',0x0
   db 'READ > MANUAL.TXT < FILE',0x0
+  db '-------------------------------------',0x0
   db ' ',0x0
+  db 'TABLE OF CONTENT',0x0
+  db '- GAME IDEA',0x0
+  db '- BASE EXPANSION & BUILDINGS',0x0
+  db '- RAILS MANAGEMENT',0x0
+  db '- RESOURCES & UPGRADES',0x0
+  db '- PAGE 5',0x0
+  db '- PAGE 6',0x0
+  db '- PAGE 7',0x0
+  db 0x00
+
+HelpPage1Text:
+  db 'GAME IDEA',0x0
   db ' ',0x0
-  db ' ',0x0
-  db 'HTTP://SMOL.P1X.IN/ASSEMBLY',0x0
+  db 'PAGE 1 OF 7',0x0
   db 0x00
 
 HelpPage2Text:
   db 'BASE EXPANSION & BUILDINGS',0x0
   db ' ',0x0
-  db 'PAGE 2 OF 4',0x0
+  db 'PAGE 2 OF 7',0x0
   db 0x00
 
 HelpPage3Text:
   db 'RAILS MANAGEMENT',0x0
   db ' ',0x0
-  db 'PAGE 3 OF 4',0x0
+  db 'PAGE 3 OF 7',0x0
   db 0x00
 
 HelpPage4Text:
   db 'RESOURCES & UPGRADES',0x0
   db ' ',0x0
-  db 'PAGE 4 OF 4',0x0
+  db 'PAGE 4 OF 7',0x0
+  db 0x00
+
+HelpPage5Text:
+db 'PAGE 5',0x0
+db ' ',0x0
+db 'PAGE 5 OF 7',0x0
+db 0x00
+HelpPage6Text:
+db 'PAGE 6',0x0
+db ' ',0x0
+db 'PAGE 6 OF 7',0x0
+db 0x00
+HelpPage7Text:
+  db 'PAGE 7',0x0
+  db ' ',0x0
+  db 'PAGE 7 OF 7',0x0
   db 0x00
 
 HelpArrayText:
+  dw HelpPage0Text
   dw HelpPage1Text
   dw HelpPage2Text
   dw HelpPage3Text
   dw HelpPage4Text
+  dw HelpPage5Text
+  dw HelpPage6Text
+  dw HelpPage7Text
 
 ; =========================================== WINDOWS DEFINITIONS ===========|80
 
