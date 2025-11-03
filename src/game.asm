@@ -3072,7 +3072,10 @@ HelpPage0Text:
 HelpPage1Text:
   db 'GAME IDEA',0x0
   db ' ',0x0
-  db 'PAGE 1 OF 7',0x0
+  db 'CORTEX LABS IS A STRATEGY PUZZLE GAME.',0x00
+  db 'YOUR MISSION IS TO EXTRACT, REFINE,',0x0
+  db 'AND RETURN RESOURCES ON OTHER PLANET.',0x0
+  db '-------------------------------------',0x0
   db 0x00
 
 HelpPage2Text:
