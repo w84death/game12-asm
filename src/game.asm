@@ -511,12 +511,12 @@ jmp main_loop
 ; =========================================== EXIT TO DOS ===================|80
 
 exit:
-  call kill_audio_system
+  call audio.kill
   mov ax, 0x0003                        ; Set video mode to 80x25 text mode
   int 0x10                              ; Call BIOS interrupt
   mov si, QuitText                      ; Draw message after exit
   xor dx, dx                            ; At 0/0 position
-  call draw_text
+  call terminal.draw_text
 
   mov ax, 0x4c00                        ; Exit to DOS
   int 0x21                              ; Call DOS
@@ -604,7 +604,7 @@ game_logic:
     push ds
 
     mov bx, SFX_BUILD
-    call play_sfx
+    call audio.play_sfx
 
     mov di, [_CURSOR_Y_]                ; Calculate map position
     shl di, 7   ; Y * 128
@@ -658,7 +658,7 @@ game_logic:
     push ds
 
     mov bx, SFX_BUILD
-    call play_sfx
+    call audio.play_sfx
 
     mov di, [_CURSOR_Y_]                ; Calculate map position
     shl di, 7   ; Y * 128
@@ -1239,7 +1239,7 @@ window_logic:
 
     inc dl
     mov bl, COLOR_BLACK
-    call draw_font_text
+    call font.draw_string
 
     pop si
     mov ax, [si+6]
@@ -1261,7 +1261,7 @@ window_logic:
         mov bl, COLOR_YELLOW
       .skip_color_highlight:
       push cx
-      call draw_font_text
+      call font.draw_string
       pop cx
       inc dh
       inc dh
@@ -1281,7 +1281,7 @@ menu_logic:
     je .done
     dec byte [_MENU_SELECTION_POS_]
     mov bx, SFX_MENU_UP
-    call play_sfx
+    call audio.play_sfx
   jmp window_logic.redraw_window
 
   .selection_down:
@@ -1290,14 +1290,14 @@ menu_logic:
     je .done
     inc byte [_MENU_SELECTION_POS_]
     mov bx, SFX_MENU_DOWN
-    call play_sfx
+    call audio.play_sfx
   jmp window_logic.redraw_window
 
   .game_menu_enter:
     mov byte [_GAME_STATE_], STATE_GAME_INIT
   .main_menu_enter:
     mov bx, SFX_MENU_ENTER
-    call play_sfx
+    call audio.play_sfx
     mov si, WindowDefinitionsArray
     xor ax, ax
     mov al, [_SCENE_MODE_]
@@ -1351,7 +1351,7 @@ ret
 
 init_engine:
   call reset_to_default_values
-  call init_audio_system
+  call audio.init
   call decompress_tiles
   call generate_map
   call build_initial_base
@@ -1386,7 +1386,7 @@ init_p1x_screen:
   call draw_rle_image
 
   ;mov bx, INTRO_JINGLE
- ; call play_sfx
+ ; call audio.play_sfx
 
   mov byte [_GAME_STATE_], STATE_P1X_SCREEN
 ret
@@ -1399,7 +1399,7 @@ live_p1x_screen:
   je .blink
     mov bl, COLOR_BLACK
   .blink:
-  call draw_font_text
+  call font.draw_string
 ret
 
 init_title_screen:
@@ -1412,15 +1412,15 @@ init_title_screen:
   mov si, CreatedByText
   mov dx, 0x1508
   mov bl, COLOR_WHITE
-  call draw_font_text
+  call font.draw_string
 
   mov si, KKJText
   mov dx, 0x1606
   mov bl, COLOR_WHITE
-  call draw_font_text
+  call font.draw_string
 
   ;mov bx, INTRO_JINGLE
-  ;call play_sfx
+  ;call audio.play_sfx
 
   mov byte [_GAME_STATE_], STATE_TITLE_SCREEN
 ret
@@ -1450,7 +1450,7 @@ live_title_screen:
   je .blink
     mov bl, COLOR_BLACK
   .blink:
-  call draw_font_text
+  call font.draw_string
 ret
 
 init_menu:
@@ -1468,10 +1468,10 @@ init_menu:
   mov si, MainMenuCopyText
   mov dx, 0x170D
   mov bl, COLOR_LIGHT_GRAY
-  call draw_font_text
+  call font.draw_string
 
   ;mov bx, MENU_JINGLE
-  ;call play_sfx
+  ;call audio.play_sfx
 ret
 
 live_menu:
@@ -1503,7 +1503,7 @@ draw_help_page:
   .help_entry:
     cmp byte [si], 0x00
     jz .done
-    call draw_font_text
+    call font.draw_string
     inc dh
   jmp .help_entry
   .done:
@@ -1512,10 +1512,10 @@ draw_help_page:
   mov bl, COLOR_WHITE
   mov dx, 0x1502
   mov si, HelpFooter1Text
-  call draw_font_text
+  call font.draw_string
   mov si, HelpFooter2Text
   inc dh
-  call draw_font_text
+  call font.draw_string
 
 ret
 
@@ -1546,7 +1546,7 @@ init_game:
   mov byte [_SCENE_MODE_], SCENE_MODE_ANY
 
   ;mov bx, GAME_JINGLE
-  ;call play_sfx
+  ;call audio.play_sfx
 ret
 
 live_game:
@@ -1558,7 +1558,7 @@ init_map_view:
   mov byte [_GAME_STATE_], STATE_MAP_VIEW
 
   ;mov bx, MAP_JINGLE
-  ;call play_sfx
+  ;call audio.play_sfx
 ret
 
 live_map_view:
@@ -1592,17 +1592,17 @@ init_debug_view:
   mov si, Fontset1Text
   mov bl, COLOR_WHITE
   mov dx, 0x1002
-  call draw_font_text
+  call font.draw_string
 
   mov si, Fontset2Text
   mov bl, COLOR_RED
   mov dx, 0x1102
-  call draw_font_text
+  call font.draw_string
 
   mov si, Fontset3Text
   mov bl, COLOR_BLUE
   mov dx, 0x1202
-  call draw_font_text
+  call font.draw_string
 
   .draw_color_palette:
   mov di, SCREEN_WIDTH*160+32           ; Position on screen
@@ -1700,147 +1700,146 @@ db 27, 48, 50                           ; #6DC2CA - Cyan
 db 54, 53, 23                           ; #DAD45E - Yellow
 db 55, 59, 53                           ; #DEEED6 - White
 
-; =========================================== DRAW TEXT =====================|80
-; IN:
-;  SI - Pointer to text
-;  DL - X position
-;  DH - Y position
-;  BX - Color
-draw_text:
-  mov ah, 0x02                          ; Set cursor
-  xor bh, bh                            ; Page 0
-  int 0x10
+terminal:
+  ; =========================================== DRAW TEXT ====================|80
+  ;  SI - Pointer to text
+  ;  DL - X position
+  ;  DH - Y position
+  ;  BX - Color
+  .draw_text:
+    mov ah, 0x02                          ; Set cursor
+    xor bh, bh                            ; Page 0
+    int 0x10
 
-  .next_char:
-    lodsb                               ; Load next character from SI into AL
-    test al, al                         ; Check for string terminator
-    jz .done                            ; If terminator, we're done
+    .next_char:
+      lodsb                               ; Load next character from SI into AL
+      test al, al                         ; Check for string terminator
+      jz .done                            ; If terminator, we're done
 
-    mov ah, 0x0E                        ; Teletype output
-    mov bh, 0                           ; Page 0
-    int 0x10                            ; BIOS video interrupt
+      mov ah, 0x0E                        ; Teletype output
+      mov bh, 0                           ; Page 0
+      int 0x10                            ; BIOS video interrupt
 
-    jmp .next_char                      ; Process next character
+      jmp .next_char                      ; Process next character
 
-  .done:
-ret
+    .done:
+  ret
 
 
-calculate_coordinates_vga_pointer:
-  push bx                             ; Save color
-  movzx ax, dl                        ; Extract X
-  movzx bx, dh                        ; Extract Y
-  shl ax, 3                           ; X * 8
-  shl bx, 3                           ; Y * 8
-  imul bx, SCREEN_WIDTH               ; Y * 8 * 320
-  add bx, ax                          ; Y * 8 * 320 + X * 8
-  mov di, bx                          ; Move result to DI
-  pop bx                              ; Restore color
- ret
+; =========================================== FONT SUBSYSTEM ===============|80
+font:
+  ; =========================================== DRAW STRING ================|80
+  ;  SI - Pointer to text string
+  ;  DL - X position (in character font size)
+  ;  DH - Y position (in character font size)
+  ;  BX - Color
+  .draw_string:
+    .calculate_vga_pointer:
+      push bx                             ; Save color
+      movzx ax, dl                        ; Extract X
+      movzx bx, dh                        ; Extract Y
+      shl ax, 3                           ; X * 8
+      shl bx, 3                           ; Y * 8
+      imul bx, SCREEN_WIDTH               ; Y * 8 * 320
+      add bx, ax                          ; Y * 8 * 320 + X * 8
+      mov di, bx                          ; Move result to DI
+      pop bx                              ; Restore color
 
-; =========================================== DRAW FONT TEXT ================|80
-; IN:
-;  SI - Pointer to text string
-;  DL - X position (in character font size)
-;  DH - Y position (in character font size)
-;  BX - Color
-draw_font_text:
-  call calculate_coordinates_vga_pointer
-  .next_char:
-    xor ax, ax                          ; Clear leftover in ax
-    lodsb
-    test al, al                         ; Test for 0x0 terminator in text string
-    jz .done
-    cmp ax, 32                          ; space
-    jnz .is_not_space
-      add di,FONT_SIZE
-      jmp .next_char
-    .is_not_space:
-    push si                             ; Save string pointer
-    push di
+    .next_char_loop:
+      xor ax, ax                          ; Clear leftover in ax
+      lodsb
+      test al, al                         ; Test for 0x0 terminator in text string
+      jz .done
+      cmp ax, 32                          ; space
+      jnz .is_not_space
+        add di,FONT_SIZE
+        jmp .next_char_loop
+      .is_not_space:
+      push si                             ; Save string pointer
+      push di
 
-    call draw_font_character
+      call font.draw_character
 
-    pop di
-    pop si                              ; Restore string pointer
-    add di,FONT_SIZE                    ; Next char
-  jmp .next_char
-  .done:
-ret
+      pop di
+      pop si                              ; Restore string pointer
+      add di,FONT_SIZE                    ; Next char
+    jmp .next_char_loop
+    .done:
+  ret
 
-draw_font_character:
-  .calculate_character_font_pointer:
-    sub ax, ' '                       ; Char index
-    shl ax, 3                         ; Font offset (8 bytes)
-    mov si, Font
-    add si, ax
+  .draw_character:
+    .calculate_character_font_pointer:
+      sub ax, ' '                       ; Char index
+      shl ax, 3                         ; Font offset (8 bytes)
+      mov si, Font
+      add si, ax
 
-  mov cx, FONT_SIZE
-  .char_line:
-    lodsb                             ; Load font byte
-    push cx
     mov cx, FONT_SIZE
-    .pixel:
-      shl al, 1
-      jc .draw_px                     ; Transparent
-      inc di                          ; Skip pixel
-    loop .pixel
-      jmp .next_line                  ; Jump to next line on last pixel
-      .draw_px:
-      mov [es:di], bl                 ; Color pixel
-      inc di
-    loop .pixel                       ; Next pixel
-    .next_line:
-    add di, SCREEN_WIDTH-FONT_SIZE
-    pop cx
-  loop .char_line
-ret
+    .char_line:
+      lodsb                             ; Load font byte
+      push cx
+      mov cx, FONT_SIZE
+      .pixel:
+        shl al, 1
+        jc .draw_px                     ; Transparent
+        inc di                          ; Skip pixel
+      loop .pixel
+        jmp .next_line                  ; Jump to next line on last pixel
+        .draw_px:
+        mov [es:di], bl                 ; Color pixel
+        inc di
+      loop .pixel                       ; Next pixel
+      .next_line:
+      add di, SCREEN_WIDTH-FONT_SIZE
+      pop cx
+    loop .char_line
+  ret
 
-; =========================================== DRAW NUMBER ===================|80
-; IN:
-;   SI - Value to display (decimal)
-;   DL - X position
-;   DH - Y position
-;   BX - Color
-;   CX - digits length
-draw_number:
-  mov ah, 0x02                          ; Set cursor
-  xor bh, bh                            ; Page 0
-  int 0x10
+  ; =========================================== DRAW NUMBER ===================|80
+  ; IN:
+  ;   SI - Value to display (decimal)
+  ;   DL - X position
+  ;   DH - Y position
+  ;   BX - Color
+  ;   CX - digits length
+  .draw_number:
+    mov ah, 0x02                          ; Set cursor
+    xor bh, bh                            ; Page 0
+    int 0x10
 
-  ;mov cx, 10000                         ; Divisor for 5 digits
-  mov ax, si                            ; Copy the number to AX for division
+    ;mov cx, 10000                         ; Divisor for 5 digits
+    mov ax, si                            ; Copy the number to AX for division
 
-  .next_digit:
-    xor dx, dx                          ; Clear DX for division
-    div cx                              ; Divide, remainder in DX
-    add al, '0'                         ; Convert to ASCII
+    .next_digit:
+      xor dx, dx                          ; Clear DX for division
+      div cx                              ; Divide, remainder in DX
+      add al, '0'                         ; Convert to ASCII
 
-    mov ah, 0x0E                        ; Teletype output
-    push dx                             ; Save remainder
-    push cx                             ; Save divisor
-    mov bh, 0                           ; Page 0
-    int 0x10                            ; BIOS video interrupt
-    pop cx                              ; Restore divisor
-    pop dx                              ; Restore remainder
+      mov ah, 0x0E                        ; Teletype output
+      push dx                             ; Save remainder
+      push cx                             ; Save divisor
+      mov bh, 0                           ; Page 0
+      int 0x10                            ; BIOS video interrupt
+      pop cx                              ; Restore divisor
+      pop dx                              ; Restore remainder
 
 
-    mov ax, dx                          ; Save remainder to AX
+      mov ax, dx                          ; Save remainder to AX
 
-    push ax                             ; Save current remainder
-    mov ax, cx                          ; Get current divisor in AX
-    xor dx, dx                          ; Clear DX for division
-    push bx
-    mov bx, 10                          ; Divide by 10
-    div bx                              ; AX = AX/10
-    pop bx
-    mov cx, ax                          ; Set new divisor
-    pop ax                              ; Restore current remainder
+      push ax                             ; Save current remainder
+      mov ax, cx                          ; Get current divisor in AX
+      xor dx, dx                          ; Clear DX for division
+      push bx
+      mov bx, 10                          ; Divide by 10
+      div bx                              ; AX = AX/10
+      pop bx
+      mov cx, ax                          ; Set new divisor
+      pop ax                              ; Restore current remainder
 
-    cmp cx, 0                           ; If divisor is 0, we're done
-    jne .next_digit
+      cmp cx, 0                           ; If divisor is 0, we're done
+      jne .next_digit
 
-ret
+  ret
 
 ; =========================================== GET RANDOM ====================|80
 ; OUT: AX - Random number
@@ -2601,10 +2600,6 @@ draw_sprite:
   popa
 ret
 
-; =========================================== INIT ENTITIES =================|80
-init_entities:
-ret
-
 draw_cursor:
   mov si, [_CURSOR_Y_]    ; Absolute Y map coordinate
   shl si, 7               ; Y * 128 (optimized shl for *128)
@@ -2678,7 +2673,7 @@ draw_minimap:
   mov si, WindowMinimapText
   mov dx, 0x0603
   mov bl, COLOR_BLACK
-  call draw_font_text
+  call font.draw_string
   push SEGMENT_TERRAIN_BACKGROUND
   pop ds
   .draw_mini_map:
@@ -2780,7 +2775,7 @@ draw_ui:
   mov dl, 0x0D
   mov bl, COLOR_WHITE
   mov cx, 10000
-  call draw_number
+  call font.draw_number
 
    mov di, UI_STATS_GFX_LINE+154
    mov al, TILE_ORE_YELLOW
@@ -2791,7 +2786,7 @@ draw_ui:
    mov dl, 0x15
    mov bl, COLOR_WHITE
    mov cx, 10000
-   call draw_number
+   call font.draw_number
 
    mov di, UI_STATS_GFX_LINE+218
    mov al, TILE_ORE_RED
@@ -2802,7 +2797,7 @@ draw_ui:
    mov dl, 0x1D
    mov bl, COLOR_WHITE
    mov cx, 10000
-   call draw_number
+   call font.draw_number
 
 ret
 
@@ -2813,143 +2808,144 @@ ret
 
 ; =========================================== AUDIO SYSTEM ==================|80
 
-init_audio_system:
-  push es
-  push bx
+audio:
+  .init:
+    push es
+    push bx
 
-  mov byte [_SFX_NOTE_INDEX_], 0
-  mov byte [_SFX_NOTE_DURATION_], 0
-  mov byte [_AUDIO_ENABLED_], TRUE
-  mov word [_SFX_POINTER_], SFX_NULL
-
-  mov al, 182                          ; Binary mode, square wave, 16-bit divisor
-  out 43h, al                          ; Write to PIT command register
-
-  xor ax, ax
-  mov es, ax
-  mov bx, [es:08h*4]                  ; Get offset
-  mov [_SFX_IRQ_OFFSET_], bx
-  mov bx, [es:08h*4+2]                ; Get segment
-  mov [_SFX_IRQ_SEGMENT_], bx
-
-  cli                                  ; Disable interrupts
-  mov word [es:08h*4], audio_irq_handler
-  mov [es:08h*4+2], cs
-  sti                                  ; Enable interrupts
-
-  pop bx
-  pop es
-ret
-
-audio_irq_handler:
-  push ds
-
-  push cs
-  pop ds
-
-  cmp byte [_AUDIO_ENABLED_], FALSE
-  je .skip_audio
-  call irq_update_audio
-
-.skip_audio:
-  pop ds
-
-  jmp far [cs:_SFX_IRQ_OFFSET_]
-
-irq_update_audio:
-  push ax
-  push bx
-  push si
-
-  mov si, [_SFX_POINTER_]
-  cmp si, SFX_NULL
-  je .stop_all_sound
-
-  mov bl, [_SFX_NOTE_INDEX_]
-  xor bh, bh
-  add si, bx
-  mov al, [si]
-
-  test al, al
-  jz .end_sfx
-
-  call play_note_indexed
-
-  inc byte [_SFX_NOTE_INDEX_]
-  jmp .done
-
-  .end_sfx:
-    mov word [_SFX_POINTER_], SFX_NULL
-    mov byte [_SFX_NOTE_INDEX_], 0
-
-  .stop_all_sound:
-    call stop_sound_irq
-
-  .done:
-  pop si
-  pop bx
-  pop ax
-ret
-
-play_note_indexed:
-  test al, al
-  jz .rest
-
-  movzx bx, al
-  shl bx, 1                             ; Multiply by 2 (word size)
-  mov si, NoteTable
-  add si, bx
-  mov ax, [si]
-
-  cmp ax, 0xFFFF
-  je .rest
-
-  push ax
-  mov al, 182                           ; Prepare timer
-  out 43h, al
-  pop ax
-
-  out 42h, al                           ; Low byte
-  mov al, ah
-  out 42h, al                           ; High byte
-
-  in al, 61h
-  or al, 00000011b
-  out 61h, al
-  jmp .done
-
-  .rest:
-    call stop_sound_irq
-
-  .done:
-ret
-
-stop_sound_irq:
-  in al, 61h
-  and al, 11111100b                    ; Clear bits 0-1
-  out 61h, al
-ret
-
-play_sfx:
-  cli                                  ; Atomic operation
-    mov [_SFX_POINTER_], bx
     mov byte [_SFX_NOTE_INDEX_], 0
     mov byte [_SFX_NOTE_DURATION_], 0
-  sti
-ret
+    mov byte [_AUDIO_ENABLED_], TRUE
+    mov word [_SFX_POINTER_], SFX_NULL
 
-kill_audio_system:
-  call stop_sound_irq
+    mov al, 182                          ; Binary mode, square wave, 16-bit divisor
+    out 43h, al                          ; Write to PIT command register
 
-  xor ax, ax
-  mov es, ax
-  cli                                   ; Atomic operation
-    mov ax, [_SFX_IRQ_OFFSET_]
-    mov [es:08h*4], ax
-    mov ax, [_SFX_IRQ_SEGMENT_]
-    mov [es:08h*4+2], ax
-  sti
-ret
+    xor ax, ax
+    mov es, ax
+    mov bx, [es:08h*4]                  ; Get offset
+    mov [_SFX_IRQ_OFFSET_], bx
+    mov bx, [es:08h*4+2]                ; Get segment
+    mov [_SFX_IRQ_SEGMENT_], bx
+
+    cli                                  ; Disable interrupts
+    mov word [es:08h*4], audio.irq_handler
+    mov [es:08h*4+2], cs
+    sti                                  ; Enable interrupts
+
+    pop bx
+    pop es
+    ret
+
+  .irq_handler:
+    push ds
+
+    push cs
+    pop ds
+
+    cmp byte [_AUDIO_ENABLED_], FALSE
+    je .skip_audio
+    call audio.irq_update
+
+  .skip_audio:
+    pop ds
+
+    jmp far [cs:_SFX_IRQ_OFFSET_]
+
+  .irq_update:
+    push ax
+    push bx
+    push si
+
+    mov si, [_SFX_POINTER_]
+    cmp si, SFX_NULL
+    je .stop_all_sound
+
+    mov bl, [_SFX_NOTE_INDEX_]
+    xor bh, bh
+    add si, bx
+    mov al, [si]
+
+    test al, al
+    jz .end_sfx
+
+    call audio.play_note_indexed
+
+    inc byte [_SFX_NOTE_INDEX_]
+    jmp .done_irq_update
+
+    .end_sfx:
+      mov word [_SFX_POINTER_], SFX_NULL
+      mov byte [_SFX_NOTE_INDEX_], 0
+
+    .stop_all_sound:
+      call audio.stop_sound_irq
+
+    .done_irq_update:
+    pop si
+    pop bx
+    pop ax
+    ret
+
+  .play_note_indexed:
+    test al, al
+    jz .rest
+
+    movzx bx, al
+    shl bx, 1                             ; Multiply by 2 (word size)
+    mov si, NoteTable
+    add si, bx
+    mov ax, [si]
+
+    cmp ax, 0xFFFF
+    je .rest
+
+    push ax
+    mov al, 182                           ; Prepare timer
+    out 43h, al
+    pop ax
+
+    out 42h, al                           ; Low byte
+    mov al, ah
+    out 42h, al                           ; High byte
+
+    in al, 61h
+    or al, 00000011b
+    out 61h, al
+    jmp .done_play
+
+    .rest:
+      call audio.stop_sound_irq
+
+    .done_play:
+    ret
+
+  .stop_sound_irq:
+    in al, 61h
+    and al, 11111100b                    ; Clear bits 0-1
+    out 61h, al
+    ret
+
+  .play_sfx:
+    cli                                  ; Atomic operation
+      mov [_SFX_POINTER_], bx
+      mov byte [_SFX_NOTE_INDEX_], 0
+      mov byte [_SFX_NOTE_DURATION_], 0
+    sti
+    ret
+
+  .kill:
+    call audio.stop_sound_irq
+
+    xor ax, ax
+    mov es, ax
+    cli                                   ; Atomic operation
+      mov ax, [_SFX_IRQ_OFFSET_]
+      mov [es:08h*4], ax
+      mov ax, [_SFX_IRQ_SEGMENT_]
+      mov [es:08h*4+2], ax
+    sti
+    ret
 
 
 
