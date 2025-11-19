@@ -511,7 +511,7 @@ jmp main_loop
 ; =========================================== EXIT TO DOS ===================|80
 
 exit:
-  call audio.kill
+  call audio.destroy
   mov ax, 0x0003                        ; Set video mode to 80x25 text mode
   int 0x10                              ; Call BIOS interrupt
   mov si, QuitText                      ; Draw message after exit
@@ -2700,7 +2700,7 @@ draw_minimap:
   pop es
 ret
 
-; =========================================== DRAW UI =======================|80
+; =========================================== UI SUBSYSTEM ==================|80
 
 draw_frame:
   xor di, di                            ; start at top-left corner
@@ -2744,7 +2744,7 @@ draw_frame:
   mov al, TILE_FRAME_8                  ; right-bottom corner
   call draw_sprite
 
-ret
+  ret
 
 draw_bottom_frame:
   mov di, UI_BOTTOM_FRAME
@@ -2761,7 +2761,7 @@ draw_bottom_frame:
     rep stosw
   dec dx
   jnz .stripes_loop
-ret
+  ret
 
 draw_ui:
   call draw_bottom_frame
@@ -2777,37 +2777,31 @@ draw_ui:
   mov cx, 10000
   call font.draw_number
 
-   mov di, UI_STATS_GFX_LINE+154
-   mov al, TILE_ORE_YELLOW
-   call draw_sprite
+  mov di, UI_STATS_GFX_LINE+154
+  mov al, TILE_ORE_YELLOW
+  call draw_sprite
 
-   mov si, [_ECONOMY_YELLOW_RES_]  ; Yellow resource count
-   mov dh, UI_STATS_TXT_LINE
-   mov dl, 0x15
-   mov bl, COLOR_WHITE
-   mov cx, 10000
-   call font.draw_number
+  mov si, [_ECONOMY_YELLOW_RES_]  ; Yellow resource count
+  mov dh, UI_STATS_TXT_LINE
+  mov dl, 0x15
+  mov bl, COLOR_WHITE
+  mov cx, 10000
+  call font.draw_number
 
-   mov di, UI_STATS_GFX_LINE+218
-   mov al, TILE_ORE_RED
-   call draw_sprite
+  mov di, UI_STATS_GFX_LINE+218
+  mov al, TILE_ORE_RED
+  call draw_sprite
 
-   mov si, [_ECONOMY_RED_RES_]  ; Red resource count
-   mov dh, UI_STATS_TXT_LINE
-   mov dl, 0x1D
-   mov bl, COLOR_WHITE
-   mov cx, 10000
-   call font.draw_number
+  mov si, [_ECONOMY_RED_RES_]  ; Red resource count
+  mov dh, UI_STATS_TXT_LINE
+  mov dl, 0x1D
+  mov bl, COLOR_WHITE
+  mov cx, 10000
+  call font.draw_number
 
-ret
-
-
-
-
-
+  ret
 
 ; =========================================== AUDIO SYSTEM ==================|80
-
 audio:
   .init:
     push es
@@ -2837,6 +2831,19 @@ audio:
     pop es
     ret
 
+  .destroy:
+    call audio.stop_sound_irq
+
+    xor ax, ax
+    mov es, ax
+    cli                                   ; Atomic operation
+      mov ax, [_SFX_IRQ_OFFSET_]
+      mov [es:08h*4], ax
+      mov ax, [_SFX_IRQ_SEGMENT_]
+      mov [es:08h*4+2], ax
+    sti
+    ret
+
   .irq_handler:
     push ds
 
@@ -2845,12 +2852,11 @@ audio:
 
     cmp byte [_AUDIO_ENABLED_], FALSE
     je .skip_audio
-    call audio.irq_update
+      call audio.irq_update
+    .skip_audio:
+      pop ds
 
-  .skip_audio:
-    pop ds
-
-    jmp far [cs:_SFX_IRQ_OFFSET_]
+      jmp far [cs:_SFX_IRQ_OFFSET_]
 
   .irq_update:
     push ax
@@ -2869,25 +2875,7 @@ audio:
     test al, al
     jz .end_sfx
 
-    call audio.play_note_indexed
-
-    inc byte [_SFX_NOTE_INDEX_]
-    jmp .done_irq_update
-
-    .end_sfx:
-      mov word [_SFX_POINTER_], SFX_NULL
-      mov byte [_SFX_NOTE_INDEX_], 0
-
-    .stop_all_sound:
-      call audio.stop_sound_irq
-
-    .done_irq_update:
-    pop si
-    pop bx
-    pop ax
-    ret
-
-  .play_note_indexed:
+  .play_note:
     test al, al
     jz .rest
 
@@ -2918,6 +2906,21 @@ audio:
       call audio.stop_sound_irq
 
     .done_play:
+
+    inc byte [_SFX_NOTE_INDEX_]
+    jmp .done_irq_update
+
+    .end_sfx:
+      mov word [_SFX_POINTER_], SFX_NULL
+      mov byte [_SFX_NOTE_INDEX_], 0
+
+    .stop_all_sound:
+      call audio.stop_sound_irq
+
+    .done_irq_update:
+    pop si
+    pop bx
+    pop ax
     ret
 
   .stop_sound_irq:
@@ -2928,22 +2931,9 @@ audio:
 
   .play_sfx:
     cli                                  ; Atomic operation
-      mov [_SFX_POINTER_], bx
-      mov byte [_SFX_NOTE_INDEX_], 0
-      mov byte [_SFX_NOTE_DURATION_], 0
-    sti
-    ret
-
-  .kill:
-    call audio.stop_sound_irq
-
-    xor ax, ax
-    mov es, ax
-    cli                                   ; Atomic operation
-      mov ax, [_SFX_IRQ_OFFSET_]
-      mov [es:08h*4], ax
-      mov ax, [_SFX_IRQ_SEGMENT_]
-      mov [es:08h*4+2], ax
+    mov [_SFX_POINTER_], bx
+    mov byte [_SFX_NOTE_INDEX_], 0
+    mov byte [_SFX_NOTE_DURATION_], 0
     sti
     ret
 
