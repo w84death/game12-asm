@@ -908,17 +908,17 @@ game_logic:
     mov word [_CURSOR_X_OLD_], ax
     mov word [_CURSOR_Y_OLD_], bx
     call draw_selected_cell
-    call draw_cursor
+    call ui.draw_cursor
     jmp .done
 
   .redraw_terrain:
     call draw_terrain
-    call draw_cursor
-    call draw_ui
+    call ui.draw_cursor
+    call ui.draw_footer
     jmp .done
 
   .done:
-  call draw_frame
+  call ui.draw_screen_frame
 ret
 
 ; in:
@@ -1432,7 +1432,7 @@ init_briefing:
   mov si, landing_image
   call draw_rle_image
 
-  call draw_minimap
+  call ui.draw_map
   mov byte [_GAME_STATE_], STATE_BRIEFING
   mov byte [_SCENE_MODE_], SCENE_MODE_BRIEFING
   call window_logic.create_window
@@ -1539,9 +1539,9 @@ ret
 
 init_game:
   call draw_terrain
-  call draw_cursor
-  call draw_frame
-  call draw_ui
+  call ui.draw_cursor
+  call ui.draw_screen_frame
+  call ui.draw_footer
   mov byte [_GAME_STATE_], STATE_GAME
   mov byte [_SCENE_MODE_], SCENE_MODE_ANY
 
@@ -1554,7 +1554,7 @@ live_game:
 ret
 
 init_map_view:
-  call draw_minimap
+  call ui.draw_map
   mov byte [_GAME_STATE_], STATE_MAP_VIEW
 
   ;mov bx, MAP_JINGLE
@@ -2600,206 +2600,208 @@ draw_sprite:
   popa
 ret
 
-draw_cursor:
-  mov si, [_CURSOR_Y_]    ; Absolute Y map coordinate
-  shl si, 7               ; Y * 128 (optimized shl for *128)
-  add si, [_CURSOR_X_]    ; + absolute X map coordinate
 
-  mov bx, [_CURSOR_Y_]    ; Y coordinate
-  sub bx, [_VIEWPORT_Y_]  ; Y - Viewport Y
-  shl bx, 4               ; Y * 16
-  mov ax, [_CURSOR_X_]    ; X coordinate
-  sub ax, [_VIEWPORT_X_]  ; X - Viewport X
-  shl ax, 4               ; X * 16
-  imul bx, SCREEN_WIDTH   ; Y * 16 * 320
-  add bx, ax              ; Y * 16 * 320 + X * 16
-  mov di, bx              ; Move result to DI
-
-  push es
-  push ds
-
-  push SEGMENT_TERRAIN_BACKGROUND
-  pop es
-
-  push SEGMENT_TERRAIN_FOREGROUND
-  pop ds
-
-  mov al, [ds:si]
-  and al, CURSOR_TYPE_MASK
-  rol al, CURSOR_TYPE_ROL
-  add al, TILE_CURSOR_PAN
-  mov bl, al
-
-  test byte [es:si], INFRASTRUCTURE_MASK ; If not a building then skip arrows
-  jz .no_infra
-
-  test byte [ds:si], CURSOR_TYPE_MASK   ; If it's a pointer then skip arrows
-  jz .no_infra
-
-  push SEGMENT_META_DATA
-  pop ds
-
-  mov al, [ds:si]
-  and al, TILE_DIRECTION_MASK
-  add al, TILE_IO_RIGHT
-
-  pop ds
-  pop es
-
-  call draw_sprite                      ; draw the in/out arrow
-
-  mov al, bl
-  call draw_sprite                      ; draw cursor
-  jmp .done
-
-  .no_infra:
-    pop ds
-    pop es
-    call draw_sprite                    ; draw cursor
-  .done:
-ret
-
-draw_minimap:
-  push es
-  push ds
-
-  push SEGMENT_VGA
-  pop es
-
-  mov ax, 0x0602
-  mov bx, 0x0909
-  call draw_window
-
-  mov si, WindowMinimapText
-  mov dx, 0x0603
-  mov bl, COLOR_BLACK
-  call font.draw_string
-  push SEGMENT_TERRAIN_BACKGROUND
-  pop ds
-  .draw_mini_map:
-  xor si, si
-  mov di, SCREEN_WIDTH*59+39-16          ; Map position on screen
-  mov bx, TerrainColors      ; Terrain colors array
-  mov cx, MAP_SIZE           ; Columns
-  .draw_loop:
-    push cx
-    mov cx, MAP_SIZE        ; Rows
-    .draw_row:
-      mov al, [ds:si]                ; Load map cell
-      inc si
-      and al, BACKGROUND_SPRITE_MASK ; Clear metadata
-      ; TODO: colors
-      mov [es:di], al      ; Draw 1 pixels
-      add di, 1            ; Move to next column
-    loop .draw_row
-    pop cx
-    add di, 320-MAP_SIZE    ; Move to next row
-  loop .draw_loop
-
-  pop ds
-  pop es
-ret
 
 ; =========================================== UI SUBSYSTEM ==================|80
+ui:
+  .draw_screen_frame:
+    xor di, di                            ; start at top-left corner
 
-draw_frame:
-  xor di, di                            ; start at top-left corner
-
-  mov al, TILE_FRAME_1                  ; left-top corner
-  call draw_sprite
-
-  add di, SPRITE_SIZE
-  mov al, TILE_FRAME_2                  ; top frame
-  mov cx, 18
-  .top_loop:
+    mov al, TILE_FRAME_1                  ; left-top corner
     call draw_sprite
+
     add di, SPRITE_SIZE
-  loop .top_loop
+    mov al, TILE_FRAME_2                  ; top frame
+    mov cx, 18
+    .top_loop:
+      call draw_sprite
+      add di, SPRITE_SIZE
+    loop .top_loop
 
-  mov al, TILE_FRAME_3                  ; right-top corner
-  call draw_sprite
+    mov al, TILE_FRAME_3                  ; right-top corner
+    call draw_sprite
 
-  add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
-  mov cx, 9
-  .vertical_loop:
-    mov al, TILE_FRAME_4                  ; left frame
-    call draw_sprite
-    add di, 19*SPRITE_SIZE
-    mov al, TILE_FRAME_5                  ; right frame
-    call draw_sprite
     add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
-  loop .vertical_loop
+    mov cx, 9
+    .vertical_loop:
+      mov al, TILE_FRAME_4                  ; left frame
+      call draw_sprite
+      add di, 19*SPRITE_SIZE
+      mov al, TILE_FRAME_5                  ; right frame
+      call draw_sprite
+      add di, 320*SPRITE_SIZE+SPRITE_SIZE-320
+    loop .vertical_loop
 
-  mov al, TILE_FRAME_6                  ; left-bottom corner
-  call draw_sprite
-
-  add di, SPRITE_SIZE
-  mov al, TILE_FRAME_7                  ; bottom frame
-  mov cx, 18
-  .bottom_loop:
+    mov al, TILE_FRAME_6                  ; left-bottom corner
     call draw_sprite
+
     add di, SPRITE_SIZE
-  loop .bottom_loop
+    mov al, TILE_FRAME_7                  ; bottom frame
+    mov cx, 18
+    .bottom_loop:
+      call draw_sprite
+      add di, SPRITE_SIZE
+    loop .bottom_loop
 
-  mov al, TILE_FRAME_8                  ; right-bottom corner
-  call draw_sprite
+    mov al, TILE_FRAME_8                  ; right-bottom corner
+    call draw_sprite
 
-  ret
+    ret
 
-draw_bottom_frame:
-  mov di, UI_BOTTOM_FRAME
+  .draw_footer_background:
+    mov di, UI_BOTTOM_FRAME
 
-  mov dx, 12
-  .stripes_loop:
-    mov cx, 320/2
-    mov al, COLOR_DEEP_PURPLE
-    mov ah, al
-    rep stosw
-    mov cx, 320/2
-    mov al, COLOR_NAVY_BLUE
-    mov ah, al
-    rep stosw
-  dec dx
-  jnz .stripes_loop
-  ret
+    mov dx, 12
+    .stripes_loop:
+      mov cx, 320/2
+      mov al, COLOR_DEEP_PURPLE
+      mov ah, al
+      rep stosw
+      mov cx, 320/2
+      mov al, COLOR_NAVY_BLUE
+      mov ah, al
+      rep stosw
+    dec dx
+    jnz .stripes_loop
+    ret
 
-draw_ui:
-  call draw_bottom_frame
+  .draw_footer:
+    call ui.draw_footer_background
 
-  mov di, UI_STATS_GFX_LINE+90   ; Resource blue icon
-  mov al, TILE_ORE_BLUE
-  call draw_sprite
+    mov di, UI_STATS_GFX_LINE+90   ; Resource blue icon
+    mov al, TILE_ORE_BLUE
+    call draw_sprite
 
-  mov si, [_ECONOMY_BLUE_RES_]  ; Blue resource count
-  mov dh, UI_STATS_TXT_LINE
-  mov dl, 0x0D
-  mov bl, COLOR_WHITE
-  mov cx, 10000
-  call font.draw_number
+    mov si, [_ECONOMY_BLUE_RES_]  ; Blue resource count
+    mov dh, UI_STATS_TXT_LINE
+    mov dl, 0x0D
+    mov bl, COLOR_WHITE
+    mov cx, 10000
+    call font.draw_number
 
-  mov di, UI_STATS_GFX_LINE+154
-  mov al, TILE_ORE_YELLOW
-  call draw_sprite
+    mov di, UI_STATS_GFX_LINE+154
+    mov al, TILE_ORE_YELLOW
+    call draw_sprite
 
-  mov si, [_ECONOMY_YELLOW_RES_]  ; Yellow resource count
-  mov dh, UI_STATS_TXT_LINE
-  mov dl, 0x15
-  mov bl, COLOR_WHITE
-  mov cx, 10000
-  call font.draw_number
+    mov si, [_ECONOMY_YELLOW_RES_]  ; Yellow resource count
+    mov dh, UI_STATS_TXT_LINE
+    mov dl, 0x15
+    mov bl, COLOR_WHITE
+    mov cx, 10000
+    call font.draw_number
 
-  mov di, UI_STATS_GFX_LINE+218
-  mov al, TILE_ORE_RED
-  call draw_sprite
+    mov di, UI_STATS_GFX_LINE+218
+    mov al, TILE_ORE_RED
+    call draw_sprite
 
-  mov si, [_ECONOMY_RED_RES_]  ; Red resource count
-  mov dh, UI_STATS_TXT_LINE
-  mov dl, 0x1D
-  mov bl, COLOR_WHITE
-  mov cx, 10000
-  call font.draw_number
+    mov si, [_ECONOMY_RED_RES_]  ; Red resource count
+    mov dh, UI_STATS_TXT_LINE
+    mov dl, 0x1D
+    mov bl, COLOR_WHITE
+    mov cx, 10000
+    call font.draw_number
 
-  ret
+    ret
+
+  .draw_cursor:
+    mov si, [_CURSOR_Y_]    ; Absolute Y map coordinate
+    shl si, 7               ; Y * 128 (optimized shl for *128)
+    add si, [_CURSOR_X_]    ; + absolute X map coordinate
+
+    mov bx, [_CURSOR_Y_]    ; Y coordinate
+    sub bx, [_VIEWPORT_Y_]  ; Y - Viewport Y
+    shl bx, 4               ; Y * 16
+    mov ax, [_CURSOR_X_]    ; X coordinate
+    sub ax, [_VIEWPORT_X_]  ; X - Viewport X
+    shl ax, 4               ; X * 16
+    imul bx, SCREEN_WIDTH   ; Y * 16 * 320
+    add bx, ax              ; Y * 16 * 320 + X * 16
+    mov di, bx              ; Move result to DI
+
+    push es
+    push ds
+
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop es
+
+    push SEGMENT_TERRAIN_FOREGROUND
+    pop ds
+
+    mov al, [ds:si]
+    and al, CURSOR_TYPE_MASK
+    rol al, CURSOR_TYPE_ROL
+    add al, TILE_CURSOR_PAN
+    mov bl, al
+
+    test byte [es:si], INFRASTRUCTURE_MASK ; If not a building then skip arrows
+    jz .no_infra
+
+    test byte [ds:si], CURSOR_TYPE_MASK   ; If it's a pointer then skip arrows
+    jz .no_infra
+
+    push SEGMENT_META_DATA
+    pop ds
+
+    mov al, [ds:si]
+    and al, TILE_DIRECTION_MASK
+    add al, TILE_IO_RIGHT
+
+    pop ds
+    pop es
+
+    call draw_sprite                      ; draw the in/out arrow
+
+    mov al, bl
+    call draw_sprite                      ; draw cursor
+    jmp .done
+
+    .no_infra:
+      pop ds
+      pop es
+      call draw_sprite                    ; draw cursor
+    .done:
+    ret
+
+  .draw_map:
+    push es
+    push ds
+
+    push SEGMENT_VGA
+    pop es
+
+    mov ax, 0x0602
+    mov bx, 0x0909
+    call draw_window
+
+    mov si, WindowMinimapText
+    mov dx, 0x0603
+    mov bl, COLOR_BLACK
+    call font.draw_string
+    push SEGMENT_TERRAIN_BACKGROUND
+    pop ds
+    .draw_mini_map:
+    xor si, si
+    mov di, SCREEN_WIDTH*59+39-16          ; Map position on screen
+    mov bx, TerrainColors      ; Terrain colors array
+    mov cx, MAP_SIZE           ; Columns
+    .draw_loop:
+      push cx
+      mov cx, MAP_SIZE        ; Rows
+      .draw_row:
+        mov al, [ds:si]                ; Load map cell
+        inc si
+        and al, BACKGROUND_SPRITE_MASK ; Clear metadata
+        ; TODO: colors
+        mov [es:di], al      ; Draw 1 pixels
+        add di, 1            ; Move to next column
+      loop .draw_row
+      pop cx
+      add di, 320-MAP_SIZE    ; Move to next row
+    loop .draw_loop
+
+    pop ds
+    pop es
+    ret
 
 ; =========================================== AUDIO SYSTEM ==================|80
 audio:
