@@ -1352,7 +1352,7 @@ ret
 init_engine:
   call reset_to_default_values
   call audio.init
-  call decompress_tiles
+  call decompress_all_tiles
   call generate_map
   call build_initial_base
   mov byte [_GAME_STATE_], STATE_P1X_SCREEN_INIT
@@ -1938,13 +1938,11 @@ draw_rle_image:
 ret
 
 ; =========================================== DRAW WINDOW ===================|80
+; AX - Position of top/left corner; high:Y, low:X
+; BX - Size of window; high: height, low: width
 ; Window is drown over 8x8 grid in sprites size (16px each). Uses 9 tiles for
 ; drawing the window.
-; IN:
-;   AX - Position of top/left corner; high:Y, low:X
-;   BX - Size of window; high: height, low: width
 draw_window:
-
   .calculate_uposition:
   push bx                               ; Save the size
   xor di, di
@@ -2039,8 +2037,7 @@ draw_window:
   .bottom_right:
   inc ax                                ; Set next sprite (bottom right corner)
   call draw_sprite
-ret
-
+  ret
 
 ; =========================================== GENERATE MAP ==================|80
 ; Generates the procedural map using simple rules (TerrainRules)
@@ -2121,7 +2118,7 @@ generate_map:
 
   pop ds
   pop es
-ret
+  ret
 
 ; =========================================== BUILD INITIAL BASE FOUNDATIONS |80
 ; Sets up initial base foundations, rocket
@@ -2167,10 +2164,11 @@ build_initial_base:
 
   pop ds
   pop es
-ret
+  ret
 
 ; =========================================== DRAW TERRAIN ==================|80
-; OUT: Terrain drawn on the screen
+; Draw part of the terrain visible in a viewport
+; Set by VIEWPORT_WIDTH, VIEWPORT_HEIGHT
 draw_terrain:
   push es
   push ds
@@ -2206,8 +2204,7 @@ draw_terrain:
 
   pop ds
   pop es
-ret
-
+  ret
 
 draw_selected_cell:
   push si
@@ -2240,7 +2237,7 @@ draw_selected_cell:
   pop es
   pop di
   pop si
-ret
+  ret
 
 draw_single_cell:
   push si
@@ -2296,7 +2293,7 @@ draw_single_cell:
   pop es
   pop di
   pop si
-ret
+  ret
 
 draw_cell:
   mov al, [es:si]                   ; SEGMENT_TERRAIN_BACKGROUND
@@ -2360,12 +2357,12 @@ draw_cell:
         pop es
     .skip_rails_stuff:
   .skip_foreground:
-ret
+  ret
 
 ; =================================== RECALCULATE RAILS =====================|80
-; di: pos
-; es background
-; ds foreground
+; DI - Position on map
+; ES - SEGMENT_TERRAIN_BACKGROUND
+; DS - SEGMENT_TERRAIN_FOREGROUND
 recalculate_rails:
   xor ax, ax
   test byte [es:di], RAIL_MASK
@@ -2466,20 +2463,19 @@ recalculate_rails:
     mov byte [ds:di], al
 
   .done:
-ret
-
+  ret
 
 ; =========================================== DECOMPRESS SPRITE ============|80
-; IN: SI - Compressed sprite data address
+; SI - Compressed sprite data address
 ; DI - sprites memory data address
-; OUT: Sprite decompressed to _TILES_
+; Sprite decompression to memory at _TILES_
 decompress_sprite:
   lodsb
   movzx dx, al   ; save palette
   shl dx, 2      ; multiply by 4 (palette size)
 
   mov cx, SPRITE_SIZE   ; Sprite width
-.plot_line:
+  .plot_line:
     push cx           ; Save lines
     lodsw             ; Load 16 pixels
 
@@ -2505,11 +2501,11 @@ decompress_sprite:
 
   pop cx                   ; Restore line counter
   loop .plot_line
-ret
+  ret
 
-; =========================================== DECOMPRESS TILES ============|80
-; OUT: Tiles decompressed to _TILES_
-decompress_tiles:
+; =========================================== DECOMPRESS ALL TILES ==========|80
+; Decompressing all tiles and sprites (transparent pixel)
+decompress_all_tiles:
   push es
   push cs                               ; GAME CODE SEGMENT
   pop es
@@ -2521,13 +2517,13 @@ decompress_tiles:
   jmp .decompress_next
   .done:
   pop es
-ret
+  ret
 
 ; =========================================== DRAW TILE =====================|80
 ; IN: SI - Tile data
 ; AL - Tile ID
 ; DI - Position
-; OUT: Tile drawn on the screen
+; Drawing opaque tile on screen
 draw_tile:
   pusha
 
@@ -2554,13 +2550,12 @@ draw_tile:
   pop es
   pop ds
   popa
-ret
+  ret
 
 ; =========================================== DRAW SPRITE ===================|80
-; IN:
 ; AL - Sprite ID
 ; DI - Position
-; OUT: Sprite drawn on the screen
+; Drawing transparent sprite on screen
 draw_sprite:
   pusha
   push ds
@@ -2598,7 +2593,7 @@ draw_sprite:
   pop es
   pop ds
   popa
-ret
+  ret
 
 
 
@@ -2939,9 +2934,6 @@ audio:
     sti
     ret
 
-
-
-
 ; =========================================== LOGIC FOR GAME STATES =========|80
 
 ; This table needs to corespond to the STATE_ variables IDs
@@ -3023,92 +3015,7 @@ InputTable:
   dw ror_help_page
 InputTableEnd:
 
-; =========================================== TEXT DATA =====================|80
 
-CreatedByText db 'HUMAN CODED ASSEMBLY BY',0x0
-KKJText db 'KRZYSZTOF KRYSTIAN JANKOWSKI',0x0
-PressEnterText db 'PRESS ENTER', 0x0
-MainMenuCopyText db '(MIT) 2025 P1X',0x0
-QuitText db 'Thanks for playing!',0x0D,0x0A,'Visit http://smol.p1x.in/assembly for more...', 0x0D, 0x0A, 0x0
-
-Fontset1Text db ' !',34,'#$%&',39,'()*+,-./:;<=>?',0x0
-Fontset2Text db '@ 0123456789',0x0
-Fontset3Text db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',0x0
-
-
-HelpFooter1Text db '> PRESS ENTER FOR NEXT PAGE',0x0
-HelpFooter2Text db '< PRESS ESC TO BACK TO MAIN MENU',0x0
-
-HelpPage0Text:
-  db 'CORTEX LABS - QUICK HELP!',0x0
-  db ' ',0x0
-  db '-------------------------------------',0x0
-  db 'FOR FULL MANUAL CHECK @ FLOPPY IN DOS',0x0
-  db 'READ > MANUAL.TXT < FILE',0x0
-  db '-------------------------------------',0x0
-  db ' ',0x0
-  db 'TABLE OF CONTENT',0x0
-  db '- GAME IDEA',0x0
-  db '- BASE EXPANSION & BUILDINGS',0x0
-  db '- RAILS MANAGEMENT',0x0
-  db '- RESOURCES & UPGRADES',0x0
-  db '- PAGE 5',0x0
-  db '- PAGE 6',0x0
-  db '- PAGE 7',0x0
-  db 0x00
-
-HelpPage1Text:
-  db 'GAME IDEA',0x0
-  db ' ',0x0
-  db 'CORTEX LABS IS A STRATEGY PUZZLE GAME.',0x00
-  db 'YOUR MISSION IS TO EXTRACT, REFINE,',0x0
-  db 'AND RETURN RESOURCES ON OTHER PLANET.',0x0
-  db '-------------------------------------',0x0
-  db 0x00
-
-HelpPage2Text:
-  db 'BASE EXPANSION & BUILDINGS',0x0
-  db ' ',0x0
-  db 'PAGE 2 OF 7',0x0
-  db 0x00
-
-HelpPage3Text:
-  db 'RAILS MANAGEMENT',0x0
-  db ' ',0x0
-  db 'PAGE 3 OF 7',0x0
-  db 0x00
-
-HelpPage4Text:
-  db 'RESOURCES & UPGRADES',0x0
-  db ' ',0x0
-  db 'PAGE 4 OF 7',0x0
-  db 0x00
-
-HelpPage5Text:
-db 'PAGE 5',0x0
-db ' ',0x0
-db 'PAGE 5 OF 7',0x0
-db 0x00
-HelpPage6Text:
-db 'PAGE 6',0x0
-db ' ',0x0
-db 'PAGE 6 OF 7',0x0
-db 0x00
-HelpPage7Text:
-  db 'PAGE 7',0x0
-  db ' ',0x0
-  db 'PAGE 7 OF 7',0x0
-  db 0x00
-
-HelpArrayText:
-  dw HelpPage0Text
-  dw HelpPage1Text
-  dw HelpPage2Text
-  dw HelpPage3Text
-  dw HelpPage4Text
-  dw HelpPage5Text
-  dw HelpPage6Text
-  dw HelpPage7Text
 
 ; =========================================== WINDOWS DEFINITIONS ===========|80
 
@@ -3233,6 +3140,7 @@ db 0, 0, 1, 4, 0, 0, 3, 9, 1, 6, 1, 10, 5, 7, 8, 2
 
 ; =========================================== INCLUDES ======================|80
 
+include 'text_en.asm'
 include 'font.asm'
 include 'sfx.asm'
 include 'tiles.asm'
