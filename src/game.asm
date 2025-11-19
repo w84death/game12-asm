@@ -1,5 +1,5 @@
 ; ===========================================================================|80
-; CORTEX LABS - 2D Strategic game for x86 processors (and MS-DOS)
+; CORTEX LABS - 2D Strategic game for x86 processors (and Free/MS-DOS)
 ;
 ; Real-time strategy, economic game about extracting and managing resources.
 ; Havely based on building optimized train (pods) lines.
@@ -10,7 +10,9 @@
 ; This is free and open software. See LICENSE for details.
 ; ===========================================================================|80
 ;
-; Should run on any x86 processor and system that supports legacy BIOS boot.
+; Should run on any x86 processor and system that supports legacy BIOS.
+; Can boot to baremetal or run on MS-DOS/FreeDOS from COM file.
+;
 ; Tested hardware:
 ; Compaq Contura 430C (FreeDOS & Boot Floppy)
 ; * CPU: 486 DX4, 100Mhz
@@ -30,24 +32,21 @@
 ;   - custom tool for RLE image compression
 ;
 ; ===========================================================================|80
-; Latest revision: 10/2025
-; ===========================================================================|80
 
 org 0x0100
 
 ; =========================================== MEMORY LAYOUT =================|80
 
-GAME_STACK_POINTER          equ 0xFFFE    ; Stack pointer for game code
-SEGMENT_SPRITES             equ 0x5400    ; 96 tiles (6KB)
-SEGMENT_TERRAIN_BACKGROUND  equ 0x6400    ; First map layer (16KB)
-SEGMENT_TERRAIN_FOREGROUND  equ 0x6800    ; Second map layer (16KB)
-SEGMENT_META_DATA           equ 0x6C00    ; Third map layer (16KB)
-SEGMENT_RESERVED            equ 0x7000    ; Fourth map layer (16KB)
-SEGMENT_ENTITIES            equ 0x7400    ; Entities data
-SEGMENT_VGA                 equ 0xA000    ; VGA memory (fixed by hardware)
-
-OFFSET_ENTITIES_PODS        equ 0x0000
-OFFSET_ENTITIES_RESOURCES   equ 0x0400
+SEGMENT_VGA                 equ 0xA000  ; VGA memory (fixed by hardware)
+GAME_STACK_POINTER          equ 0xFFFE  ; Stack pointer for game code
+SEGMENT_SPRITES             equ 0x5400  ; 96 tiles (6KB)
+SEGMENT_TERRAIN_BACKGROUND  equ 0x6400  ; Terrain first layer (16KB)
+SEGMENT_TERRAIN_FOREGROUND  equ 0x6800  ; Terrain second layer (16KB)
+SEGMENT_META_DATA           equ 0x6C00  ; Terrain third layer (16KB)
+SEGMENT_RESERVED            equ 0x7000  ; Terrain fourth layer (16KB)
+SEGMENT_ENTITIES            equ 0x7400  ; Entities data (pointers)
+OFFSET_ENTITIES_PODS        equ 0x0000  ; Pods
+OFFSET_ENTITIES_RESOURCES   equ 0x0400  ; Resources
 
 ; =========================================== MEMORY ALLOCATION =============|80
 
@@ -383,7 +382,7 @@ KB_0        equ 0x0B
 
 ; =========================================== INITIALIZATION ================|80
 
-start:
+init:
   mov ax, 0x13                          ; Init 320x200, 256 colors mode
   int 0x10                              ; Video BIOS interrupt
   cld                                   ; Clear DF to ensure forward string ops
@@ -533,7 +532,7 @@ game_logic:
     cmp word [_CURSOR_Y_], ax           ; check if cursor at the top edge
     je .move_viewport_up                ; try move the viewport up
     dec word [_CURSOR_Y_]               ; or just move the cursor up
-  jmp .redraw_old_tile
+    jmp .redraw_old_tile
 
   .move_cursor_down:
     mov ax, [_VIEWPORT_Y_]              ; viewport top position
@@ -542,7 +541,7 @@ game_logic:
     jae .move_viewport_down             ; try to move viewport down
 
     inc word [_CURSOR_Y_]               ; or just move the cursor down
-  jmp .redraw_old_tile
+    jmp .redraw_old_tile
 
   .move_cursor_left:
     mov ax, [_VIEWPORT_X_]              ; viewport left position
@@ -551,7 +550,7 @@ game_logic:
     je .move_viewport_left              ; try to move viewport left
 
     dec word [_CURSOR_X_]               ; or just move the cursor left
-  jmp .redraw_old_tile
+    jmp .redraw_old_tile
 
   .move_cursor_right:
     mov ax, [_VIEWPORT_X_]              ; viewport left position
@@ -560,7 +559,7 @@ game_logic:
     jae .move_viewport_right            ; try to move viewport right
 
     inc word [_CURSOR_X_]               ; or just move the cursor right
-  jmp .redraw_old_tile
+    jmp .redraw_old_tile
 
   .move_viewport_up:
     cmp word [_VIEWPORT_Y_], 0          ; check if viewport at the top edge
@@ -569,7 +568,7 @@ game_logic:
     dec word [_CURSOR_Y_]               ; move cursor up
     mov bx, [_CURSOR_Y_]
     mov word [_CURSOR_Y_OLD_], bx
-  jmp .redraw_terrain
+    jmp .redraw_terrain
 
   .move_viewport_down:
     cmp word [_VIEWPORT_Y_], MAP_SIZE-VIEWPORT_HEIGHT ; check if viewport at the bottom edge of ma26p
@@ -578,7 +577,7 @@ game_logic:
     inc word [_CURSOR_Y_]               ; move cursor down
     mov bx, [_CURSOR_Y_]
     mov word [_CURSOR_Y_OLD_], bx
-  jmp .redraw_terrain
+    jmp .redraw_terrain
 
   .move_viewport_left:
     cmp word [_VIEWPORT_X_], 0          ; check if viewport at the left edge of map
@@ -587,7 +586,7 @@ game_logic:
     dec word [_CURSOR_X_]               ; move cursor left
     mov ax, [_CURSOR_X_]
     mov word [_CURSOR_X_OLD_], ax
-  jmp .redraw_terrain
+    jmp .redraw_terrain
 
   .move_viewport_right:
     cmp word [_VIEWPORT_X_], MAP_SIZE-VIEWPORT_WIDTH ; check if viewport at the right edge of map
@@ -596,8 +595,7 @@ game_logic:
     inc word [_CURSOR_X_]               ; move cursor right
     mov ax, [_CURSOR_X_]
     mov word [_CURSOR_X_OLD_], ax
-  jmp .redraw_terrain
-
+    jmp .redraw_terrain
 
   .change_action:
     push es
@@ -651,7 +649,7 @@ game_logic:
     .change_action_done:
     pop ds
     pop es
-  jmp .redraw_tile
+    jmp .redraw_tile
 
   .build_action:
     push es
@@ -742,7 +740,7 @@ game_logic:
     .build_action_done:
     pop ds
     pop es
-  jmp .redraw_tile
+    jmp .redraw_tile
 
   .calculate_pods:
     push es
@@ -873,7 +871,7 @@ game_logic:
 
     pop ds
     pop es
-  jmp .done
+    jmp .done
 
   .redraw_four_tiles:
     mov ax, [_CURSOR_X_]
@@ -919,7 +917,7 @@ game_logic:
 
   .done:
   call ui.draw_screen_frame
-ret
+  ret
 
 ; in:
 ; DI position
@@ -944,7 +942,7 @@ calculate_directed_tile:
     ret
   .check_right:
     inc di
-ret
+    ret
 
 actions_logic:
 
@@ -986,9 +984,9 @@ actions_logic:
       mov byte [ds:di+MAP_SIZE], bl
     .skip_down:
 
-  pop ds
-  pop es
-  jmp .done
+    pop ds
+    pop es
+    jmp .done
 
   .place_station:
     mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
@@ -1045,7 +1043,7 @@ actions_logic:
 
     pop ds
     pop es
-  jmp .done
+    jmp .done
 
   .place_building:
     mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
@@ -1073,10 +1071,10 @@ actions_logic:
 
     pop ds
     pop es
-  jmp .done
+    jmp .done
 
   .inspect_building:
-  jmp .done
+    jmp .done
 
   .build_pods_station:
     mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
@@ -1130,7 +1128,7 @@ actions_logic:
     .skip_station:
     pop ds
     pop es
-  jmp .done
+    jmp .done
 
   .build_pod:
     mov di, [_CURSOR_Y_]    ; Absolute Y map coordinate
@@ -1185,15 +1183,15 @@ actions_logic:
     pop es
     mov [es:si], di
     pop es
-  jmp .done
+    jmp .done
 
   .done:
-ret
+    ret
 
   .skip_build_pod:
-  pop ds
-  pop es
-ret
+    pop ds
+    pop es
+    ret
 
 ; DI current
 ; al direction
@@ -1217,7 +1215,7 @@ get_target_tile:
   .test_down:
     add di, MAP_SIZE
   .test_done:
-ret
+  ret
 
 window_logic:
   .create_window:
@@ -1270,10 +1268,10 @@ window_logic:
     .done_menu_array:
     dec cl
     mov byte [_MENU_SELECTION_MAX_], cl
-  jmp .done
+    jmp .done
 
   .done:
-ret
+    ret
 
 menu_logic:
   .selection_up:
