@@ -482,6 +482,7 @@ check_keyboard:
   mov bx, dx                            ; Store low word of tick count
   mov si, cx                            ; Store high word of tick count
   .wait_loop:
+    hlt
     xor ax, ax
     int 0x1a
     cmp cx, si                          ; Compare high word
@@ -916,8 +917,8 @@ game_logic:
     jmp .done
 
   .done:
-  call ui.draw_screen_frame
-  ret
+    call ui.draw_screen_frame
+    ret
 
 ; in:
 ; DI position
@@ -1219,6 +1220,7 @@ get_target_tile:
 
 window_logic:
   .create_window:
+
   .redraw_window:
     mov si, WindowDefinitionsArray
     xor ax, ax
@@ -1280,7 +1282,7 @@ menu_logic:
     dec byte [_MENU_SELECTION_POS_]
     mov bx, SFX_MENU_UP
     call audio.play_sfx
-  jmp window_logic.redraw_window
+    jmp window_logic.redraw_window
 
   .selection_down:
     mov al, [_MENU_SELECTION_POS_]
@@ -1289,10 +1291,11 @@ menu_logic:
     inc byte [_MENU_SELECTION_POS_]
     mov bx, SFX_MENU_DOWN
     call audio.play_sfx
-  jmp window_logic.redraw_window
+    jmp window_logic.redraw_window
 
   .game_menu_enter:
     mov byte [_GAME_STATE_], STATE_GAME_INIT
+
   .main_menu_enter:
     mov bx, SFX_MENU_ENTER
     call audio.play_sfx
@@ -1308,44 +1311,44 @@ menu_logic:
     add si, ax
     mov ax, [si+2]
     call word [si]
-  jmp .done
+    jmp .done
 
   .start_game:
     mov byte [_GAME_STATE_], STATE_GAME_INIT
-  jmp .done
+    jmp .done
 
   .generate_new_map:
     mov byte [_GAME_STATE_], STATE_GAME_NEW
-  jmp .done
+    jmp .done
 
   .tailset_preview:
     mov byte [_GAME_STATE_], STATE_DEBUG_VIEW_INIT
-  jmp .done
+    jmp .done
 
   .help:
     mov byte [_GAME_STATE_], STATE_HELP_INIT
-  jmp .done
+    jmp .done
 
   .quit:
     mov byte [_GAME_STATE_], STATE_QUIT
-  jmp .done
+    jmp .done
 
   .close_window:
     mov byte [_GAME_STATE_], STATE_GAME_INIT
-  jmp .done
+    jmp .done
 
   .show_brief:
     mov byte [_GAME_STATE_], STATE_BRIEFING_INIT
-  jmp .done
+    jmp .done
 
   .back_to_menu:
     mov byte [_GAME_STATE_], STATE_MENU_INIT
-  jmp .done
+    jmp .done
 
   .done:
-ret
+    ret
 
-; ======================================= PROCEDURES FOR GAME STATES ===C====|80
+; ======================================= PROCEDURES FOR GAME STATES ========|80
 
 init_engine:
   call reset_to_default_values
@@ -1738,7 +1741,10 @@ font:
       movzx bx, dh                        ; Extract Y
       shl ax, 3                           ; X * 8
       shl bx, 3                           ; Y * 8
-      imul bx, SCREEN_WIDTH               ; Y * 8 * 320
+      mov cx, bx      ; make copy of Y
+      shl bx, 8       ; Y * 256
+      shl cx, 6       ; Y * 64
+      add bx, cx      ; BX = Y * 320
       add bx, ax                          ; Y * 8 * 320 + X * 8
       mov di, bx                          ; Move result to DI
       pop bx                              ; Restore color
@@ -1947,7 +1953,10 @@ draw_window:
   xor bx, bx
   mov bl, ah                            ; Y coord from high bits
   shl bx, 0x3                           ; Y * 8 (grid size)
-  imul bx, SCREEN_WIDTH                 ; Multiply by vertical lines
+  mov dx, bx      ; make copy of Y
+  shl bx, 8       ; Y * 256
+  shl dx, 6       ; Y * 64
+  add bx, dx      ; BX = Y * 320
   and ax, 0x00FF                        ; X, remove high bits, keep low bits
   shl ax, 0x3                           ; X * 8 (grid size)
   add bx, ax                            ; Add X to coords
@@ -2216,7 +2225,10 @@ draw_selected_cell:
   shl bx, 4               ; Y * 16
   sub ax, [_VIEWPORT_X_]  ; X - Viewport X
   shl ax, 4               ; X * 16
-  imul bx, SCREEN_WIDTH   ; Y * 16 * 320
+  mov dx, bx      ; make copy of Y
+  shl bx, 8       ; Y * 256
+  shl dx, 6       ; Y * 64
+  add bx, dx      ; BX = Y * 320
   add bx, ax              ; Y * 16 * 320 + X * 16
   mov di, bx              ; Move result to DI
 
@@ -2274,7 +2286,10 @@ draw_single_cell:
     shl bx, 4
     sub ax, [es:_VIEWPORT_X_]
     shl ax, 4
-    imul bx, SCREEN_WIDTH
+    mov dx, bx      ; make copy of Y
+    shl bx, 8       ; Y * 256
+    shl dx, 6       ; Y * 64
+    add bx, dx      ; BX = Y * 320
     add bx, ax
     mov di, bx
 
@@ -2707,7 +2722,10 @@ ui:
     mov ax, [_CURSOR_X_]    ; X coordinate
     sub ax, [_VIEWPORT_X_]  ; X - Viewport X
     shl ax, 4               ; X * 16
-    imul bx, SCREEN_WIDTH   ; Y * 16 * 320
+    mov dx, bx      ; make copy of Y
+    shl bx, 8       ; Y * 256
+    shl dx, 6       ; Y * 64
+    add bx, dx      ; BX = Y * 320
     add bx, ax              ; Y * 16 * 320 + X * 16
     mov di, bx              ; Move result to DI
 
